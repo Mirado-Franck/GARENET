@@ -1,0 +1,283 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Utilisateur {
+  id                     Int                     @id @default(autoincrement())
+  idUtilisateur          String                  @unique @db.VarChar(25)
+  nom                    String                  @db.VarChar(100)
+  prenoms                String                  @db.VarChar(100)
+  email                  String                  @db.VarChar(100)
+  telephone              Int
+  statutCompte           String                  @db.VarChar(50)
+  role                   String                  @db.VarChar(50) // admin, client, responsable_cooperative
+  dateCreationCompte     DateTime                @db.Timestamp
+  motDePasse             String                  @db.VarChar(100)
+  photoIdentiter         String                  @db.Text
+  admin                  Admin?
+  client                 Client?
+  responsableCooperative ResponsableCooperative?
+  notifications          Notification[]          @relation("Recevoir")
+}
+
+model Admin {
+  id                 Int           @id @default(autoincrement())
+  idUtilisateur      String        @unique @db.VarChar(25)
+  nom                String        @db.VarChar(100)
+  prenoms            String        @db.VarChar(100)
+  email              String        @db.VarChar(100)
+  telephone          Int
+  statutCompte       String        @db.VarChar(50)
+  role               String        @db.VarChar(50) // admin
+  dateCreationCompte DateTime      @db.Timestamp
+  motDePasse         String        @db.VarChar(100)
+  photoIdentiter     String        @db.Text
+  matriculeAdmin     String        @db.VarChar(25)
+  dernierAcces       DateTime      @db.Timestamp
+  cooperatives       Cooperative[] @relation("Superviser")
+  utilisateur        Utilisateur   @relation(fields: [id], references: [id], onDelete: Cascade)
+}
+
+model Client {
+  id                  Int            @id @default(autoincrement())
+  idUtilisateur       String         @unique @db.VarChar(25)
+  nom                 String         @db.VarChar(100)
+  prenoms             String         @db.VarChar(100)
+  email               String         @db.VarChar(100)
+  telephone           Int
+  statutCompte        String         @db.VarChar(50)
+  role                String         @db.VarChar(50) // client
+  dateCreationCompte  DateTime       @db.Timestamp
+  motDePasse          String         @db.VarChar(100)
+  photoIdentiter      String         @db.Text
+  idClient            String         @unique @db.VarChar(25)
+  adresse             String         @db.VarChar(100)
+  moyenneSatisfaction Float          @db.DoublePrecision
+  avis                Avis?          @relation("Donner")
+  reservations        Reservation[]  @relation("Effectue")
+  passagers           Passager[]     @relation("Represente")
+  notifications       Notification[] @relation("RecevoirClient")
+  utilisateur         Utilisateur    @relation(fields: [id], references: [id], onDelete: Cascade)
+}
+
+model ResponsableCooperative {
+  id                 Int            @id @default(autoincrement())
+  idUtilisateur      String         @unique @db.VarChar(25)
+  nom                String         @db.VarChar(100)
+  prenoms            String         @db.VarChar(100)
+  email              String         @db.VarChar(100)
+  telephone          Int
+  statutCompte       String         @db.VarChar(50)
+  role               String         @db.VarChar(50) // responsable_cooperative
+  dateCreationCompte DateTime       @db.Timestamp
+  motDePasse         String         @db.VarChar(100)
+  photoIdentiter     String         @db.Text
+  idResponsable      String         @unique @db.VarChar(25)
+  nomCooperative     String         @db.VarChar(20)
+  adresseCooperative String         @db.VarChar(100)
+  statutCooperative  String         @db.VarChar(20)
+  cooperative        Cooperative    @relation("Appartient", fields: [cooperativeId], references: [id], onDelete: Cascade)
+  cooperativeId      Int
+  reservations       Reservation[]  @relation("Creer")
+  notifications      Notification[] @relation("Envoyer")
+  utilisateur        Utilisateur    @relation(fields: [id], references: [id], onDelete: Cascade)
+}
+
+model Avis {
+  id          Int      @id @default(autoincrement())
+  idAvis      String   @unique @db.VarChar(25)
+  note        Float    @db.DoublePrecision
+  commentaire String   @db.Text
+  dateAvis    DateTime @db.Timestamp
+  voyage      Voyage   @relation("Concerner", fields: [voyageId], references: [id])
+  voyageId    Int
+  client      Client   @relation("Donner", fields: [clientId], references: [id])
+  clientId    Int      @unique
+}
+
+model Chauffeur {
+  id                   Int        @id @default(autoincrement())
+  idChauffeur          String     @unique @db.VarChar(25)
+  nom                  String     @db.VarChar(50)
+  permis               String     @db.VarChar(100)
+  dateExpirationPermis DateTime   @db.Date
+  disponibilite        Boolean
+  affectationsActuelle String     @db.VarChar(100)
+  voyage               Voyage?    @relation("Conduit", fields: [voyageId], references: [id])
+  voyageId             Int?
+  documents            Document[] @relation("AvoirChauffeur")
+  voiture              Voiture?   @relation("Posseder", fields: [voitureId], references: [id])
+  voitureId            Int?
+}
+
+model Cooperative {
+  id              Int                      @id @default(autoincrement())
+  idCooperative   String                   @unique @db.VarChar(25)
+  nom             String                   @db.VarChar(100)
+  adresse         String                   @db.VarChar(100)
+  contact         String                   @db.VarChar(100)
+  statut          String                   @db.VarChar(20)
+  dateInscription DateTime                 @db.Timestamp
+  stations        Station[]                @relation("PossedeCooperative")
+  voyages         Voyage[]                 @relation("Planifie")
+  admin           Admin?                   @relation("Superviser", fields: [adminId], references: [id])
+  adminId         Int?
+  responsables    ResponsableCooperative[] @relation("Appartient")
+  voitures        Voiture[]                @relation("PossedeVoiture")
+}
+
+model Document {
+  id             Int        @id @default(autoincrement())
+  idDocument     String     @unique @db.VarChar(25)
+  typeDocument   String     @db.VarChar(50)
+  dateExpiration DateTime   @db.Date
+  fichier        String     @db.VarChar(50)
+  etat           String     @db.VarChar(20)
+  voiture        Voiture    @relation("AvoirVoiture", fields: [voitureId], references: [id], onDelete: Cascade)
+  voitureId      Int
+  chauffeur      Chauffeur? @relation("AvoirChauffeur", fields: [chauffeurId], references: [id])
+  chauffeurId    Int?
+}
+
+model Notification {
+  id             Int                      @id @default(autoincrement())
+  idNotification String                   @unique @db.VarChar(25)
+  type           String                   @db.VarChar(20)
+  contenu        String                   @db.Text
+  dateEnvoi      DateTime                 @db.Timestamp
+  statut         String                   @db.VarChar(20)
+  canal          String                   @db.VarChar(20)
+  utilisateurs   Utilisateur[]            @relation("Recevoir")
+  clients        Client[]                 @relation("RecevoirClient")
+  responsables   ResponsableCooperative[] @relation("Envoyer")
+}
+
+model Paiement {
+  id            Int          @id @default(autoincrement())
+  idPaiement    String       @unique @db.VarChar(25)
+  montant       Float        @db.DoublePrecision
+  modePaiement  String       @db.VarChar(20)
+  datePaiement  DateTime     @db.Timestamp
+  statut        String       @db.VarChar(20)
+  reservation   Reservation? @relation("EstAssocieA", fields: [reservationId], references: [id])
+  reservationId Int?         @unique
+}
+
+model Passager {
+  id            Int      @id @default(autoincrement())
+  idPassager    String   @unique @db.VarChar(25)
+  dateNaissance DateTime @db.Date
+  nom           String   @db.VarChar(100)
+  prenom        String   @db.VarChar(100)
+  numeroCIN     Int
+  telephone     Int
+  email         String   @db.VarChar(100)
+  voyage        Voyage   @relation("Comprend", fields: [voyageId], references: [id], onDelete: Cascade)
+  voyageId      Int
+  client        Client   @relation("Represente", fields: [clientId], references: [id])
+  clientId      Int
+}
+
+model Recu {
+  id            Int          @id @default(autoincrement())
+  idRecu        String       @unique @db.VarChar(25)
+  dateEmission  DateTime     @db.Date
+  montantTotal  Int
+  qrCode        String       @db.VarChar(50)
+  format        String       @db.VarChar(20)
+  reservation   Reservation? @relation("Genere", fields: [reservationId], references: [id])
+  reservationId Int?         @unique
+}
+
+model Reservation {
+  id              Int                     @id @default(autoincrement())
+  idReservation   String                  @unique @db.VarChar(25)
+  dateReservation DateTime                @db.Timestamp
+  statut          String                  @db.VarChar(20)
+  nombrePlaces    Int
+  modePaiement    String                  @db.VarChar(20)
+  codeQR          String                  @db.VarChar(50)
+  numeroPlace     Int
+  trajet          Trajet                  @relation("TrajetPrincipal", fields: [trajetId], references: [id], onDelete: Cascade)
+  trajetId        Int
+  trajets         Trajet[]                @relation("TrajetsSupplementaires")
+  recu            Recu?                   @relation("Genere")
+  paiement        Paiement?               @relation("EstAssocieA")
+  client          Client                  @relation("Effectue", fields: [clientId], references: [id])
+  clientId        Int
+  responsable     ResponsableCooperative? @relation("Creer", fields: [responsableId], references: [id])
+  responsableId   Int?
+}
+
+model Station {
+  id            Int         @id @default(autoincrement())
+  idStation     String      @unique @db.VarChar(25)
+  nom           String      @db.VarChar(100)
+  localisation  String      @db.VarChar(100)
+  type          String      @db.VarChar(20)
+  cooperative   Cooperative @relation("PossedeCooperative", fields: [cooperativeId], references: [id], onDelete: Cascade)
+  cooperativeId Int
+  voitures      Voiture[]   @relation("Affecte")
+  trajets       Trajet[]    @relation("Relie")
+}
+
+model Trajet {
+  id                    Int           @id @default(autoincrement())
+  codeTrajet            String        @unique @db.VarChar(25)
+  stationDepart         String        @db.VarChar(50)
+  stationArrivee        String        @db.VarChar(50)
+  distance              Float         @db.DoublePrecision
+  statut                String        @db.VarChar(20)
+  reservationsPrincipal Reservation[] @relation("TrajetPrincipal")
+  reservations          Reservation[] @relation("TrajetsSupplementaires")
+  stations              Station[]     @relation("Relie")
+  voyages               Voyage[]      @relation("TrajetVoyage")
+}
+
+model Voiture {
+  id               Int         @id @default(autoincrement())
+  idVoiture        String      @unique @db.VarChar(25)
+  immatriculation  String      @db.VarChar(20)
+  modele           String      @db.VarChar(25)
+  capacite         Int
+  disponibilite    Boolean
+  etatTechnique    String      @db.VarChar(20)
+  nbRanger         Int
+  nbPlaceParRanger Int
+  stations         Station[]   @relation("Affecte")
+  voyage           Voyage?     @relation("Utiliser", fields: [voyageId], references: [id])
+  voyageId         Int?        @unique
+  cooperative      Cooperative @relation("PossedeVoiture", fields: [cooperativeId], references: [id])
+  cooperativeId    Int
+  documents        Document[]  @relation("AvoirVoiture")
+  chauffeurs       Chauffeur[] @relation("Posseder")
+}
+
+model Voyage {
+  id              Int         @id @default(autoincrement())
+  idVoyage        String      @unique @db.VarChar(25)
+  dateDepart      DateTime    @db.Timestamp
+  heureDepart     DateTime    @db.Timestamp
+  prix            Float       @db.DoublePrecision
+  statut          String      @db.VarChar(25)
+  tauxRemplissage Float       @db.DoublePrecision
+  trajets         Trajet[]    @relation("TrajetVoyage")
+  voiture         Voiture?    @relation("Utiliser")
+  chauffeurs      Chauffeur[] @relation("Conduit")
+  passagers       Passager[]  @relation("Comprend")
+  avis            Avis[]      @relation("Concerner")
+  cooperative     Cooperative @relation("Planifie", fields: [cooperativeId], references: [id])
+  cooperativeId   Int
+}

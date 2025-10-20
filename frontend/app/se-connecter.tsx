@@ -1,35 +1,36 @@
+// app/se-connecter.tsx
 import React, { useState } from 'react';
 import {
   View,
   Text,
   TextInput,
-  TouchableOpacity,
   StyleSheet,
-  Alert,
   ScrollView,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import Button from '../components/ui/Button';
 
 export default function SeConnecter() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
   const router = useRouter();
 
   const handleLogin = () => {
-    // Validation basique
-    if (!email || !password) {
-      Alert.alert('Erreur', 'Veuillez remplir tous les champs');
-      return;
-    }
+    setIsLoading(true);
 
-    if (!email.includes('@')) {
-      Alert.alert('Erreur', 'Email invalide');
-      return;
-    }
+    // Simulation simple d'une connexion réussie
+    setTimeout(() => {
+      setIsLoading(false);
+      setSuccessMessage('Connexion réussie !');
 
-    // Simulation de connexion réussie
-    Alert.alert('Succès', 'Connexion réussie !');
-    console.log('Connexion:', { email, password });
+      // Le message disparaît après 5 secondes
+      setTimeout(() => setSuccessMessage(''), 5000);
+
+      // Redirection vers la page client
+      router.replace('/(client)');
+    }, 1000);
   };
 
   const goToInscription = () => {
@@ -38,17 +39,21 @@ export default function SeConnecter() {
 
   return (
     <ScrollView contentContainerStyle={styles.scrollContainer}>
-      {/* En-tête */}
+      {/* Message de succès affiché en haut */}
+      {successMessage ? (
+        <View style={styles.successBox}>
+          <Text style={styles.successText}>{successMessage}</Text>
+        </View>
+      ) : null}
+
       <View style={styles.header}>
         <Text style={styles.logo}>🌱 GARENET</Text>
         <Text style={styles.subtitle}>Vos voyages, simplifiés</Text>
       </View>
 
-      {/* Formulaire de connexion */}
       <View style={styles.formContainer}>
         <Text style={styles.title}>Connexion</Text>
-        
-        {/* Champ Email */}
+
         <Text style={styles.label}>Email</Text>
         <TextInput
           style={styles.input}
@@ -58,8 +63,7 @@ export default function SeConnecter() {
           keyboardType="email-address"
           autoCapitalize="none"
         />
-        
-        {/* Champ Mot de passe */}
+
         <Text style={styles.label}>Mot de passe</Text>
         <TextInput
           style={styles.input}
@@ -69,17 +73,22 @@ export default function SeConnecter() {
           secureTextEntry
         />
 
-        {/* Bouton de connexion */}
-        <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
-          <Text style={styles.loginButtonText}>Se connecter</Text>
-        </TouchableOpacity>
+        <Button
+          title="Se connecter"
+          onPress={handleLogin}
+          variant="primary"
+          loading={isLoading}
+          style={styles.loginButton}
+        />
 
-        {/* Lien vers inscription */}
         <View style={styles.signupContainer}>
           <Text style={styles.signupText}>Pas de compte ? </Text>
-          <TouchableOpacity onPress={goToInscription}>
-            <Text style={styles.signupLink}>S'inscrire</Text>
-          </TouchableOpacity>
+          <Button
+            title="S'inscrire"
+            onPress={goToInscription}
+            variant="secondary"
+            style={styles.signupButton}
+          />
         </View>
       </View>
     </ScrollView>
@@ -92,6 +101,21 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 20,
     backgroundColor: '#f8fff8',
+  },
+  successBox: {
+    position: 'absolute',
+    top: 40,
+    alignSelf: 'center',
+    backgroundColor: '#2E7D32',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 10,
+    zIndex: 10,
+  },
+  successText: {
+    color: 'white',
+    fontWeight: 'bold',
+    fontSize: 16,
   },
   header: {
     alignItems: 'center',
@@ -141,17 +165,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#f9f9f9',
   },
   loginButton: {
-    backgroundColor: '#4CAF50',
-    padding: 15,
-    borderRadius: 10,
-    alignItems: 'center',
     marginTop: 10,
     marginBottom: 20,
-  },
-  loginButtonText: {
-    color: 'white',
-    fontSize: 18,
-    fontWeight: 'bold',
   },
   signupContainer: {
     flexDirection: 'row',
@@ -162,9 +177,9 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#666',
   },
-  signupLink: {
-    fontSize: 16,
-    color: '#4CAF50',
-    fontWeight: 'bold',
+  signupButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    marginLeft: 8,
   },
 });

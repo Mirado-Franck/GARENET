@@ -36,4 +36,18 @@ const createVoyage = async (req, res, next) => {
   }
 };
 
-export { getVoyages, createVoyage };
+// GET /api/voyages/cooperative/:cooperativeId
+const getVoyagesByCooperative = async (req, res) => {
+  try {
+    const { cooperativeId } = req.params;
+    const voyages = await prisma.voyage.findMany({
+      where: { cooperativeId: parseInt(cooperativeId) },
+      orderBy: { dateHeureDepart: "asc" }
+    });
+    res.json(voyages);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export { getVoyages, createVoyage, getVoyagesByCooperative };

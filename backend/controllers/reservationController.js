@@ -49,4 +49,22 @@ const cancelReservation = async (req, res, next) => {
   }
 };
 
-export { createReservation, getReservations, cancelReservation };
+// GET /api/reservations/client/:utilisateurId
+const getReservationsByClient = async (req, res) => {
+  try {
+    const { utilisateurId } = req.params;
+    const reservations = await prisma.reservation.findMany({
+      where: { utilisateurId: parseInt(utilisateurId) },
+      include: {
+        voyage: true,
+        utilisateur: true
+      },
+      orderBy: { dateReservation: "desc" }
+    });
+    res.json(reservations);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export { createReservation, getReservations, cancelReservation, getReservationsByClient };

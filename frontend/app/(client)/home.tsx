@@ -1,250 +1,298 @@
 import React, { useState } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  ScrollView,
-  RefreshControl 
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { View, Text, ScrollView, StyleSheet, Image, TouchableOpacity } from 'react-native';
+import { useRouter } from 'expo-router';
 import SearchBar from '../../components/ui/SearchBar';
 import Button from '../../components/ui/Button';
 
-const voyagesSimules = [
+// Données simulées pour Madagascar
+const cooperativesEpinglees = [
   {
-    id: '1',
-    destination: 'Antananarivo - Toamasina',
-    date: '15 Déc 2024',
-    heure: '08:00',
-    prix: 25000,
-    placesDisponibles: 12,
-    cooperative: 'Cotisse Transport'
+    id: 1,
+    nom: 'Cotrama',
+    note: 4.5,
+    trajetsPopulaires: ['Tana - Tamatave', 'Tana - Antsirabe'],
+    image: 'https://via.placeholder.com/100x100/4CAF50/white?text=COTRAMA',
+    abonne: true
   },
   {
-    id: '2', 
-    destination: 'Antananarivo - Antsirabe',
-    date: '16 Déc 2024',
-    heure: '10:30',
-    prix: 15000,
-    placesDisponibles: 8,
-    cooperative: 'Bus Express'
+    id: 2,
+    nom: 'Transfi',
+    note: 4.2,
+    trajetsPopulaires: ['Tana - Fianar', 'Tana - Mahajanga'],
+    image: 'https://via.placeholder.com/100x100/2196F3/white?text=TRANSFI',
+    abonne: true
   },
   {
-    id: '3',
-    destination: 'Antananarivo - Mahajanga',
-    date: '17 Déc 2024',
-    prix: 45000,
-    heure: '14:00',
-    placesDisponibles: 5,
-    cooperative: 'Nord Express'
+    id: 3,
+    nom: 'Mafio',
+    note: 4.7,
+    trajetsPopulaires: ['Tana - Toliara', 'Antsirabe - Fianar'],
+    image: 'https://via.placeholder.com/100x100/FF9800/white?text=MAFIO',
+    abonne: false
   }
 ];
 
-export default function Home() {
+// Voyages recommandés depuis Fianarantsoa
+const voyagesRecommandes = [
+  {
+    id: 1,
+    depart: 'Fianarantsoa',
+    arrivee: 'Antananarivo',
+    cooperative: 'Cotrama',
+    prix: '30 000 Ar',
+    duree: '10h',
+    departTime: '06:00',
+    placesDisponibles: 8
+  },
+  {
+    id: 2,
+    depart: 'Fianarantsoa',
+    arrivee: 'Manakara',
+    cooperative: 'Mafio',
+    prix: '15 000 Ar',
+    duree: '4h',
+    departTime: '07:30',
+    placesDisponibles: 12
+  },
+  {
+    id: 3,
+    depart: 'Fianarantsoa',
+    arrivee: 'Toliara',
+    cooperative: 'Transfi',
+    prix: '40 000 Ar',
+    duree: '12h',
+    departTime: '05:00',
+    placesDisponibles: 5
+  },
+  {
+    id: 4,
+    depart: 'Fianarantsoa',
+    arrivee: 'Antsirabe',
+    cooperative: 'Cotrama',
+    prix: '25 000 Ar',
+    duree: '8h',
+    departTime: '08:00',
+    placesDisponibles: 15
+  }
+];
+
+export default function HomeClient() {
+  const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
-  const [voyages, setVoyages] = useState(voyagesSimules);
-  const [refreshing, setRefreshing] = useState(false);
 
-  const voyagesFiltres = voyages.filter(voyage =>
-    voyage.destination.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    voyage.cooperative.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  const onRefresh = () => {
-    setRefreshing(true);
-    setTimeout(() => {
-      setVoyages(voyagesSimules);
-      setRefreshing(false);
-    }, 2000);
-  };
-
-  const handleReserver = (voyageId: string) => {
-    console.log(`Réservation du voyage: ${voyageId}`);
-    alert(`Réservation du voyage ${voyageId} - À implémenter`);
-  };
-
-  const handleVoirDetails = (voyageId: string) => {
-    console.log(`Voir détails du voyage: ${voyageId}`);
-    alert(`Détails voyage ${voyageId} - À implémenter`);
-  };
-
-  // ✅ CORRECTION : Fonction qui respecte l'interface (query: string) => void
   const handleSearch = (query: string) => {
     setSearchQuery(query);
+    console.log('Recherche:', query);
+    // Redirection vers la page de résultats de recherche
+    if (query.trim()) {
+      router.push('/voyages/listeCooperative');
+    }
   };
 
-  // ✅ Fonction pour effacer la recherche
-  const handleClearSearch = () => {
-    setSearchQuery('');
+  const handleVoirCooperative = (coopId: number) => {
+    router.push(`/voyages/detailCooperative?id=${coopId}`);
+  };
+
+  const handleVoirToutesCooperatives = () => {
+    router.push('/voyages/listeCooperative');
+  };
+
+  const handleVoirDetailsVoyage = (voyageId: number) => {
+    router.push(`/voyages/detailVoyage?id=${voyageId}`);
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      {/* 🎯 En-tête de la page */}
+    <ScrollView style={styles.container}>
+      {/* En-tête */}
       <View style={styles.header}>
-        <Text style={styles.title}>Bonjour 👋</Text>
-        <Text style={styles.subtitle}>
-          Trouvez votre prochain voyage
-        </Text>
+        <Text style={styles.bienvenue}>Bon retour Mirado</Text>
+        <Text style={styles.sousTitre}>Localisation: Fianarantsoa</Text>
       </View>
 
-      {/* 🔍 Barre de recherche CORRIGÉE */}
+      {/* Barre de recherche principale */}
       <View style={styles.searchSection}>
         <SearchBar
-          placeholder="Rechercher un voyage ou une destination..."
-          onSearch={handleSearch} // ✅ Fonction correcte
-          onClear={handleClearSearch} // ✅ Optionnel
+          placeholder="Rechercher un trajet, une coopérative..."
+          onSearch={handleSearch}
+          style={styles.searchBar}
         />
       </View>
 
-      {/* ⚡ Actions rapides */}
-      <View style={styles.actionsSection}>
-        <Text style={styles.sectionTitle}>Actions rapides</Text>
-        <View style={styles.buttonsContainer}>
-          <Button 
-            title="Voir tous les voyages" 
-            onPress={() => console.log('Navigation vers voyages')}
-            variant="primary"
-            style={styles.actionButton}
-          />
-          <Button 
-            title="Mes réservations" 
-            onPress={() => console.log('Navigation vers réservations')}
-            variant="secondary"
-            style={styles.actionButton}
-          />
-        </View>
-      </View>
-
-      {/* 🎫 Liste des voyages disponibles */}
-      <View style={styles.voyagesSection}>
+      {/* Cooperatives épinglées */}
+      <View style={styles.section}>
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Voyages disponibles</Text>
-          <Text style={styles.voyagesCount}>
-            {voyagesFiltres.length} voyage(s) trouvé(s)
-          </Text>
+          <Text style={styles.sectionTitle}>Vos coopératives</Text>
+          <Button
+            title="Voir tout"
+            onPress={handleVoirToutesCooperatives}
+            variant="secondary"
+            style={styles.voirToutButton}
+          />
         </View>
 
-        <ScrollView
-          style={styles.voyagesList}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-              colors={['#3B82F6']}
-            />
-          }
-        >
-          {voyagesFiltres.length > 0 ? (
-            voyagesFiltres.map((voyage) => (
-              <View key={voyage.id} style={styles.voyageCard}>
-                <View style={styles.voyageHeader}>
-                  <Text style={styles.destination}>{voyage.destination}</Text>
-                  <Text style={styles.prix}>{voyage.prix.toLocaleString()} Ar</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.coopList}>
+          {cooperativesEpinglees.map((coop) => (
+            <TouchableOpacity
+              key={coop.id}
+              style={styles.coopCard}
+              onPress={() => handleVoirCooperative(coop.id)}
+            >
+              <Image source={{ uri: coop.image }} style={styles.coopImage} />
+              <View style={styles.coopInfo}>
+                <Text style={styles.coopName}>{coop.nom}</Text>
+                <View style={styles.rating}>
+                  <Text style={styles.ratingText}>⭐ {coop.note}</Text>
                 </View>
-
-                <View style={styles.voyageInfo}>
-                  <Text style={styles.infoText}>📅 {voyage.date}</Text>
-                  <Text style={styles.infoText}>🕒 {voyage.heure}</Text>
-                  <Text style={styles.infoText}>👥 {voyage.placesDisponibles} places</Text>
-                </View>
-
-                <Text style={styles.cooperative}>🚌 {voyage.cooperative}</Text>
-
-                <View style={styles.cardActions}>
-                  <Button 
-                    title="Voir détails" 
-                    onPress={() => handleVoirDetails(voyage.id)}
-                    variant="secondary"
-                    style={styles.detailsButton}
-                  />
-                  <Button 
-                    title="Réserver" 
-                    onPress={() => handleReserver(voyage.id)}
-                    variant="primary"
-                    style={styles.reserverButton}
-                  />
-                </View>
+                <Text style={styles.coopTrajets}>
+                  {coop.trajetsPopulaires.join(', ')}
+                </Text>
+                {coop.abonne && (
+                  <View style={styles.abonneBadge}>
+                    <Text style={styles.abonneText}>Abonné</Text>
+                  </View>
+                )}
               </View>
-            ))
-          ) : (
-            <View style={styles.emptyState}>
-              <Text style={styles.emptyText}>Aucun voyage trouvé</Text>
-              <Text style={styles.emptySubtext}>
-                Essayez de modifier vos critères de recherche
-              </Text>
-            </View>
-          )}
+            </TouchableOpacity>
+          ))}
         </ScrollView>
       </View>
-    </SafeAreaView>
+
+      {/* Voyages recommandés depuis Fianarantsoa */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Voyages recommandés depuis Fianarantsoa</Text>
+        {voyagesRecommandes.map((voyage) => (
+          <TouchableOpacity
+            key={voyage.id}
+            style={styles.voyageCard}
+            onPress={() => handleVoirDetailsVoyage(voyage.id)}
+          >
+            <View style={styles.voyageHeader}>
+              <Text style={styles.voyageRoute}>
+                {voyage.depart} → {voyage.arrivee}
+              </Text>
+              <Text style={styles.voyagePrix}>{voyage.prix}</Text>
+            </View>
+            
+            <View style={styles.voyageDetails}>
+              <Text style={styles.voyageCoop}>{voyage.cooperative}</Text>
+              <Text style={styles.voyageInfo}>
+                {voyage.departTime} • {voyage.duree} • {voyage.placesDisponibles} places
+              </Text>
+            </View>
+
+            <View style={styles.voyageAction}>
+              <Button
+                title="Voir détail"
+                onPress={() => handleVoirDetailsVoyage(voyage.id)}
+                variant="primary"
+                style={styles.detailButton}
+              />
+            </View>
+          </TouchableOpacity>
+        ))}
+      </View>
+    </ScrollView>
   );
 }
 
-// 🎨 Les styles restent identiques
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#f8f9fa',
+    padding: 16,
   },
   header: {
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 10,
+    marginBottom: 24,
   },
-  title: {
+  bienvenue: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#1e293b',
+    color: '#1a1a1a',
     marginBottom: 4,
   },
-  subtitle: {
+  sousTitre: {
     fontSize: 16,
-    color: '#64748b',
+    color: '#666',
   },
   searchSection: {
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    backgroundColor: 'white',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e2e8f0',
+    marginBottom: 24,
   },
-  actionsSection: {
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-    backgroundColor: 'white',
-    marginTop: 10,
+  searchBar: {
+    marginBottom: 12,
   },
-  buttonsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 10,
-  },
-  actionButton: {
-    flex: 0.48,
-  },
-  voyagesSection: {
-    flex: 1,
-    paddingHorizontal: 20,
-    paddingTop: 15,
+  section: {
+    marginBottom: 32,
   },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 15,
+    marginBottom: 16,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#1e293b',
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#1a1a1a',
   },
-  voyagesCount: {
-    fontSize: 14,
-    color: '#64748b',
+  voirToutButton: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    minHeight: 0,
   },
-  voyagesList: {
+  coopList: {
+    marginHorizontal: -16,
+    paddingHorizontal: 16,
+  },
+  coopCard: {
+    backgroundColor: 'white',
+    borderRadius: 12,
+    padding: 16,
+    marginRight: 12,
+    width: 200,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  coopImage: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    marginBottom: 12,
+  },
+  coopInfo: {
     flex: 1,
+  },
+  coopName: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#1a1a1a',
+    marginBottom: 4,
+  },
+  rating: {
+    marginBottom: 6,
+  },
+  ratingText: {
+    fontSize: 14,
+    color: '#666',
+  },
+  coopTrajets: {
+    fontSize: 12,
+    color: '#888',
+    marginBottom: 8,
+  },
+  abonneBadge: {
+    backgroundColor: '#E8F5E8',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    alignSelf: 'flex-start',
+  },
+  abonneText: {
+    fontSize: 10,
+    color: '#4CAF50',
+    fontWeight: 'bold',
   },
   voyageCard: {
     backgroundColor: 'white',
@@ -252,70 +300,46 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 12,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 2,
-    borderWidth: 1,
-    borderColor: '#f1f5f9',
+    shadowRadius: 4,
+    elevation: 3,
   },
   voyageHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 12,
+    alignItems: 'center',
+    marginBottom: 8,
   },
-  destination: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1e293b',
-    flex: 1,
-    marginRight: 10,
-  },
-  prix: {
+  voyageRoute: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#3B82F6',
+    color: '#1a1a1a',
   },
-  voyageInfo: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 8,
+  voyagePrix: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#4CAF50',
   },
-  infoText: {
-    fontSize: 12,
-    color: '#64748b',
-  },
-  cooperative: {
-    fontSize: 14,
-    color: '#475569',
-    fontStyle: 'italic',
+  voyageDetails: {
     marginBottom: 12,
   },
-  cardActions: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  detailsButton: {
-    flex: 0.48,
-  },
-  reserverButton: {
-    flex: 0.48,
-  },
-  emptyState: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 60,
-  },
-  emptyText: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#64748b',
-    marginBottom: 8,
-  },
-  emptySubtext: {
+  voyageCoop: {
     fontSize: 14,
-    color: '#94a3b8',
-    textAlign: 'center',
+    color: '#666',
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  voyageInfo: {
+    fontSize: 14,
+    color: '#888',
+  },
+  voyageAction: {
+    alignItems: 'flex-end',
+  },
+  detailButton: {
+    paddingVertical: 6,
+    paddingHorizontal: 16,
+    minHeight: 36,
   },
 });

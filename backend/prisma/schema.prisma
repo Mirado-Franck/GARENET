@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
   output   = "../generated/prisma"
@@ -14,270 +8,372 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Utilisateur {
-  id                     Int                     @id @default(autoincrement())
-  idUtilisateur          String                  @unique @db.VarChar(25)
-  nom                    String                  @db.VarChar(100)
-  prenoms                String                  @db.VarChar(100)
-  email                  String                  @db.VarChar(100)
-  telephone              Int
-  statutCompte           String                  @db.VarChar(50)
-  role                   String                  @db.VarChar(50) // admin, client, responsable_cooperative
-  dateCreationCompte     DateTime                @db.Timestamp
-  motDePasse             String                  @db.VarChar(100)
-  photoIdentiter         String                  @db.Text
-  admin                  Admin?
-  client                 Client?
-  responsableCooperative ResponsableCooperative?
-  notifications          Notification[]          @relation("Recevoir")
-}
 
-model Admin {
-  id                 Int           @id @default(autoincrement())
-  idUtilisateur      String        @unique @db.VarChar(25)
-  nom                String        @db.VarChar(100)
-  prenoms            String        @db.VarChar(100)
-  email              String        @db.VarChar(100)
-  telephone          Int
-  statutCompte       String        @db.VarChar(50)
-  role               String        @db.VarChar(50) // admin
-  dateCreationCompte DateTime      @db.Timestamp
-  motDePasse         String        @db.VarChar(100)
-  photoIdentiter     String        @db.Text
-  matriculeAdmin     String        @db.VarChar(25)
-  dernierAcces       DateTime      @db.Timestamp
-  cooperatives       Cooperative[] @relation("Superviser")
-  utilisateur        Utilisateur   @relation(fields: [id], references: [id], onDelete: Cascade)
-}
+// =============================================
+// NOUVEAUX MODÈLES - GESTION DES PLACES
+// =============================================
 
-model Client {
-  id                  Int            @id @default(autoincrement())
-  idUtilisateur       String         @unique @db.VarChar(25)
-  nom                 String         @db.VarChar(100)
-  prenoms             String         @db.VarChar(100)
-  email               String         @db.VarChar(100)
-  telephone           Int
-  statutCompte        String         @db.VarChar(50)
-  role                String         @db.VarChar(50) // client
-  dateCreationCompte  DateTime       @db.Timestamp
-  motDePasse          String         @db.VarChar(100)
-  photoIdentiter      String         @db.Text
-  idClient            String         @unique @db.VarChar(25)
-  adresse             String         @db.VarChar(100)
-  moyenneSatisfaction Float          @db.DoublePrecision
-  avis                Avis?          @relation("Donner")
-  reservations        Reservation[]  @relation("Effectue")
-  passagers           Passager[]     @relation("Represente")
-  notifications       Notification[] @relation("RecevoirClient")
-  utilisateur         Utilisateur    @relation(fields: [id], references: [id], onDelete: Cascade)
-}
-
-model ResponsableCooperative {
-  id                 Int            @id @default(autoincrement())
-  idUtilisateur      String         @unique @db.VarChar(25)
-  nom                String         @db.VarChar(100)
-  prenoms            String         @db.VarChar(100)
-  email              String         @db.VarChar(100)
-  telephone          Int
-  statutCompte       String         @db.VarChar(50)
-  role               String         @db.VarChar(50) // responsable_cooperative
-  dateCreationCompte DateTime       @db.Timestamp
-  motDePasse         String         @db.VarChar(100)
-  photoIdentiter     String         @db.Text
-  idResponsable      String         @unique @db.VarChar(25)
-  nomCooperative     String         @db.VarChar(20)
-  adresseCooperative String         @db.VarChar(100)
-  statutCooperative  String         @db.VarChar(20)
-  cooperative        Cooperative    @relation("Appartient", fields: [cooperativeId], references: [id], onDelete: Cascade)
-  cooperativeId      Int
-  reservations       Reservation[]  @relation("Creer")
-  notifications      Notification[] @relation("Envoyer")
-  utilisateur        Utilisateur    @relation(fields: [id], references: [id], onDelete: Cascade)
-}
-
-model Avis {
-  id          Int      @id @default(autoincrement())
-  idAvis      String   @unique @db.VarChar(25)
-  note        Float    @db.DoublePrecision
-  commentaire String   @db.Text
-  dateAvis    DateTime @db.Timestamp
-  voyage      Voyage   @relation("Concerner", fields: [voyageId], references: [id])
-  voyageId    Int
-  client      Client   @relation("Donner", fields: [clientId], references: [id])
-  clientId    Int      @unique
-}
-
-model Chauffeur {
-  id                   Int        @id @default(autoincrement())
-  idChauffeur          String     @unique @db.VarChar(25)
-  nom                  String     @db.VarChar(50)
-  permis               String     @db.VarChar(100)
-  dateExpirationPermis DateTime   @db.Date
-  disponibilite        Boolean
-  affectationsActuelle String     @db.VarChar(100)
-  voyage               Voyage?    @relation("Conduit", fields: [voyageId], references: [id])
-  voyageId             Int?
-  documents            Document[] @relation("AvoirChauffeur")
-  voiture              Voiture?   @relation("Posseder", fields: [voitureId], references: [id])
-  voitureId            Int?
-}
-
-model Cooperative {
-  id              Int                      @id @default(autoincrement())
-  idCooperative   String                   @unique @db.VarChar(25)
-  nom             String                   @db.VarChar(100)
-  adresse         String                   @db.VarChar(100)
-  contact         String                   @db.VarChar(100)
-  statut          String                   @db.VarChar(20)
-  dateInscription DateTime                 @db.Timestamp
-  stations        Station[]                @relation("PossedeCooperative")
-  voyages         Voyage[]                 @relation("Planifie")
-  admin           Admin?                   @relation("Superviser", fields: [adminId], references: [id])
-  adminId         Int?
-  responsables    ResponsableCooperative[] @relation("Appartient")
-  voitures        Voiture[]                @relation("PossedeVoiture")
-}
-
-model Document {
-  id             Int        @id @default(autoincrement())
-  idDocument     String     @unique @db.VarChar(25)
-  typeDocument   String     @db.VarChar(50)
-  dateExpiration DateTime   @db.Date
-  fichier        String     @db.VarChar(50)
-  etat           String     @db.VarChar(20)
-  voiture        Voiture    @relation("AvoirVoiture", fields: [voitureId], references: [id], onDelete: Cascade)
-  voitureId      Int
-  chauffeur      Chauffeur? @relation("AvoirChauffeur", fields: [chauffeurId], references: [id])
-  chauffeurId    Int?
-}
-
-model Notification {
-  id             Int                      @id @default(autoincrement())
-  idNotification String                   @unique @db.VarChar(25)
-  type           String                   @db.VarChar(20)
-  contenu        String                   @db.Text
-  dateEnvoi      DateTime                 @db.Timestamp
-  statut         String                   @db.VarChar(20)
-  canal          String                   @db.VarChar(20)
-  utilisateurs   Utilisateur[]            @relation("Recevoir")
-  clients        Client[]                 @relation("RecevoirClient")
-  responsables   ResponsableCooperative[] @relation("Envoyer")
-}
-
-model Paiement {
-  id            Int          @id @default(autoincrement())
-  idPaiement    String       @unique @db.VarChar(25)
-  montant       Float        @db.DoublePrecision
-  modePaiement  String       @db.VarChar(20)
-  datePaiement  DateTime     @db.Timestamp
-  statut        String       @db.VarChar(20)
-  reservation   Reservation? @relation("EstAssocieA", fields: [reservationId], references: [id])
-  reservationId Int?         @unique
-}
-
-model Passager {
+model place_voiture {
   id            Int      @id @default(autoincrement())
-  idPassager    String   @unique @db.VarChar(25)
-  dateNaissance DateTime @db.Date
-  nom           String   @db.VarChar(100)
-  prenom        String   @db.VarChar(100)
-  numeroCIN     Int
-  telephone     Int
-  email         String   @db.VarChar(100)
-  voyage        Voyage   @relation("Comprend", fields: [voyageId], references: [id], onDelete: Cascade)
-  voyageId      Int
-  client        Client   @relation("Represente", fields: [clientId], references: [id])
-  clientId      Int
+  voiture_id    Int
+  numero        String   @db.VarChar(10)  // "0", "1", "2", "A1", "B3", ...
+  est_chauffeur Boolean  @default(false)  // true seulement pour "0"
+  est_reserve   Boolean  @default(false)  // true si réservée
+
+  voiture       voiture  @relation(fields: [voiture_id], references: [id], onDelete: Cascade)
+  reservations  reservation_place[]
+
+  @@unique([voiture_id, numero])
+  @@index([voiture_id])
+  @@map("place_voiture")
 }
 
-model Recu {
-  id            Int          @id @default(autoincrement())
-  idRecu        String       @unique @db.VarChar(25)
-  dateEmission  DateTime     @db.Date
-  montantTotal  Int
-  qrCode        String       @db.VarChar(50)
-  format        String       @db.VarChar(20)
-  reservation   Reservation? @relation("Genere", fields: [reservationId], references: [id])
-  reservationId Int?         @unique
+model reservation_place {
+  id             Int      @id @default(autoincrement())
+  reservation_id Int
+  place_id       Int
+
+  reservation    reservation @relation(fields: [reservation_id], references: [id], onDelete: Cascade)
+  place          place_voiture @relation(fields: [place_id], references: [id], onDelete: Restrict)
+
+  @@unique([reservation_id, place_id])
+  @@map("reservation_place")
 }
 
-model Reservation {
-  id              Int                     @id @default(autoincrement())
-  idReservation   String                  @unique @db.VarChar(25)
-  dateReservation DateTime                @db.Timestamp
-  statut          String                  @db.VarChar(20)
-  nombrePlaces    Int
-  modePaiement    String                  @db.VarChar(20)
-  codeQR          String                  @db.VarChar(50)
-  numeroPlace     Int
-  trajet          Trajet                  @relation("TrajetPrincipal", fields: [trajetId], references: [id], onDelete: Cascade)
-  trajetId        Int
-  trajets         Trajet[]                @relation("TrajetsSupplementaires")
-  recu            Recu?                   @relation("Genere")
-  paiement        Paiement?               @relation("EstAssocieA")
-  client          Client                  @relation("Effectue", fields: [clientId], references: [id])
-  clientId        Int
-  responsable     ResponsableCooperative? @relation("Creer", fields: [responsableId], references: [id])
-  responsableId   Int?
+model admin {
+  id             Int      @id
+  matricule_admin String  @db.VarChar(25)
+  deleted_at     DateTime?
+  
+  utilisateur    utilisateur @relation(fields: [id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_880e0d76bf396750")
+  admin_cooperative admin_cooperative[]
 }
 
-model Station {
-  id            Int         @id @default(autoincrement())
-  idStation     String      @unique @db.VarChar(25)
-  nom           String      @db.VarChar(100)
-  localisation  String      @db.VarChar(100)
-  type          String      @db.VarChar(20)
-  cooperative   Cooperative @relation("PossedeCooperative", fields: [cooperativeId], references: [id], onDelete: Cascade)
-  cooperativeId Int
-  voitures      Voiture[]   @relation("Affecte")
-  trajets       Trajet[]    @relation("Relie")
+model admin_cooperative {
+  admin_id       Int
+  cooperative_id Int
+  admin          admin       @relation(fields: [admin_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_ec1d9572642b8210")
+  cooperative    cooperative @relation(fields: [cooperative_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_ec1d95728d0c5d40")
+
+  @@id([admin_id, cooperative_id])
+  @@index([admin_id], map: "idx_ec1d9572642b8210")
+  @@index([cooperative_id], map: "idx_ec1d95728d0c5d40")
 }
 
-model Trajet {
-  id                    Int           @id @default(autoincrement())
-  codeTrajet            String        @unique @db.VarChar(25)
-  stationDepart         String        @db.VarChar(50)
-  stationArrivee        String        @db.VarChar(50)
-  distance              Float         @db.DoublePrecision
-  statut                String        @db.VarChar(20)
-  reservationsPrincipal Reservation[] @relation("TrajetPrincipal")
-  reservations          Reservation[] @relation("TrajetsSupplementaires")
-  stations              Station[]     @relation("Relie")
-  voyages               Voyage[]      @relation("TrajetVoyage")
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model avis {
+  id             Int      @id @default(autoincrement())
+  code_voyage_id Int?
+  code_client_id Int
+  ref_avis       String   @db.VarChar(25)
+  note           Float
+  commentaire    String?
+  date_avis      DateTime @db.Timestamp(0)
+  deleted_at     DateTime?
+  
+  client         client   @relation(fields: [code_client_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_8f91abf0b5ae1119")
+  voyage         voyage?  @relation(fields: [code_voyage_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_8f91abf0c48c9d97")
+
+  @@index([code_client_id], map: "idx_8f91abf0b5ae1119")
+  @@index([code_voyage_id], map: "idx_8f91abf0c48c9d97")
 }
 
-model Voiture {
-  id               Int         @id @default(autoincrement())
-  idVoiture        String      @unique @db.VarChar(25)
-  immatriculation  String      @db.VarChar(20)
-  modele           String      @db.VarChar(25)
-  capacite         Int
-  disponibilite    Boolean
-  etatTechnique    String      @db.VarChar(20)
-  nbRanger         Int
-  nbPlaceParRanger Int
-  stations         Station[]   @relation("Affecte")
-  voyage           Voyage?     @relation("Utiliser", fields: [voyageId], references: [id])
-  voyageId         Int?        @unique
-  cooperative      Cooperative @relation("PossedeVoiture", fields: [cooperativeId], references: [id])
-  cooperativeId    Int
-  documents        Document[]  @relation("AvoirVoiture")
-  chauffeurs       Chauffeur[] @relation("Posseder")
+model chauffeur {
+  id                     Int                 @id @default(autoincrement())
+  code_chauffeur         String              @db.VarChar(25)
+  nom                    String              @db.VarChar(50)
+  permis                 String              @db.VarChar(70)
+  date_expiration_permis DateTime?           @db.Date
+  disponibilite          String              @db.VarChar(255)
+  affectation_actuelle   String?             @db.VarChar(100)
+  telephone              Int
+  cin                    String              @unique(map: "uniq_5ca777b8abe530da") @db.VarChar(12)
+  adress                 String?             @db.VarChar(70)
+  etat_visite_med        Boolean?
+  voiture_chauffeur      voiture_chauffeur[]
+  voyage                 voyage[]
 }
 
-model Voyage {
-  id              Int         @id @default(autoincrement())
-  idVoyage        String      @unique @db.VarChar(25)
-  dateDepart      DateTime    @db.Timestamp
-  heureDepart     DateTime    @db.Timestamp
-  prix            Float       @db.DoublePrecision
-  statut          String      @db.VarChar(25)
-  tauxRemplissage Float       @db.DoublePrecision
-  trajets         Trajet[]    @relation("TrajetVoyage")
-  voiture         Voiture?    @relation("Utiliser")
-  chauffeurs      Chauffeur[] @relation("Conduit")
-  passagers       Passager[]  @relation("Comprend")
-  avis            Avis[]      @relation("Concerner")
-  cooperative     Cooperative @relation("Planifie", fields: [cooperativeId], references: [id])
-  cooperativeId   Int
+model client {
+  id                   Int      @id
+  ref_responsable_id   Int?
+  ref_client           String   @db.VarChar(25)
+  adresse              String?  @db.VarChar(100)
+  moyenne_satisfaction Float?
+  deleted_at           DateTime?
+  
+  avis                 avis[]
+  responsable_cooperative responsable_cooperative? @relation(fields: [ref_responsable_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_c74404551e53ac7d")
+  utilisateur          utilisateur @relation(fields: [id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_c7440455bf396750")
+  passager             passager[]
+  reservation          reservation[]
+
+  @@index([ref_responsable_id], map: "idx_c74404551e53ac7d")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model cooperative {
+  id                      Int                       @id @default(autoincrement())
+  code_cooperative        String                    @db.VarChar(25)
+  nom                     String                    @db.VarChar(50)
+  adresse                 String?                   @db.VarChar(100)
+  contact                 String?                   @db.VarChar(100)
+  statut                  String                    @db.VarChar(255)
+  date_inscription        DateTime                  @db.Timestamp(0)
+  logo                    String?                   @db.VarChar(100)
+  admin_cooperative       admin_cooperative[]
+  responsable_cooperative responsable_cooperative[]
+  station                 station[]
+  voiture                 voiture[]
+  voyage                  voyage[]
+}
+
+model doctrine_migration_versions {
+  version        String    @id @db.VarChar(191)
+  executed_at    DateTime? @db.Timestamp(0)
+  execution_time Int?
+}
+
+model document {
+  id              Int      @id @default(autoincrement())
+  code_voiture_id Int?
+  code_document   String   @db.VarChar(25)
+  type_document   String   @db.VarChar(255)
+  date_expiration DateTime @db.Date
+  fichier         String?  @db.VarChar(100)
+  etat            String   @db.VarChar(255)
+  voiture         voiture? @relation(fields: [code_voiture_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_d8698a76292f555c")
+
+  @@index([code_voiture_id], map: "idx_d8698a76292f555c")
+}
+
+model notification {
+  id                 Int          @id @default(autoincrement())
+  ref_utilisateur_id Int?
+  ref_notification   String       @db.VarChar(70)
+  type               String       @db.VarChar(255)
+  contenu            String
+  date_envoi         DateTime     @db.Timestamp(0)
+  statut             String       @db.VarChar(255)
+  canal              String       @db.VarChar(255)
+  utilisateur        utilisateur? @relation(fields: [ref_utilisateur_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_bf5476cab61ed040")
+
+  @@index([ref_utilisateur_id], map: "idx_bf5476cab61ed040")
+}
+
+model paiement {
+  id                Int     @id @default(autoincrement())
+  code_reservation_id Int
+  code_paiement     String  @db.VarChar(25)
+  montant           Float
+  mode_paiement     String  @db.VarChar(255)
+  date_paiement     DateTime @db.Timestamp(0)
+  status            String  @db.VarChar(255)
+  paiement_restant  Float?  // CORRIGÉ : orthographe
+  deleted_at        DateTime?
+  
+  reservation       reservation @relation(fields: [code_reservation_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_b1dc7a1ef30b501d")
+
+  @@index([code_reservation_id], map: "idx_b1dc7a1ef30b501d")
+}
+
+model passager {
+  id             Int       @id @default(autoincrement())
+  code_voyage_id Int
+  code_client_id Int?
+  code_passager  String    @db.VarChar(25)
+  nom            String    @db.VarChar(40)
+  prenoms        String    @db.VarChar(60)
+  date_naissance DateTime? @db.Date
+  numero_cin     Int?
+  telephone      Int
+  email          String?   @db.VarChar(60)
+  client         client?   @relation(fields: [code_client_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_bff42ee9b5ae1119")
+  voyage         voyage    @relation(fields: [code_voyage_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_bff42ee9c48c9d97")
+
+  @@index([code_client_id], map: "idx_bff42ee9b5ae1119")
+  @@index([code_voyage_id], map: "idx_bff42ee9c48c9d97")
+}
+
+model recu {
+  id                  Int         @id @default(autoincrement())
+  code_reservation_id Int
+  code_recu           String      @db.VarChar(25)
+  date_emission       DateTime    @db.Timestamp(0)
+  qr_code             String      @db.VarChar(50)
+  format              String?     @db.VarChar(25)
+  reservation         reservation @relation(fields: [code_reservation_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_c0d10317f30b501d")
+
+  @@index([code_reservation_id], map: "idx_c0d10317f30b501d")
+}
+
+model reservation {
+  id                 Int      @id @default(autoincrement())
+  code_trajet_id     Int
+  code_voyage_id     Int
+  code_client_id     Int
+  code_responsable_id Int?
+  code_reservation   String   @db.VarChar(25)
+  date_reservation   DateTime @db.Timestamp(0)
+  statut             String   @db.VarChar(255)
+  nombre_places      Int
+
+  // SUPPRIMÉ : numero_place Json
+  // REMPLACÉ PAR :
+  places             reservation_place[]
+
+  paiement           paiement[]
+  recu               recu[]
+  responsable_cooperative responsable_cooperative? @relation(fields: [code_responsable_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_42c8495518fc5a88")
+  trajet             trajet     @relation(fields: [code_trajet_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_42c84955a157d01b")
+  client             client     @relation(fields: [code_client_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_42c84955b5ae1119")
+  voyage             voyage     @relation(fields: [code_voyage_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_42c84955c48c9d97")
+
+  @@index([code_responsable_id], map: "idx_42c8495518fc5a88")
+  @@index([code_trajet_id], map: "idx_42c84955a157d01b")
+  @@index([code_client_id], map: "idx_42c84955b5ae1119")
+  @@index([code_voyage_id], map: "idx_42c84955c48c9d97")
+}
+
+model responsable_cooperative {
+  id                  Int           @id
+  code_cooperative_id Int
+  ref_responsable     String        @db.VarChar(25)
+  nom_cooperative     String        @db.VarChar(70)
+  adresse_cooperative String?       @db.VarChar(100)
+  statut_cooperative  String        @db.VarChar(30)
+  client              client[]
+  reservation         reservation[]
+  utilisateur         utilisateur   @relation(fields: [id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_71f3f588bf396750")
+  cooperative         cooperative   @relation(fields: [code_cooperative_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_71f3f588c6359aba")
+
+  @@index([code_cooperative_id], map: "idx_71f3f588c6359aba")
+}
+
+model station {
+  id                  Int              @id @default(autoincrement())
+  code_cooperative_id Int
+  code_station        String           @db.VarChar(25)
+  nom                 String           @db.VarChar(100)
+  localisation        String           @db.VarChar(100)
+  capacite            Int?
+  responsable         String           @db.VarChar(70)
+  statut              String           @db.VarChar(255)
+  coordonnee          Int
+  cooperative         cooperative      @relation(fields: [code_cooperative_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_9f39f8b1c6359aba")
+  station_trajet      station_trajet[]
+  voiture             voiture[]
+
+  @@index([code_cooperative_id], map: "idx_9f39f8b1c6359aba")
+}
+
+model station_trajet {
+  station_id Int
+  trajet_id  Int
+  station    station @relation(fields: [station_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_e4b9ba6a21bdb235")
+  trajet     trajet  @relation(fields: [trajet_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_e4b9ba6ad12a823")
+
+  @@id([station_id, trajet_id])
+  @@index([station_id], map: "idx_e4b9ba6a21bdb235")
+  @@index([trajet_id], map: "idx_e4b9ba6ad12a823")
+}
+
+model trajet {
+  id              Int              @id @default(autoincrement())
+  code_trajet     String           @db.VarChar(25)
+  station_depart  String           @db.VarChar(50)
+  station_arrivee String           @db.VarChar(50)
+  distance        Float
+  status          String           @db.VarChar(255)
+  reservation     reservation[]
+  station_trajet  station_trajet[]
+  voyage          voyage[]
+}
+
+// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model utilisateur {
+  id                 Int      @id @default(autoincrement())
+  ref_utilisateur    String   @db.VarChar(25)
+  nom                String   @db.VarChar(100)
+  prenoms            String?  @db.VarChar(70)
+  email              String?  @unique(map: "uniq_1d1c63b3e7927c74") @db.VarChar(100)
+  telephone          String   // CHANGÉ : Int → String
+  statut_compte      String   @db.VarChar(255)
+  role               String   @db.VarChar(255)
+  date_creation_compte DateTime @db.Timestamp(0)
+  mot_de_passe       String   @db.VarChar(255)
+  photo_identite     String?  // CORRIGÉ : orthographe
+  type_utilisateur   String   @db.VarChar(255)
+  dernier_acces      DateTime? @db.Timestamp(0)
+  
+  // NOUVEAU : Soft delete
+  deleted_at         DateTime?
+
+  admin              admin?
+  client             client?
+  notification       notification[]
+  responsable_cooperative responsable_cooperative?
+
+  @@index([email])
+}
+
+model voiture {
+  id                   Int      @id @default(autoincrement())
+  code_station_id      Int?
+  code_cooperative_id  Int
+  immatriculation      String   @db.VarChar(20)
+  modele               String   @db.VarChar(25)
+  capacite             Int      // Total places (ex: 23)
+  disponibilite        String   @db.VarChar(25)
+  etat_technique       String   @db.VarChar(20)
+  nb_ranger            Int
+  nb_place_par_ranger  Int
+
+  // NOUVEAU : Places générées automatiquement
+  places               place_voiture[]
+
+  station              station?     @relation(fields: [code_station_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_e9e2810f9134fd3")
+  cooperative          cooperative  @relation(fields: [code_cooperative_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_e9e2810fc6359aba")
+  voiture_chauffeur    voiture_chauffeur[]
+  voyage               voyage[]
+  document             document[]
+
+  @@index([code_station_id], map: "idx_e9e2810f9134fd3")
+  @@index([code_cooperative_id], map: "idx_e9e2810fc6359aba")
+}
+
+model voiture_chauffeur {
+  voiture_id   Int
+  chauffeur_id Int
+  voiture      voiture   @relation(fields: [voiture_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_c6d358fc181a8ba")
+  chauffeur    chauffeur @relation(fields: [chauffeur_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_c6d358fc85c0b3be")
+
+  @@id([voiture_id, chauffeur_id])
+  @@index([voiture_id], map: "idx_c6d358fc181a8ba")
+  @@index([chauffeur_id], map: "idx_c6d358fc85c0b3be")
+}
+
+model voyage {
+  id                  Int           @id @default(autoincrement())
+  code_trajet_id      Int
+  code_cooperative_id Int
+  code_voiture_id     Int
+  code_chauffeur_id   Int
+  code_voyage         String        @db.VarChar(25)
+  date_depart         DateTime      @db.Timestamp(0)
+  heure_depart        DateTime?     @db.Timestamp(0)
+  prix                Float
+  status              String        @db.VarChar(255)
+  avis                avis[]
+  passager            passager[]
+  reservation         reservation[]
+  voiture             voiture       @relation(fields: [code_voiture_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_3f9d8955292f555c")
+  chauffeur           chauffeur     @relation(fields: [code_chauffeur_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_3f9d89554ee841db")
+  trajet              trajet        @relation(fields: [code_trajet_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_3f9d8955a157d01b")
+  cooperative         cooperative   @relation(fields: [code_cooperative_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_3f9d8955c6359aba")
+
+  @@index([code_voiture_id], map: "idx_3f9d8955292f555c")
+  @@index([code_chauffeur_id], map: "idx_3f9d89554ee841db")
+  @@index([code_trajet_id], map: "idx_3f9d8955a157d01b")
+  @@index([code_cooperative_id], map: "idx_3f9d8955c6359aba")
 }

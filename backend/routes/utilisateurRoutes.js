@@ -3,24 +3,40 @@ import express from "express";
 import {
   createUtilisateur,
   getUtilisateur,
-  getAllUtilisateurs,
   updateUtilisateur,
   deleteUtilisateur
 } from "../controllers/utilisateurController.js";
 
 const router = express.Router();
 
-// CREATE
+/**
+ * @route   POST /api/utilisateurs/register
+ * @desc    Inscription d'un client
+ * @access  Public
+ * @body    { nom, prenoms?, email, mot_de_passe, telephone }
+ */
 router.post("/register", createUtilisateur);
 
-// READ
-router.get("/", getAllUtilisateurs);        // GET /api/utilisateurs
-router.get("/:id", getUtilisateur);         // GET /api/utilisateurs/1
+/**
+ * @route   GET /api/utilisateurs/:id
+ * @desc    Récupérer un utilisateur par ID
+ * @access  Public
+ */
+router.get("/:id", getUtilisateur);
 
-// UPDATE
-router.put("/:id", updateUtilisateur);      // PUT /api/utilisateurs/1
+/**
+ * @route   PUT /api/utilisateurs/:id
+ * @desc    Mettre à jour un utilisateur
+ * @access  Public (à sécuriser plus tard)
+ * @body    { nom, prenoms, telephone, photo_identite, ... }
+ */
+router.put("/:id", updateUtilisateur);
 
-// DELETE
-router.delete("/:id", deleteUtilisateur);   // DELETE /api/utilisateurs/1
+/**
+ * @route   DELETE /api/utilisateurs/:id
+ * @desc    Supprimer un utilisateur (soft delete)
+ * @access  Public (à sécuriser)
+ */
+router.delete("/:id", deleteUtilisateur);
 
 export default router;

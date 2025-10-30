@@ -8,6 +8,7 @@ import paiementRoutes from "./routes/paiementRoutes.js";
 import reservationRoutes from "./routes/reservationRoutes.js";
 import avisRoutes from "./routes/avisRoutes.js";
 import voyageRoutes from "./routes/voyageRoutes.js";
+import cooperativeRoutes from "./routes/cooperativeRoutes.js";
 // Création de l'application Express
 const app = express();
 
@@ -21,6 +22,7 @@ app.use("/api/voyages", voyageRoutes);
 app.use("/api/reservations", reservationRoutes);
 app.use("/api/paiements", paiementRoutes);
 app.use("/api/avis", avisRoutes);
+app.use("/api/cooperatives", cooperativeRoutes);
 
 // Démarrage de l'application
 const PORT = 3000;

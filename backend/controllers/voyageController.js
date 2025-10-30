@@ -84,8 +84,57 @@ const getPlacesByVoyage = async (req, res, next) => {
   }
 };
 
+// === 4. RECHERCHE DE VOYAGES (NOUVEAU) ===
+const searchVoyages = async (req, res, next) => {
+  try {
+    const { query } = req.query;
+
+    if (!query) {
+      return res.status(400).json({ error: "Paramètre 'query' requis" });
+    }
+
+    const searchTerm = query.toLowerCase();
+
+    const voyages = await prisma.voyage.findMany({
+      where: {
+        OR: [
+          {
+            trajet: {
+              station_depart: {
+                contains: searchTerm,
+                mode: 'insensitive'
+              }
+            }
+          },
+          {
+            trajet: {
+              station_arrivee: {
+                contains: searchTerm,
+                mode: 'insensitive'
+              }
+            }
+          }
+        ]
+      },
+      include: {
+        trajet: true,
+        voiture: true,
+        chauffeur: true,
+        cooperative: true
+      },
+      orderBy: { date_depart: "asc" }
+    });
+
+    res.json(voyages);
+  } catch (error) {
+    console.error("Erreur searchVoyages:", error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
 export {
   getVoyages,
   getVoyagesByCooperative,
-  getPlacesByVoyage
+  getPlacesByVoyage,
+  searchVoyages  // NOUVEAU
 };

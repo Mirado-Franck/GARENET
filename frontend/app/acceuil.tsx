@@ -1,19 +1,86 @@
 // app/acceuil.tsx
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
-  Image,
   TouchableOpacity,
-  Alert,
+  ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import Button from '../components/ui/Button';
+import SearchBar from '../components/ui/SearchBar';
+import { voyageService, Voyage } from '../services/voyageService';
 
 export default function Acceuil() {
   const router = useRouter();
+  
+  // États
+  const [voyages, setVoyages] = useState<Voyage[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [searching, setSearching] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [villeActuelle] = useState('Fianarantsoa');
+  const [isSearchMode, setIsSearchMode] = useState(false);
+
+  useEffect(() => {
+    loadVoyages();
+  }, []);
+
+  const loadVoyages = async () => {
+    try {
+      setError(null);
+      setIsSearchMode(false);
+      const data = await voyageService.getAllVoyages();
+      
+      // Filtrer les voyages recommandés depuis la ville actuelle
+      const voyagesRecommandes = data.filter(v => 
+        v.trajet.station_depart.toLowerCase() === villeActuelle.toLowerCase()
+      );
+      
+      setVoyages(voyagesRecommandes);
+    } catch (err) {
+      setError('Impossible de charger les voyages');
+      console.error(err);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  const handleSearch = async (query: string) => {
+    if (!query || query.trim() === '') {
+      loadVoyages();
+      return;
+    }
+
+    try {
+      setSearching(true);
+      setError(null);
+      setIsSearchMode(true);
+      
+      const results = await voyageService.searchVoyages(query);
+      setVoyages(results);
+    } catch (err) {
+      setError('Erreur lors de la recherche');
+      console.error(err);
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  const handleClearSearch = () => {
+    setIsSearchMode(false);
+    loadVoyages();
+  };
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    loadVoyages();
+  };
 
   const handleSeConnecter = () => {
     router.push('/se-connecter');
@@ -23,20 +90,36 @@ export default function Acceuil() {
     router.push('/inscription');
   };
 
-  const handleVillePress = (ville: string) => {
-    Alert.alert('Ville sélectionnée', `Vous avez choisi ${ville}`);
+  const handleVoyagePress = (voyageId: number) => {
+    router.push(`/(client)/voyages/detailVoyage?id=${voyageId}`);
   };
 
-  // Données simulées pour les villes
-  const villes = [
-    { id: 1, nom: 'Fianarantsoa', image: '🏞️' },
-    { id: 2, nom: 'Antananarivo', image: '🏙️' },
-    { id: 3, nom: 'Toamasina', image: '🌊' },
-    { id: 4, nom: 'Mahajanga', image: '🏖️' },
-  ];
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('fr-FR', {
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric',
+    });
+  };
+
+  const formatHeure = (heureString: string | null) => {
+    if (!heureString) return 'N/A';
+    const date = new Date(heureString);
+    return date.toLocaleTimeString('fr-FR', {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
+    <ScrollView 
+      style={styles.container} 
+      contentContainerStyle={styles.contentContainer}
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+      }
+    >
       {/* Section En-tête */}
       <View style={styles.header}>
         <Text style={styles.logo}>🌱 GARENET</Text>
@@ -52,60 +135,86 @@ export default function Acceuil() {
         <View style={styles.localisationCard}>
           <Text style={styles.localisationIcon}>📍</Text>
           <View style={styles.localisationText}>
-            <Text style={styles.villeActuelle}>Fianarantsoa</Text>
+            <Text style={styles.villeActuelle}>{villeActuelle}</Text>
             <Text style={styles.localisationSubtitle}>
               Ville détectée automatiquement
             </Text>
           </View>
         </View>
-        
-        <Text style={styles.villesTitle}>Autres villes disponibles</Text>
-        <ScrollView 
-          horizontal 
-          showsHorizontalScrollIndicator={false}
-          style={styles.villesContainer}
-        >
-          {villes.map((ville) => (
-            <TouchableOpacity 
-              key={ville.id}
-              style={styles.villeCard}
-              onPress={() => handleVillePress(ville.nom)}
-            >
-              <Text style={styles.villeImage}>{ville.image}</Text>
-              <Text style={styles.villeNom}>{ville.nom}</Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
       </View>
 
-      {/* Section Voyages Recommandés */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Voyages recommandés</Text>
-        <View style={styles.voyagesContainer}>
-          {/* Placeholder voyage 1 */}
-          <View style={styles.voyagePlaceholder}>
-            <View style={styles.voyageImagePlaceholder}>
-              <Text style={styles.placeholderText}>🛣️</Text>
-            </View>
-            <View style={styles.voyageInfo}>
-              <Text style={styles.voyageTitre}>Fianarantsoa - Antananarivo</Text>
-              <Text style={styles.voyageDetails}>Départ: 08:00 • Prix: 25,000 Ar</Text>
-              <Text style={styles.voyageCooperative}>SONATRA</Text>
-            </View>
-          </View>
+      {/* Barre de recherche */}
+      <View style={styles.searchSection}>
+        <SearchBar
+          placeholder="Rechercher par ville (départ ou arrivée)..."
+          onSearch={handleSearch}
+          onClear={handleClearSearch}
+          style={styles.searchBar}
+        />
+      </View>
 
-          {/* Placeholder voyage 2 */}
-          <View style={styles.voyagePlaceholder}>
-            <View style={styles.voyageImagePlaceholder}>
-              <Text style={styles.placeholderText}>🚌</Text>
-            </View>
-            <View style={styles.voyageInfo}>
-              <Text style={styles.voyageTitre}>Fianarantsoa - Toamasina</Text>
-              <Text style={styles.voyageDetails}>Départ: 14:30 • Prix: 35,000 Ar</Text>
-              <Text style={styles.voyageCooperative}>KOFIMADA</Text>
-            </View>
+      {/* Section Voyages */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>
+          {isSearchMode 
+            ? 'Résultats de recherche' 
+            : `Voyages recommandés depuis ${villeActuelle}`
+          }
+        </Text>
+        
+        {(loading || searching) ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#4CAF50" />
+            <Text style={styles.loadingText}>
+              {searching ? 'Recherche en cours...' : 'Chargement des voyages...'}
+            </Text>
           </View>
-        </View>
+        ) : error ? (
+          <View style={styles.errorContainer}>
+            <Text style={styles.errorText}>{error}</Text>
+            <TouchableOpacity style={styles.retryButton} onPress={loadVoyages}>
+              <Text style={styles.retryText}>Réessayer</Text>
+            </TouchableOpacity>
+          </View>
+        ) : voyages.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>
+              {isSearchMode 
+                ? 'Aucun voyage trouvé pour cette recherche'
+                : `Aucun voyage disponible depuis ${villeActuelle}`
+              }
+            </Text>
+          </View>
+        ) : (
+          <View style={styles.voyagesContainer}>
+            {voyages.map((voyage) => (
+              <TouchableOpacity 
+                key={voyage.id}
+                style={styles.voyageCard}
+                onPress={() => handleVoyagePress(voyage.id)}
+              >
+                <View style={styles.voyageImagePlaceholder}>
+                  <Text style={styles.placeholderText}>🚌</Text>
+                </View>
+                <View style={styles.voyageInfo}>
+                  <Text style={styles.voyageTitre}>
+                    {voyage.trajet.station_depart} → {voyage.trajet.station_arrivee}
+                  </Text>
+                  <Text style={styles.voyageDetails}>
+                    {formatDate(voyage.date_depart)} • {formatHeure(voyage.heure_depart)}
+                  </Text>
+                  <Text style={styles.voyagePrix}>{voyage.prix.toLocaleString()} Ar</Text>
+                  <Text style={styles.voyageCooperative}>
+                    {voyage.cooperative.nom}
+                  </Text>
+                  <Text style={styles.voyageCapacite}>
+                    {voyage.voiture.capacite} places • {voyage.voiture.modele}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
       </View>
 
       {/* Section Boutons d'action */}
@@ -187,7 +296,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 6,
     elevation: 3,
-    marginBottom: 20,
   },
   localisationIcon: {
     fontSize: 24,
@@ -206,42 +314,56 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
   },
-  villesTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 12,
-  },
-  villesContainer: {
+  searchSection: {
+    paddingHorizontal: 20,
     marginBottom: 10,
   },
-  villeCard: {
+  searchBar: {
+    marginVertical: 0,
+  },
+  loadingContainer: {
     alignItems: 'center',
-    backgroundColor: 'white',
-    padding: 15,
-    borderRadius: 12,
-    marginRight: 12,
-    minWidth: 80,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 2,
+    paddingVertical: 40,
   },
-  villeImage: {
-    fontSize: 24,
-    marginBottom: 8,
+  loadingText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: '#666',
   },
-  villeNom: {
-    fontSize: 12,
+  errorContainer: {
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  errorText: {
+    fontSize: 16,
+    color: '#e74c3c',
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  retryButton: {
+    backgroundColor: '#4CAF50',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  retryText: {
+    color: 'white',
+    fontSize: 16,
     fontWeight: '600',
-    color: '#333',
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  emptyText: {
+    fontSize: 16,
+    color: '#999',
     textAlign: 'center',
   },
   voyagesContainer: {
     gap: 15,
   },
-  voyagePlaceholder: {
+  voyageCard: {
     flexDirection: 'row',
     backgroundColor: 'white',
     borderRadius: 12,
@@ -279,10 +401,21 @@ const styles = StyleSheet.create({
     color: '#666',
     marginBottom: 4,
   },
+  voyagePrix: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#2E7D32',
+    marginBottom: 4,
+  },
   voyageCooperative: {
     fontSize: 12,
     color: '#4CAF50',
     fontWeight: '600',
+    marginBottom: 2,
+  },
+  voyageCapacite: {
+    fontSize: 11,
+    color: '#999',
   },
   actionsSection: {
     padding: 20,

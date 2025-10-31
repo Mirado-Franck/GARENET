@@ -1,5 +1,7 @@
 // app/acceuil.tsx
 import React, { useEffect, useState } from 'react';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
 import {
   View,
   Text,
@@ -8,6 +10,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
+
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import Button from '../components/ui/Button';
@@ -113,14 +116,8 @@ export default function Acceuil() {
   };
 
   return (
-    <ScrollView 
-      style={styles.container} 
-      contentContainerStyle={styles.contentContainer}
-      refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-      }
-    >
-      {/* Section En-tête */}
+    <SafeAreaView style={styles.container}>
+      {/* Section En-tête - FIXE */}
       <View style={styles.header}>
         <Text style={styles.logo}>🌱 GARENET</Text>
         <Text style={styles.title}>Bienvenue sur Garenet</Text>
@@ -129,7 +126,7 @@ export default function Acceuil() {
         </Text>
       </View>
 
-      {/* Section Localisation */}
+      {/* Section Localisation - FIXE */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Votre localisation</Text>
         <View style={styles.localisationCard}>
@@ -143,7 +140,7 @@ export default function Acceuil() {
         </View>
       </View>
 
-      {/* Barre de recherche */}
+      {/* Barre de recherche - FIXE */}
       <View style={styles.searchSection}>
         <SearchBar
           placeholder="Rechercher par ville (départ ou arrivée)..."
@@ -153,8 +150,8 @@ export default function Acceuil() {
         />
       </View>
 
-      {/* Section Voyages */}
-      <View style={styles.section}>
+      {/* Section Voyages - SCROLLABLE */}
+      <View style={styles.voyagesSection}>
         <Text style={styles.sectionTitle}>
           {isSearchMode 
             ? 'Résultats de recherche' 
@@ -162,62 +159,71 @@ export default function Acceuil() {
           }
         </Text>
         
-        {(loading || searching) ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#4CAF50" />
-            <Text style={styles.loadingText}>
-              {searching ? 'Recherche en cours...' : 'Chargement des voyages...'}
-            </Text>
-          </View>
-        ) : error ? (
-          <View style={styles.errorContainer}>
-            <Text style={styles.errorText}>{error}</Text>
-            <TouchableOpacity style={styles.retryButton} onPress={loadVoyages}>
-              <Text style={styles.retryText}>Réessayer</Text>
-            </TouchableOpacity>
-          </View>
-        ) : voyages.length === 0 ? (
-          <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>
-              {isSearchMode 
-                ? 'Aucun voyage trouvé pour cette recherche'
-                : `Aucun voyage disponible depuis ${villeActuelle}`
-              }
-            </Text>
-          </View>
-        ) : (
-          <View style={styles.voyagesContainer}>
-            {voyages.map((voyage) => (
-              <TouchableOpacity 
-                key={voyage.id}
-                style={styles.voyageCard}
-                onPress={() => handleVoyagePress(voyage.id)}
-              >
-                <View style={styles.voyageImagePlaceholder}>
-                  <Text style={styles.placeholderText}>🚌</Text>
-                </View>
-                <View style={styles.voyageInfo}>
-                  <Text style={styles.voyageTitre}>
-                    {voyage.trajet.station_depart} → {voyage.trajet.station_arrivee}
-                  </Text>
-                  <Text style={styles.voyageDetails}>
-                    {formatDate(voyage.date_depart)} • {formatHeure(voyage.heure_depart)}
-                  </Text>
-                  <Text style={styles.voyagePrix}>{voyage.prix.toLocaleString()} Ar</Text>
-                  <Text style={styles.voyageCooperative}>
-                    {voyage.cooperative.nom}
-                  </Text>
-                  <Text style={styles.voyageCapacite}>
-                    {voyage.voiture.capacite} places • {voyage.voiture.modele}
-                  </Text>
-                </View>
+        <ScrollView 
+          style={styles.scrollContainer}
+          contentContainerStyle={styles.scrollContent}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }
+          showsVerticalScrollIndicator={true}
+        >
+          {(loading || searching) ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color="#4CAF50" />
+              <Text style={styles.loadingText}>
+                {searching ? 'Recherche en cours...' : 'Chargement des voyages...'}
+              </Text>
+            </View>
+          ) : error ? (
+            <View style={styles.errorContainer}>
+              <Text style={styles.errorText}>{error}</Text>
+              <TouchableOpacity style={styles.retryButton} onPress={loadVoyages}>
+                <Text style={styles.retryText}>Réessayer</Text>
               </TouchableOpacity>
-            ))}
-          </View>
-        )}
+            </View>
+          ) : voyages.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyText}>
+                {isSearchMode 
+                  ? 'Aucun voyage trouvé pour cette recherche'
+                  : `Aucun voyage disponible depuis ${villeActuelle}`
+                }
+              </Text>
+            </View>
+          ) : (
+            <View style={styles.voyagesContainer}>
+              {voyages.map((voyage) => (
+                <TouchableOpacity 
+                  key={voyage.id}
+                  style={styles.voyageCard}
+                  onPress={() => handleVoyagePress(voyage.id)}
+                >
+                  <View style={styles.voyageImagePlaceholder}>
+                    <Text style={styles.placeholderText}>🚌</Text>
+                  </View>
+                  <View style={styles.voyageInfo}>
+                    <Text style={styles.voyageTitre}>
+                      {voyage.trajet.station_depart} → {voyage.trajet.station_arrivee}
+                    </Text>
+                    <Text style={styles.voyageDetails}>
+                      {formatDate(voyage.date_depart)} • {formatHeure(voyage.heure_depart)}
+                    </Text>
+                    <Text style={styles.voyagePrix}>{voyage.prix.toLocaleString()} Ar</Text>
+                    <Text style={styles.voyageCooperative}>
+                      {voyage.cooperative.nom}
+                    </Text>
+                    <Text style={styles.voyageCapacite}>
+                      {voyage.voiture.capacite} places • {voyage.voiture.modele}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
+        </ScrollView>
       </View>
 
-      {/* Section Boutons d'action */}
+      {/* Section Boutons d'action - FIXE */}
       <View style={styles.actionsSection}>
         <Button
           title="Se connecter"
@@ -233,11 +239,11 @@ export default function Acceuil() {
         />
       </View>
 
-      {/* Footer */}
+      {/* Footer - FIXE */}
       <View style={styles.footer}>
         <Text style={styles.footerText}>Explorez le monde avec nous</Text>
       </View>
-    </ScrollView>
+    </SafeAreaView>
   );
 }
 
@@ -246,14 +252,11 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f8fff8',
   },
-  contentContainer: {
-    paddingBottom: 30,
-  },
   header: {
     alignItems: 'center',
-    paddingVertical: 40,
+    paddingVertical: 30,
     paddingHorizontal: 20,
-    backgroundColor: '#4CAF50',
+    backgroundColor: '#2E7D32',
     borderBottomLeftRadius: 30,
     borderBottomRightRadius: 30,
   },
@@ -264,23 +267,23 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   title: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: 'bold',
     color: 'white',
     textAlign: 'center',
     marginBottom: 8,
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: 14,
     color: 'rgba(255, 255, 255, 0.9)',
     textAlign: 'center',
   },
   section: {
     padding: 20,
-    marginTop: 10,
+    marginTop: 0,
   },
   sectionTitle: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: 'bold',
     color: '#2E7D32',
     marginBottom: 15,
@@ -305,21 +308,35 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   villeActuelle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: 'bold',
     color: '#2E7D32',
     marginBottom: 4,
   },
   localisationSubtitle: {
-    fontSize: 14,
+    fontSize: 12,
     color: '#666',
   },
   searchSection: {
     paddingHorizontal: 20,
-    marginBottom: 10,
+    marginBottom: 0,
+    paddingTop: 0,
   },
   searchBar: {
     marginVertical: 0,
+  },
+  // NOUVEAUX STYLES POUR LA SECTION SCROLLABLE
+  voyagesSection: {
+    flex: 1,
+    padding: 20,
+    marginTop: 0,
+  },
+  scrollContainer: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    paddingBottom: 10,
   },
   loadingContainer: {
     alignItems: 'center',
@@ -327,7 +344,7 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     marginTop: 12,
-    fontSize: 16,
+    fontSize: 14,
     color: '#666',
   },
   errorContainer: {
@@ -335,20 +352,20 @@ const styles = StyleSheet.create({
     paddingVertical: 40,
   },
   errorText: {
-    fontSize: 16,
+    fontSize: 14,
     color: '#e74c3c',
     textAlign: 'center',
     marginBottom: 16,
   },
   retryButton: {
     backgroundColor: '#4CAF50',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
     borderRadius: 8,
   },
   retryText: {
     color: 'white',
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
   },
   emptyContainer: {
@@ -356,85 +373,87 @@ const styles = StyleSheet.create({
     paddingVertical: 40,
   },
   emptyText: {
-    fontSize: 16,
+    fontSize: 14,
     color: '#999',
     textAlign: 'center',
   },
   voyagesContainer: {
-    gap: 15,
+    gap: 12,
   },
   voyageCard: {
     flexDirection: 'row',
     backgroundColor: 'white',
     borderRadius: 12,
-    padding: 15,
+    padding: 12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 6,
     elevation: 3,
+    marginBottom: 8,
   },
   voyageImagePlaceholder: {
-    width: 60,
-    height: 60,
+    width: 50,
+    height: 50,
     backgroundColor: '#E8F5E8',
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 15,
+    marginRight: 12,
   },
   placeholderText: {
-    fontSize: 24,
+    fontSize: 20,
   },
   voyageInfo: {
     flex: 1,
     justifyContent: 'center',
   },
   voyageTitre: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: 'bold',
     color: '#333',
     marginBottom: 4,
   },
   voyageDetails: {
-    fontSize: 14,
+    fontSize: 12,
     color: '#666',
     marginBottom: 4,
   },
   voyagePrix: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: 'bold',
     color: '#2E7D32',
     marginBottom: 4,
   },
   voyageCooperative: {
-    fontSize: 12,
+    fontSize: 11,
     color: '#4CAF50',
     fontWeight: '600',
     marginBottom: 2,
   },
   voyageCapacite: {
-    fontSize: 11,
+    fontSize: 10,
     color: '#999',
   },
   actionsSection: {
     padding: 20,
-    gap: 12,
-    marginTop: 10,
+    gap: 10,
+    marginTop: 0,
+    paddingTop: 10,
   },
   actionButton: {
-    marginHorizontal: 20,
+    marginHorizontal: 0,
   },
   footer: {
     alignItems: 'center',
-    paddingVertical: 30,
+    paddingVertical: 15,
     paddingHorizontal: 20,
     borderTopWidth: 1,
     borderTopColor: '#E0E0E0',
-    marginTop: 20,
+    marginTop: 0,
   },
   footerText: {
-    fontSize: 14,
+    fontSize: 12,
     color: '#666',
     fontStyle: 'italic',
     textAlign: 'center',

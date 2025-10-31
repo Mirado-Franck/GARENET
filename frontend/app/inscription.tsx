@@ -5,227 +5,457 @@ import {
   Text,
   TextInput,
   StyleSheet,
-  Alert,
   ScrollView,
+  TouchableOpacity,
+  Alert,
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import Button from '../components/ui/Button';  // ← IMPORT CORRIGÉ
+import { Ionicons } from '@expo/vector-icons';
+import Button from '../components/ui/Button';
+import { utilisateurService, InscriptionData } from '../services/utilisateurService';
 
 export default function Inscription() {
-  const [nom, setNom] = useState('');
-  const [prenom, setPrenom] = useState('');
-  const [email, setEmail] = useState('');
-  const [telephone, setTelephone] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [isLoading, setIsLoading] = useState(false);  // ← ÉTAT LOADING AJOUTÉ
   const router = useRouter();
+  
+  // États du formulaire
+  const [formData, setFormData] = useState<InscriptionData>({
+    nom: '',
+    prenoms: '',
+    email: '',
+    mot_de_passe: '',
+    telephone: '',
+  });
+  
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState<Partial<InscriptionData & { confirmPassword: string; api: string }>>({});
+  const [successMessage, setSuccessMessage] = useState(''); // ✅ NOUVEAU : Message de succès
 
-  const handleSignUp = async () => {
-    setIsLoading(true);  // ← DÉMARRER LE LOADING
-    
-    // Validation
-    if (!nom || !prenom || !email || !telephone || !password || !confirmPassword) {
-      Alert.alert('Erreur', 'Veuillez remplir tous les champs obligatoires');
-      setIsLoading(false);
-      return;
+  // Validation du formulaire
+  const validateForm = (): boolean => {
+    const newErrors: any = {};
+
+    if (!formData.nom.trim()) {
+      newErrors.nom = 'Le nom est requis';
     }
 
-    if (!email.includes('@')) {
-      Alert.alert('Erreur', 'Email invalide');
-      setIsLoading(false);
-      return;
+    if (!formData.email.trim()) {
+      newErrors.email = 'L\'email est requis';
+    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+      newErrors.email = 'Email invalide';
     }
 
-    if (password !== confirmPassword) {
-      Alert.alert('Erreur', 'Les mots de passe ne correspondent pas');
-      setIsLoading(false);
-      return;
+    if (!formData.telephone.trim()) {
+      newErrors.telephone = 'Le téléphone est requis';
+    } else if (!/^[0-9]{10}$/.test(formData.telephone.replace(/\s/g, ''))) {
+      newErrors.telephone = 'Numéro invalide (10 chiffres requis)';
     }
 
-    if (password.length < 6) {
-      Alert.alert('Erreur', 'Le mot de passe doit contenir au moins 6 caractères');
-      setIsLoading(false);
-      return;
+    if (!formData.mot_de_passe) {
+      newErrors.mot_de_passe = 'Le mot de passe est requis';
+    } else if (formData.mot_de_passe.length < 6) {
+      newErrors.mot_de_passe = 'Minimum 6 caractères';
     }
 
-    // Simulation d'inscription
-    setTimeout(() => {
-      Alert.alert('Succès', 'Compte créé avec succès !');
-      setIsLoading(false);
-      console.log('Inscription:', { nom, prenom, email, telephone, password });
-      router.back();
-    }, 1500);
+    if (formData.mot_de_passe !== confirmPassword) {
+      newErrors.confirmPassword = 'Les mots de passe ne correspondent pas';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
-  const goToConnexion = () => {
-    router.back();
+  // Gestion de l'inscription
+  const handleInscription = async () => {
+    // ✅ Réinitialiser les messages
+    setErrors({});
+    setSuccessMessage('');
+
+    if (!validateForm()) {
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await utilisateurService.inscription(formData);
+      
+      // ✅ SUCCÈS : Afficher message de succès
+      setSuccessMessage('🎉 Inscription réussie ! Redirection...');
+      
+      // Redirection après 2 secondes
+      setTimeout(() => {
+        router.replace('/se-connecter');
+      }, 2000);
+      
+    } catch (error: any) {
+      console.error('Erreur inscription:', error);
+      
+      // ✅ GESTION SPÉCIFIQUE DES ERREURS
+      if (error.error === "Email déjà utilisé") {
+        setErrors(prev => ({ ...prev, email: 'Cet email est déjà utilisé' }));
+      } else if (error.error === "Champs obligatoires manquants") {
+        setErrors(prev => ({ ...prev, api: 'Veuillez remplir tous les champs obligatoires' }));
+      } else if (error.error) {
+        setErrors(prev => ({ ...prev, api: error.error }));
+      } else {
+        setErrors(prev => ({ ...prev, api: 'Une erreur est survenue lors de l\'inscription' }));
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSeConnecter = () => {
+    router.push('/se-connecter');
+  };
+
+  const updateFormData = (field: keyof InscriptionData, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+    // Effacer l'erreur du champ modifié et les messages
+    if (errors[field]) {
+      setErrors(prev => ({ ...prev, [field]: undefined }));
+    }
+    if (errors.api) {
+      setErrors(prev => ({ ...prev, api: undefined }));
+    }
+    if (successMessage) {
+      setSuccessMessage('');
+    }
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.scrollContainer}>
-      <View style={styles.formContainer}>
-        <Text style={styles.title}>Créer un compte</Text>
+    <KeyboardAvoidingView 
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      style={styles.container}
+    >
+      <ScrollView 
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+      >
+        {/* Header */}
+        <View style={styles.header}>
+          <TouchableOpacity 
+            style={styles.backButton}
+            onPress={() => router.back()}
+          >
+            <Ionicons name="arrow-back" size={24} color="white" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Inscription</Text>
+        </View>
 
-        {/* Nom et Prénom */}
-        <View style={styles.row}>
-          <View style={styles.halfInput}>
+        {/* Formulaire */}
+        <View style={styles.formContainer}>
+          <Text style={styles.title}>Créer un compte</Text>
+          <Text style={styles.subtitle}>
+            Rejoignez Garenet pour réserver vos voyages
+          </Text>
+
+          {/* ✅ Message de succès */}
+          {successMessage ? (
+            <View style={styles.successContainer}>
+              <Ionicons name="checkmark-circle" size={20} color="#2E7D32" />
+              <Text style={styles.successText}>{successMessage}</Text>
+            </View>
+          ) : null}
+
+          {/* ✅ Message d'erreur API */}
+          {errors.api ? (
+            <View style={styles.errorApiContainer}>
+              <Ionicons name="alert-circle" size={20} color="#e74c3c" />
+              <Text style={styles.errorApiText}>{errors.api}</Text>
+            </View>
+          ) : null}
+
+          {/* Nom */}
+          <View style={styles.inputGroup}>
             <Text style={styles.label}>Nom *</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, errors.nom && styles.inputError]}
               placeholder="Votre nom"
-              value={nom}
-              onChangeText={setNom}
+              value={formData.nom}
+              onChangeText={(text) => updateFormData('nom', text)}
+              autoCapitalize="words"
             />
+            {errors.nom && <Text style={styles.errorText}>{errors.nom}</Text>}
           </View>
-          <View style={styles.halfInput}>
-            <Text style={styles.label}>Prénom *</Text>
+
+          {/* Prénoms */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Prénoms</Text>
             <TextInput
               style={styles.input}
-              placeholder="Votre prénom"
-              value={prenom}
-              onChangeText={setPrenom}
+              placeholder="Vos prénoms"
+              value={formData.prenoms}
+              onChangeText={(text) => updateFormData('prenoms', text)}
+              autoCapitalize="words"
             />
           </View>
-        </View>
 
-        {/* Email */}
-        <Text style={styles.label}>Email *</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="votre@email.com"
-          value={email}
-          onChangeText={setEmail}
-          keyboardType="email-address"
-          autoCapitalize="none"
-        />
+          {/* Email */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Email *</Text>
+            <TextInput
+              style={[styles.input, errors.email && styles.inputError]}
+              placeholder="exemple@email.com"
+              value={formData.email}
+              onChangeText={(text) => updateFormData('email', text)}
+              keyboardType="email-address"
+              autoCapitalize="none"
+            />
+            {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
+          </View>
 
-        {/* Téléphone */}
-        <Text style={styles.label}>Téléphone *</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="+261 34 12 345 67"
-          value={telephone}
-          onChangeText={setTelephone}
-          keyboardType="phone-pad"
-        />
+          {/* Téléphone */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Téléphone *</Text>
+            <TextInput
+              style={[styles.input, errors.telephone && styles.inputError]}
+              placeholder="0340000000"
+              value={formData.telephone}
+              onChangeText={(text) => updateFormData('telephone', text)}
+              keyboardType="phone-pad"
+              maxLength={10}
+            />
+            {errors.telephone && <Text style={styles.errorText}>{errors.telephone}</Text>}
+          </View>
 
-        {/* Mot de passe */}
-        <Text style={styles.label}>Mot de passe *</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Au moins 6 caractères"
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-        />
+          {/* Mot de passe */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Mot de passe *</Text>
+            <View style={styles.passwordContainer}>
+              <TextInput
+                style={[
+                  styles.passwordInput,
+                  errors.mot_de_passe && styles.inputError
+                ]}
+                placeholder="Minimum 6 caractères"
+                value={formData.mot_de_passe}
+                onChangeText={(text) => updateFormData('mot_de_passe', text)}
+                secureTextEntry={!showPassword}
+                autoCapitalize="none"
+              />
+              <TouchableOpacity 
+                style={styles.eyeIcon}
+                onPress={() => setShowPassword(!showPassword)}
+              >
+                <Ionicons 
+                  name={showPassword ? "eye-off" : "eye"} 
+                  size={22} 
+                  color="#666" 
+                />
+              </TouchableOpacity>
+            </View>
+            {errors.mot_de_passe && (
+              <Text style={styles.errorText}>{errors.mot_de_passe}</Text>
+            )}
+          </View>
 
-        {/* Confirmation mot de passe */}
-        <Text style={styles.label}>Confirmer le mot de passe *</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Retapez votre mot de passe"
-          value={confirmPassword}
-          onChangeText={setConfirmPassword}
-          secureTextEntry
-        />
+          {/* Confirmation mot de passe */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Confirmer le mot de passe *</Text>
+            <View style={styles.passwordContainer}>
+              <TextInput
+                style={[
+                  styles.passwordInput,
+                  errors.confirmPassword && styles.inputError
+                ]}
+                placeholder="Confirmer le mot de passe"
+                value={confirmPassword}
+                onChangeText={(text) => {
+                  setConfirmPassword(text);
+                  if (errors.confirmPassword) {
+                    setErrors(prev => ({ ...prev, confirmPassword: undefined }));
+                  }
+                }}
+                secureTextEntry={!showConfirmPassword}
+                autoCapitalize="none"
+              />
+              <TouchableOpacity 
+                style={styles.eyeIcon}
+                onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+              >
+                <Ionicons 
+                  name={showConfirmPassword ? "eye-off" : "eye"} 
+                  size={22} 
+                  color="#666" 
+                />
+              </TouchableOpacity>
+            </View>
+            {errors.confirmPassword && (
+              <Text style={styles.errorText}>{errors.confirmPassword}</Text>
+            )}
+          </View>
 
-        {/* BOUTON RÉUTILISABLE */}
-        <Button 
-          title="S'inscrire" 
-          onPress={handleSignUp} 
-          variant="primary"
-          loading={isLoading}
-          style={styles.signupButton}
-        />
-
-        {/* Lien vers connexion */}
-        <View style={styles.loginContainer}>
-          <Text style={styles.loginText}>Déjà un compte ? </Text>
-          <Button 
-            title="Se connecter" 
-            onPress={goToConnexion} 
-            variant="secondary"
-            style={styles.loginButton}
+          {/* Bouton d'inscription */}
+          <Button
+            title={loading ? 'Inscription en cours...' : 'S\'inscrire'}
+            onPress={handleInscription}
+            variant="primary"
+            style={styles.submitButton}
+            disabled={loading || !!successMessage} // ✅ Désactiver pendant le succès
           />
-        </View>
 
-        <Text style={styles.requiredHint}>* Champs obligatoires</Text>
-      </View>
-    </ScrollView>
+          {loading && (
+            <ActivityIndicator size="large" color="#4CAF50" style={styles.loader} />
+          )}
+
+          {/* Lien vers connexion */}
+          <View style={styles.footer}>
+            <Text style={styles.footerText}>Vous avez déjà un compte ? </Text>
+            <TouchableOpacity onPress={handleSeConnecter}>
+              <Text style={styles.linkText}>Se connecter</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  scrollContainer: {
-    flexGrow: 1,
-    paddingHorizontal: 20,
-    paddingVertical: 20,
+  container: {
+    flex: 1,
     backgroundColor: '#f8fff8',
   },
-  formContainer: {
-    backgroundColor: 'white',
-    padding: 25,
-    borderRadius: 15,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 5,
+  scrollContent: {
+    flexGrow: 1,
   },
-  title: {
+  header: {
+    backgroundColor: '#4CAF50',
+    paddingTop: 50,
+    paddingBottom: 20,
+    paddingHorizontal: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  backButton: {
+    marginRight: 15,
+  },
+  headerTitle: {
     fontSize: 24,
     fontWeight: 'bold',
-    textAlign: 'center',
-    marginBottom: 30,
+    color: 'white',
+  },
+  formContainer: {
+    padding: 20,
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: 'bold',
     color: '#2E7D32',
+    marginBottom: 8,
   },
-  row: {
+  subtitle: {
+    fontSize: 16,
+    color: '#666',
+    marginBottom: 30,
+  },
+  // ✅ NOUVEAUX STYLES POUR LES MESSAGES
+  successContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#d4edda',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#c3e6cb',
   },
-  halfInput: {
-    width: '48%',
+  successText: {
+    color: '#2E7D32',
+    marginLeft: 8,
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  errorApiContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f8d7da',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#f5c6cb',
+  },
+  errorApiText: {
+    color: '#e74c3c',
+    marginLeft: 8,
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  inputGroup: {
+    marginBottom: 20,
   },
   label: {
     fontSize: 16,
     fontWeight: '600',
-    marginBottom: 8,
     color: '#333',
+    marginBottom: 8,
   },
   input: {
-    height: 50,
-    borderColor: '#C8E6C9',
+    backgroundColor: 'white',
     borderWidth: 1,
-    borderRadius: 10,
+    borderColor: '#E0E0E0',
+    borderRadius: 12,
     paddingHorizontal: 15,
-    marginBottom: 20,
+    paddingVertical: 12,
     fontSize: 16,
-    backgroundColor: '#f9f9f9',
+    color: '#333',
   },
-  signupButton: {
+  inputError: {
+    borderColor: '#e74c3c',
+    borderWidth: 1.5,
+  },
+  passwordContainer: {
+    position: 'relative',
+  },
+  passwordInput: {
+    backgroundColor: 'white',
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    borderRadius: 12,
+    paddingHorizontal: 15,
+    paddingVertical: 12,
+    paddingRight: 50,
+    fontSize: 16,
+    color: '#333',
+  },
+  eyeIcon: {
+    position: 'absolute',
+    right: 15,
+    top: 12,
+  },
+  errorText: {
+    color: '#e74c3c',
+    fontSize: 12,
+    marginTop: 5,
+    marginLeft: 5,
+  },
+  submitButton: {
     marginTop: 10,
-    marginBottom: 20,
+    marginBottom: 15,
   },
-  loginContainer: {
+  loader: {
+    marginVertical: 10,
+  },
+  footer: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 10,
+    marginTop: 20,
   },
-  loginText: {
-    fontSize: 16,
+  footerText: {
+    fontSize: 14,
     color: '#666',
   },
-  loginButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    marginLeft: 8,
-  },
-  requiredHint: {
-    fontSize: 12,
-    color: '#666',
-    textAlign: 'center',
-    fontStyle: 'italic',
+  linkText: {
+    fontSize: 14,
+    color: '#4CAF50',
+    fontWeight: '600',
   },
 });

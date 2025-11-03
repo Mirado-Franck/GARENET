@@ -1,6 +1,6 @@
 // frontend/services/api.ts
 import axios from 'axios';
-
+import AsyncStorage from '@react-native-async-storage/async-storage';
 // Configuration de l'URL de base
 const API_URL = 'http://localhost:3000/api';
 
@@ -21,14 +21,14 @@ api.interceptors.response.use(
   }
 );
 
-// Intercepteur pour ajouter le token d'authentification (si nécessaire)
+// ✅ Intercepteur pour ajouter le token JWT automatiquement
 api.interceptors.request.use(
   async (config) => {
-    // Si vous utilisez AsyncStorage pour stocker le token :
-    // const token = await AsyncStorage.getItem('token');
-    // if (token) {
-    //   config.headers.Authorization = `Bearer ${token}`;
-    // }
+    const token = await AsyncStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+      console.log('🔐 Token ajouté aux headers:', token.substring(0, 20) + '...');
+    }
     return config;
   },
   (error) => {

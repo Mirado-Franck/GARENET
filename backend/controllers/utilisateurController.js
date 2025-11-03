@@ -1,7 +1,9 @@
 // controllers/utilisateurController.js
 import { PrismaClient } from "../generated/prisma/index.js";
-const prisma = new PrismaClient();
 import bcrypt from "bcryptjs";
+import { generateToken } from '../utils/jwtUtils.js';  // ✅ Syntaxe ES6 avec .js
+
+const prisma = new PrismaClient();
 
 // === CRÉER UN CLIENT (SÉCURISÉ + HACHAGE) ===
 const createUtilisateur = async (req, res) => {
@@ -113,7 +115,6 @@ const loginUtilisateur = async (req, res) => {
     }
 
     // ✅ Vérifier le mot de passe (avec bcrypt)
-
     const motDePasseValide = await bcrypt.compare(mot_de_passe, utilisateur.mot_de_passe);
 
     if (!motDePasseValide) {
@@ -126,13 +127,23 @@ const loginUtilisateur = async (req, res) => {
       data: { dernier_acces: new Date() }
     });
 
+    // ✅ Générer le token JWT
+    const payload = {
+      id: utilisateur.id,
+      email: utilisateur.email,
+      role: utilisateur.role,
+      type_utilisateur: utilisateur.type_utilisateur
+    };
+
+    const token = generateToken(payload);
+
     // ✅ Retourner les infos utilisateur (sans le mot de passe)
     const { mot_de_passe: _, ...utilisateurSansMotDePasse } = utilisateur;
 
     res.status(200).json({
       message: "Connexion réussie",
       utilisateur: utilisateurSansMotDePasse,
-      // token: 'votre-jwt-token' // On ajoutera JWT plus tard si nécessaire
+      token: token
     });
 
   } catch (error) {

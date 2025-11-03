@@ -78,13 +78,15 @@ connexion: async (data: ConnexionData): Promise<AuthResponse> => {
     
     console.log('✅ Réponse du backend:', response.data); // Pour déboguer
     
-    // Sauvegarder les infos utilisateur dans AsyncStorage
-    await AsyncStorage.setItem('utilisateur', JSON.stringify(response.data.utilisateur));
-    
-    // Si un token est fourni par le backend (plus tard)
+    // ✅ Sauvegarder le token ET l'utilisateur
     if (response.data.token) {
       await AsyncStorage.setItem('token', response.data.token);
+      console.log('🔐 Token JWT sauvegardé');
     }
+
+    // Sauvegarder les infos utilisateur
+    await AsyncStorage.setItem('utilisateur', JSON.stringify(response.data.utilisateur));
+    console.log('👤 Utilisateur sauvegardé:', response.data.utilisateur.email);
     
     return response.data;
   } catch (error: any) {
@@ -131,14 +133,15 @@ connexion: async (data: ConnexionData): Promise<AuthResponse> => {
   /**
    * Vérifier si l'utilisateur est connecté
    */
-  isConnecte: async (): Promise<boolean> => {
-    try {
-      const token = await AsyncStorage.getItem('token');
-      return token !== null;
-    } catch (error) {
-      return false;
-    }
-  },
+    isConnecte: async (): Promise<boolean> => {
+      try {
+        const token = await AsyncStorage.getItem('token');
+        const utilisateur = await AsyncStorage.getItem('utilisateur');
+        return token !== null && utilisateur !== null;
+      } catch (error) {
+        return false;
+      }
+    },
 
   /**
    * Récupérer le token JWT

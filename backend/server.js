@@ -1,4 +1,5 @@
 
+import 'dotenv/config';
 // Importation des modules express et cors 
 import express from "express";
 import cors from "cors";

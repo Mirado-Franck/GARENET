@@ -15,6 +15,7 @@ import { utilisateurService, Utilisateur } from '../services/utilisateurService'
 
 interface AuthContextType {
   utilisateur: Utilisateur | null;
+  token: string | null;  // ✅ Ajout du token
   isConnecte: boolean;
   isLoading: boolean;
   redirectAfterLogin: string | null;
@@ -28,6 +29,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [utilisateur, setUtilisateur] = useState<Utilisateur | null>(null);
+  const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [redirectAfterLogin, setRedirectAfterLogin] = useState<string | null>(null);
 
@@ -36,27 +38,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     loadUtilisateur();
   }, []);
 
-  const loadUtilisateur = async () => {
-    try {
-      const user = await utilisateurService.getUtilisateurConnecte();
-      setUtilisateur(user);
-    } catch (error) {
-      console.error('Erreur chargement utilisateur:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+        const loadUtilisateur = async () => {
+        try {
+            const user = await utilisateurService.getUtilisateurConnecte();
+            const savedToken = await utilisateurService.getToken();
+            setUtilisateur(user);
+            setToken(savedToken);
+        } catch (error) {
+            console.error('Erreur chargement utilisateur:', error);
+        } finally {
+            setIsLoading(false);
+        }
+        };
 
-  const login = async (email: string, password: string) => {
-    const response = await utilisateurService.connexion({ email, mot_de_passe: password });
-    setUtilisateur(response.utilisateur);
-  };
+const login = async (email: string, password: string) => {
+  const response = await utilisateurService.connexion({ email, mot_de_passe: password });
+  setUtilisateur(response.utilisateur);
+  if (response.token) {
+    setToken(response.token);
+  }
+};
 
-  const logout = async () => {
-    await utilisateurService.deconnexion();
-    setUtilisateur(null);
-    setRedirectAfterLogin(null);
-  };
+const logout = async () => {
+  await utilisateurService.deconnexion();
+  setUtilisateur(null);
+  setToken(null);  // ✅ Reset du token
+  setRedirectAfterLogin(null);
+};
 
   const refreshUtilisateur = async () => {
     await loadUtilisateur();
@@ -64,16 +72,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{
-        utilisateur,
-        isConnecte: !!utilisateur,
-        isLoading,
-        redirectAfterLogin,
-        setRedirectAfterLogin,
-        login,
-        logout,
-        refreshUtilisateur,
-      }}
+    value={{
+    utilisateur,
+    token,  // ✅ Ajout du token
+    isConnecte: !!utilisateur && !!token,  // ✅ Vérifier token aussi
+    isLoading,
+    redirectAfterLogin,
+    setRedirectAfterLogin,
+    login,
+    logout,
+    refreshUtilisateur,
+    }}
     >
       {children}
     </AuthContext.Provider>

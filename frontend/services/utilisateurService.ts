@@ -67,25 +67,41 @@ export const utilisateurService = {
     }
   },
 
-  /**
-   * Connexion d'un utilisateur existant
-   */
-  connexion: async (data: ConnexionData): Promise<AuthResponse> => {
-    try {
-      const response = await api.post('/utilisateurs/connexion', data);
-      
-      // Sauvegarder le token et les infos utilisateur
-      if (response.data.token) {
-        await AsyncStorage.setItem('token', response.data.token);
-        await AsyncStorage.setItem('utilisateur', JSON.stringify(response.data.utilisateur));
-      }
-      
-      return response.data;
-    } catch (error: any) {
-      console.error('Erreur lors de la connexion:', error);
-      throw error.response?.data || { error: 'Erreur lors de la connexion' };
+/**
+ * Connexion d'un utilisateur existant
+ */
+connexion: async (data: ConnexionData): Promise<AuthResponse> => {
+  try {
+    console.log('🔄 Tentative de connexion avec:', data.email); // Pour déboguer
+    
+    const response = await api.post('/utilisateurs/login', data);
+    
+    console.log('✅ Réponse du backend:', response.data); // Pour déboguer
+    
+    // Sauvegarder les infos utilisateur dans AsyncStorage
+    await AsyncStorage.setItem('utilisateur', JSON.stringify(response.data.utilisateur));
+    
+    // Si un token est fourni par le backend (plus tard)
+    if (response.data.token) {
+      await AsyncStorage.setItem('token', response.data.token);
     }
-  },
+    
+    return response.data;
+  } catch (error: any) {
+    console.error('❌ Erreur lors de la connexion:', error.response?.data || error);
+    
+    // Gestion d'erreur améliorée
+    if (error.response?.status === 401) {
+      throw { error: 'Email ou mot de passe incorrect' };
+    }
+    
+    if (error.response?.status === 403) {
+      throw { error: error.response.data.error || 'Compte désactivé' };
+    }
+    
+    throw error.response?.data || { error: 'Erreur lors de la connexion' };
+  }
+},
 
   /**
    * Déconnexion

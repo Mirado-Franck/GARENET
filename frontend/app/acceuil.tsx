@@ -1,6 +1,7 @@
 // app/acceuil.tsx
 import React, { useEffect, useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useAuth } from '../contexts/AuthContext';
 
 import {
   View,
@@ -19,7 +20,7 @@ import { voyageService, Voyage } from '../services/voyageService';
 
 export default function Acceuil() {
   const router = useRouter();
-  
+  const { setRedirectAfterLogin } = useAuth();
   // États
   const [voyages, setVoyages] = useState<Voyage[]>([]);
   const [loading, setLoading] = useState(true);
@@ -92,9 +93,13 @@ export default function Acceuil() {
   const handleSInscrire = () => {
     router.push('/inscription');
   };
-
+  
   const handleVoyagePress = (voyageId: number) => {
-    router.push(`/(client)/voyages/detailVoyage?id=${voyageId}`);
+
+      // ✅ Sauvegarder la destination avant login
+      setRedirectAfterLogin(`/(client)/voyages/detailVoyage?id=${voyageId}`);
+      router.push('/se-connecter');
+
   };
 
   const formatDate = (dateString: string) => {

@@ -132,9 +132,64 @@ const searchVoyages = async (req, res, next) => {
   }
 };
 
+// === 4. DÉTAIL D'UN VOYAGE PAR ID ===
+const getVoyageById = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    const voyage = await prisma.voyage.findUnique({
+      where: { id: parseInt(id) },
+      include: {
+        trajet: true,
+        voiture: {
+          include: {
+            places: {
+              orderBy: { numero: "asc" }
+            }
+          }
+        },
+        chauffeur: true,
+        cooperative: true,
+        avis: {
+          include: {
+            client: {
+              include: {
+                utilisateur: {
+                  select: {
+                    nom: true,
+                    prenoms: true
+                  }
+                }
+              }
+            }
+          },
+          orderBy: { date_avis: "desc" }
+        }
+      }
+    });
+
+    if (!voyage) {
+      return res.status(404).json({ error: "Voyage non trouvé" });
+    }
+
+    // Calculer le nombre de places disponibles
+    const placesReservees = voyage.voiture.places.filter(p => p.est_reserve).length;
+    const placesDisponibles = voyage.voiture.capacite - placesReservees - 1; // -1 pour le chauffeur
+
+    res.json({
+      ...voyage,
+      placesDisponibles
+    });
+  } catch (error) {
+    console.error("Erreur getVoyageById:", error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
 export {
   getVoyages,
   getVoyagesByCooperative,
   getPlacesByVoyage,
-  searchVoyages  // NOUVEAU
+  searchVoyages,
+  getVoyageById
 };

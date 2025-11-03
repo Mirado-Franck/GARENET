@@ -94,6 +94,19 @@ export const voyageService = {
     }
   },
 
+/**
+ * Récupérer un voyage par ID avec tous ses détails
+ */
+getVoyageById: async (id: number): Promise<Voyage> => {
+  try {
+    const response = await api.get(`/voyages/${id}`);
+    return response.data;
+  } catch (error) {
+    console.error('Erreur lors de la récupération du voyage:', error);
+    throw error;
+  }
+},
+
   // MODIFIÉ : Recherche simplifiée par query
   searchVoyages: async (query: string): Promise<Voyage[]> => {
     try {

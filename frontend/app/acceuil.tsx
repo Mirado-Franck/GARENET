@@ -20,7 +20,7 @@ import { voyageService, Voyage } from '../services/voyageService';
 
 export default function Acceuil() {
   const router = useRouter();
-  const { setRedirectAfterLogin } = useAuth();
+  const { isConnecte, setRedirectAfterLogin } = useAuth();
   // États
   const [voyages, setVoyages] = useState<Voyage[]>([]);
   const [loading, setLoading] = useState(true);
@@ -86,21 +86,22 @@ export default function Acceuil() {
     loadVoyages();
   };
 
-  const handleSeConnecter = () => {
-    router.push('/se-connecter');
-  };
+const handleSeConnecter = () => {
+  // ✅ Pas de redirection spécifique → ira vers home après login
+  setRedirectAfterLogin(null);
+  console.log('🔑 Connexion manuelle depuis accueil → Redirection home');
+  router.push('/se-connecter');
+};
 
   const handleSInscrire = () => {
     router.push('/inscription');
   };
   
-  const handleVoyagePress = (voyageId: number) => {
-
-      // ✅ Sauvegarder la destination avant login
-      setRedirectAfterLogin(`/(client)/voyages/detailVoyage?id=${voyageId}`);
-      router.push('/se-connecter');
-
-  };
+const handleVoyagePress = (voyageId: number) => {
+  // ✅ Sauvegarder la destination avant login
+  setRedirectAfterLogin(`/(client)/voyages/detailVoyage?id=${voyageId}`);
+  router.push('/se-connecter');
+};
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);

@@ -1,195 +1,222 @@
-import React, { useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, Image, TouchableOpacity } from 'react-native';
-import { useRouter } from 'expo-router';
-import SearchBar from '../../components/ui/SearchBar';
-import Button from '../../components/ui/Button';
+import React, { useState, useEffect } from 'react';
+import { 
+  View, 
+  Text, 
+  StyleSheet, 
+  ScrollView, 
+  TouchableOpacity, 
+  TextInput,
+  Image,
+  ActivityIndicator,
+  FlatList
+} from 'react-native';
+import { useAuth } from '../../contexts/AuthContext';
+import { router } from 'expo-router';
+import { cooperativeService, Cooperative } from '../../services/cooperativeService';
+import { avisService, Avis } from '../../services/avisService';
 
-// Données simulées pour Madagascar
-const cooperativesEpinglees = [
-  {
-    id: 1,
-    nom: 'Cotrama',
-    note: 4.5,
-    trajetsPopulaires: ['Tana - Tamatave', 'Tana - Antsirabe'],
-    image: 'https://via.placeholder.com/100x100/4CAF50/white?text=COTRAMA',
-    abonne: true
-  },
-  {
-    id: 2,
-    nom: 'Transfi',
-    note: 4.2,
-    trajetsPopulaires: ['Tana - Fianar', 'Tana - Mahajanga'],
-    image: 'https://via.placeholder.com/100x100/2196F3/white?text=TRANSFI',
-    abonne: true
-  },
-  {
-    id: 3,
-    nom: 'Mafio',
-    note: 4.7,
-    trajetsPopulaires: ['Tana - Toliara', 'Antsirabe - Fianar'],
-    image: 'https://via.placeholder.com/100x100/FF9800/white?text=MAFIO',
-    abonne: false
-  }
-];
+export default function Home() {
+  const { utilisateur } = useAuth();
 
-// Voyages recommandés depuis Fianarantsoa
-const voyagesRecommandes = [
-  {
-    id: 1,
-    depart: 'Fianarantsoa',
-    arrivee: 'Antananarivo',
-    cooperative: 'Cotrama',
-    prix: '30 000 Ar',
-    duree: '10h',
-    departTime: '06:00',
-    placesDisponibles: 8
-  },
-  {
-    id: 2,
-    depart: 'Fianarantsoa',
-    arrivee: 'Manakara',
-    cooperative: 'Mafio',
-    prix: '15 000 Ar',
-    duree: '4h',
-    departTime: '07:30',
-    placesDisponibles: 12
-  },
-  {
-    id: 3,
-    depart: 'Fianarantsoa',
-    arrivee: 'Toliara',
-    cooperative: 'Transfi',
-    prix: '40 000 Ar',
-    duree: '12h',
-    departTime: '05:00',
-    placesDisponibles: 5
-  },
-  {
-    id: 4,
-    depart: 'Fianarantsoa',
-    arrivee: 'Antsirabe',
-    cooperative: 'Cotrama',
-    prix: '25 000 Ar',
-    duree: '8h',
-    departTime: '08:00',
-    placesDisponibles: 15
-  }
-];
+  // États
+  const [depart, setDepart] = useState('');
+  const [arrivee, setArrivee] = useState('');
+  const [cooperatives, setCooperatives] = useState<Cooperative[]>([]);
+  const [avis, setAvis] = useState<Avis[]>([]);
+  const [loadingCooperatives, setLoadingCooperatives] = useState(true);
+  const [loadingAvis, setLoadingAvis] = useState(true);
 
-export default function HomeClient() {
-  const router = useRouter();
-  const [searchQuery, setSearchQuery] = useState('');
+  // Charger les données au montage
+  useEffect(() => {
+    loadCooperatives();
+    loadAvis();
+  }, []);
 
-  const handleSearch = (query: string) => {
-    setSearchQuery(query);
-    console.log('Recherche:', query);
-    // Redirection vers la page de résultats de recherche
-    if (query.trim()) {
-      router.push('/voyages/listeCooperative');
+  const loadCooperatives = async () => {
+    try {
+      setLoadingCooperatives(true);
+      const data = await cooperativeService.getAllCooperatives();
+      setCooperatives(data);
+    } catch (error) {
+      console.error('Erreur chargement coopératives:', error);
+    } finally {
+      setLoadingCooperatives(false);
     }
   };
 
-  const handleVoirCooperative = (coopId: number) => {
-    router.push(`/voyages/detailCooperative?id=${coopId}`);
+  const loadAvis = async () => {
+    try {
+      setLoadingAvis(true);
+      const data = await avisService.getLatestAvis(5);
+      setAvis(data.avis);
+    } catch (error) {
+      console.error('Erreur chargement avis:', error);
+    } finally {
+      setLoadingAvis(false);
+    }
   };
 
-  const handleVoirToutesCooperatives = () => {
-    router.push('/voyages/listeCooperative');
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Bonjour';
+    if (hour < 18) return 'Bon après-midi';
+    return 'Bonsoir';
   };
 
-  const handleVoirDetailsVoyage = (voyageId: number) => {
-    router.push(`/voyages/detailVoyage?id=${voyageId}`);
+  const handleSearch = () => {
+    // Rediriger vers la page de résultats avec paramètres
+    router.push(`/acceuil?depart=${depart}&arrivee=${arrivee}`);
   };
+
+  const renderCooperativeCard = ({ item }: { item: Cooperative }) => (
+    <TouchableOpacity 
+      style={styles.cooperativeCard}
+      onPress={() => router.push(`/(client)/cooperatives/${item.id}`)}
+    >
+      <View style={styles.cooperativeLogo}>
+        {item.logo ? (
+          <Image source={{ uri: item.logo }} style={styles.logoImage} />
+        ) : (
+          <Text style={styles.logoPlaceholder}>🚌</Text>
+        )}
+      </View>
+      <Text style={styles.cooperativeName} numberOfLines={2}>
+        {item.nom}
+      </Text>
+      {item.note_moyenne && (
+        <View style={styles.ratingContainer}>
+          <Text style={styles.starIcon}>⭐</Text>
+          <Text style={styles.ratingText}>{item.note_moyenne.toFixed(1)}</Text>
+        </View>
+      )}
+    </TouchableOpacity>
+  );
+
+  const renderAvisCard = ({ item }: { item: Avis }) => (
+    <TouchableOpacity style={styles.avisCard}>
+      <View style={styles.avisHeader}>
+        <View style={styles.avatarContainer}>
+          {item.client.photo ? (
+            <Image source={{ uri: item.client.photo }} style={styles.avatar} />
+          ) : (
+            <View style={styles.avatarPlaceholder}>
+              <Text style={styles.avatarText}>
+                {item.client.nom_complet.charAt(0).toUpperCase()}
+              </Text>
+            </View>
+          )}
+        </View>
+        <View style={styles.avisInfo}>
+          <Text style={styles.clientName}>{item.client.nom_complet}</Text>
+          <View style={styles.starsContainer}>
+            {[...Array(5)].map((_, i) => (
+              <Text key={i} style={styles.star}>
+                {i < item.note ? '⭐' : '☆'}
+              </Text>
+            ))}
+          </View>
+        </View>
+      </View>
+      <Text style={styles.commentaire} numberOfLines={3}>
+        {item.commentaire}
+      </Text>
+      <Text style={styles.trajet}>📍 {item.voyage.trajet}</Text>
+    </TouchableOpacity>
+  );
 
   return (
-    <ScrollView style={styles.container}>
-      {/* En-tête */}
+    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+      {/* 🎨 Header */}
       <View style={styles.header}>
-        <Text style={styles.bienvenue}>Bon retour Mirado</Text>
-        <Text style={styles.sousTitre}>Localisation: Fianarantsoa</Text>
-      </View>
-
-      {/* Barre de recherche principale */}
-      <View style={styles.searchSection}>
-        <SearchBar
-          placeholder="Rechercher un trajet, une coopérative..."
-          onSearch={handleSearch}
-          style={styles.searchBar}
-        />
-      </View>
-
-      {/* Cooperatives épinglées */}
-      <View style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Vos coopératives</Text>
-          <Button
-            title="Voir tout"
-            onPress={handleVoirToutesCooperatives}
-            variant="secondary"
-            style={styles.voirToutButton}
-          />
+        <View style={styles.headerTop}>
+          <View>
+            <Text style={styles.greeting}>{getGreeting()} 👋</Text>
+            <Text style={styles.userName}>{utilisateur?.nom}</Text>
+          </View>
+          <TouchableOpacity 
+            style={styles.notificationButton}
+            onPress={() => router.push('/(client)/notification')}
+          >
+            <Text style={styles.notificationIcon}>🔔</Text>
+          </TouchableOpacity>
         </View>
 
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.coopList}>
-          {cooperativesEpinglees.map((coop) => (
-            <TouchableOpacity
-              key={coop.id}
-              style={styles.coopCard}
-              onPress={() => handleVoirCooperative(coop.id)}
-            >
-              <Image source={{ uri: coop.image }} style={styles.coopImage} />
-              <View style={styles.coopInfo}>
-                <Text style={styles.coopName}>{coop.nom}</Text>
-                <View style={styles.rating}>
-                  <Text style={styles.ratingText}>⭐ {coop.note}</Text>
-                </View>
-                <Text style={styles.coopTrajets}>
-                  {coop.trajetsPopulaires.join(', ')}
-                </Text>
-                {coop.abonne && (
-                  <View style={styles.abonneBadge}>
-                    <Text style={styles.abonneText}>Abonné</Text>
-                  </View>
-                )}
-              </View>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
+        <View style={styles.locationContainer}>
+          <Text style={styles.locationIcon}>📍</Text>
+          <Text style={styles.locationText}>Fianarantsoa, Madagascar</Text>
+        </View>
+
+        {/* 🔍 Barre de recherche */}
+        <View style={styles.searchContainer}>
+          <View style={styles.searchInputContainer}>
+            <Text style={styles.searchIcon}>🚩</Text>
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Départ"
+              value={depart}
+              onChangeText={setDepart}
+              placeholderTextColor="#999"
+            />
+          </View>
+          <View style={styles.searchInputContainer}>
+            <Text style={styles.searchIcon}>📍</Text>
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Arrivée"
+              value={arrivee}
+              onChangeText={setArrivee}
+              placeholderTextColor="#999"
+            />
+          </View>
+          <TouchableOpacity style={styles.searchButton} onPress={handleSearch}>
+            <Text style={styles.searchButtonText}>Rechercher</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
-      {/* Voyages recommandés depuis Fianarantsoa */}
+      {/* ⭐ Section 1 — Coopératives */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Voyages recommandés depuis Fianarantsoa</Text>
-        {voyagesRecommandes.map((voyage) => (
-          <TouchableOpacity
-            key={voyage.id}
-            style={styles.voyageCard}
-            onPress={() => handleVoirDetailsVoyage(voyage.id)}
-          >
-            <View style={styles.voyageHeader}>
-              <Text style={styles.voyageRoute}>
-                {voyage.depart} → {voyage.arrivee}
-              </Text>
-              <Text style={styles.voyagePrix}>{voyage.prix}</Text>
-            </View>
-            
-            <View style={styles.voyageDetails}>
-              <Text style={styles.voyageCoop}>{voyage.cooperative}</Text>
-              <Text style={styles.voyageInfo}>
-                {voyage.departTime} • {voyage.duree} • {voyage.placesDisponibles} places
-              </Text>
-            </View>
-
-            <View style={styles.voyageAction}>
-              <Button
-                title="Voir détail"
-                onPress={() => handleVoirDetailsVoyage(voyage.id)}
-                variant="primary"
-                style={styles.detailButton}
-              />
-            </View>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Coopératives ⭐</Text>
+          <TouchableOpacity onPress={() => router.push('/(client)/cooperatives')}>
+            <Text style={styles.seeAllButton}>Voir tout</Text>
           </TouchableOpacity>
-        ))}
+        </View>
+
+        {loadingCooperatives ? (
+          <ActivityIndicator size="large" color="#007AFF" style={{ marginVertical: 20 }} />
+        ) : cooperatives.length === 0 ? (
+          <Text style={styles.emptyText}>Aucune coopérative disponible</Text>
+        ) : (
+          <FlatList
+            data={cooperatives}
+            renderItem={renderCooperativeCard}
+            keyExtractor={(item) => item.id.toString()}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.horizontalList}
+          />
+        )}
+      </View>
+
+      {/* 💬 Section 2 — Avis récents */}
+      <View style={styles.section}>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Avis récents 💬</Text>
+        </View>
+
+        {loadingAvis ? (
+          <ActivityIndicator size="large" color="#007AFF" style={{ marginVertical: 20 }} />
+        ) : avis.length === 0 ? (
+          <Text style={styles.emptyText}>Aucun avis pour le moment</Text>
+        ) : (
+          <FlatList
+            data={avis}
+            renderItem={renderAvisCard}
+            keyExtractor={(item) => item.id.toString()}
+            scrollEnabled={false}
+          />
+        )}
       </View>
     </ScrollView>
   );
@@ -198,106 +225,172 @@ export default function HomeClient() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
-    padding: 16,
+    backgroundColor: '#f5f5f5',
   },
   header: {
-    marginBottom: 24,
+    backgroundColor: '#007AFF',
+    paddingTop: 50,
+    paddingBottom: 30,
+    paddingHorizontal: 20,
+    borderBottomLeftRadius: 25,
+    borderBottomRightRadius: 25,
   },
-  bienvenue: {
-    fontSize: 28,
+  headerTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 15,
+  },
+  greeting: {
+    fontSize: 18,
+    color: '#E0F2FF',
+  },
+  userName: {
+    fontSize: 26,
     fontWeight: 'bold',
-    color: '#1a1a1a',
-    marginBottom: 4,
+    color: '#fff',
+    marginTop: 4,
   },
-  sousTitre: {
+  notificationButton: {
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  notificationIcon: {
+    fontSize: 24,
+  },
+  locationContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  locationIcon: {
     fontSize: 16,
-    color: '#666',
+    marginRight: 6,
   },
-  searchSection: {
-    marginBottom: 24,
+  locationText: {
+    color: '#E0F2FF',
+    fontSize: 14,
   },
-  searchBar: {
-    marginBottom: 12,
+  searchContainer: {
+    gap: 10,
+  },
+  searchInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    paddingHorizontal: 15,
+    height: 50,
+  },
+  searchIcon: {
+    fontSize: 18,
+    marginRight: 10,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 16,
+    color: '#333',
+  },
+  searchButton: {
+    backgroundColor: '#FF9500',
+    borderRadius: 12,
+    height: 50,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  searchButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
   section: {
-    marginBottom: 32,
+    marginTop: 25,
+    paddingHorizontal: 20,
   },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 15,
   },
   sectionTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#1a1a1a',
+    color: '#333',
   },
-  voirToutButton: {
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    minHeight: 0,
+  seeAllButton: {
+    color: '#007AFF',
+    fontSize: 14,
+    fontWeight: '600',
   },
-  coopList: {
-    marginHorizontal: -16,
-    paddingHorizontal: 16,
+  emptyText: {
+    textAlign: 'center',
+    color: '#999',
+    fontSize: 14,
+    fontStyle: 'italic',
+    paddingVertical: 30,
   },
-  coopCard: {
-    backgroundColor: 'white',
+  horizontalList: {
+    paddingRight: 20,
+  },
+  cooperativeCard: {
+    width: 140,
+    backgroundColor: '#fff',
     borderRadius: 12,
-    padding: 16,
+    padding: 12,
     marginRight: 12,
-    width: 200,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
   },
-  coopImage: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    marginBottom: 12,
+  cooperativeLogo: {
+    width: '100%',
+    height: 80,
+    backgroundColor: '#f0f0f0',
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
   },
-  coopInfo: {
-    flex: 1,
+  logoImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 8,
+    resizeMode: 'cover',
   },
-  coopName: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#1a1a1a',
-    marginBottom: 4,
+  logoPlaceholder: {
+    fontSize: 40,
   },
-  rating: {
+  cooperativeName: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
     marginBottom: 6,
+    minHeight: 36,
+  },
+  ratingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  starIcon: {
+    fontSize: 14,
+    marginRight: 4,
   },
   ratingText: {
     fontSize: 14,
     color: '#666',
+    fontWeight: '600',
   },
-  coopTrajets: {
-    fontSize: 12,
-    color: '#888',
-    marginBottom: 8,
-  },
-  abonneBadge: {
-    backgroundColor: '#E8F5E8',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-    alignSelf: 'flex-start',
-  },
-  abonneText: {
-    fontSize: 10,
-    color: '#4CAF50',
-    fontWeight: 'bold',
-  },
-  voyageCard: {
-    backgroundColor: 'white',
+  avisCard: {
+    backgroundColor: '#fff',
     borderRadius: 12,
-    padding: 16,
+    padding: 15,
     marginBottom: 12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -305,41 +398,56 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
-  voyageHeader: {
+  avisHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
+  avatarContainer: {
+    marginRight: 12,
+  },
+  avatar: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+  },
+  avatarPlaceholder: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: '#007AFF',
+    justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 8,
   },
-  voyageRoute: {
-    fontSize: 18,
+  avatarText: {
+    color: '#fff',
+    fontSize: 20,
     fontWeight: 'bold',
-    color: '#1a1a1a',
   },
-  voyagePrix: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#4CAF50',
+  avisInfo: {
+    flex: 1,
+    justifyContent: 'center',
   },
-  voyageDetails: {
-    marginBottom: 12,
-  },
-  voyageCoop: {
-    fontSize: 14,
-    color: '#666',
+  clientName: {
+    fontSize: 16,
     fontWeight: '600',
+    color: '#333',
     marginBottom: 4,
   },
-  voyageInfo: {
+  starsContainer: {
+    flexDirection: 'row',
+  },
+  star: {
     fontSize: 14,
-    color: '#888',
+    marginRight: 2,
   },
-  voyageAction: {
-    alignItems: 'flex-end',
+  commentaire: {
+    fontSize: 14,
+    color: '#666',
+    lineHeight: 20,
+    marginBottom: 8,
   },
-  detailButton: {
-    paddingVertical: 6,
-    paddingHorizontal: 16,
-    minHeight: 36,
+  trajet: {
+    fontSize: 12,
+    color: '#999',
   },
 });

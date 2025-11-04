@@ -5,43 +5,44 @@ import {
   cancelReservation,
   getReservationsByClient
 } from "../controllers/reservationController.js";
+import { authMiddleware } from "../middlewares/authMiddleware.js";  // ✅ Import du middleware
 
 const router = express.Router();
 
 /**
  * @route   POST /api/reservations
  * @desc    Créer une nouvelle réservation avec sélection de places
- * @access  Public (à sécuriser plus tard avec auth)
+ * @access  Private (authentification requise)
  * @body    {
  *   code_trajet_id: number,
  *   code_voyage_id: number,
- *   code_client_id: number,
  *   nombre_places: number,
  *   places: string[],           // ex: ["A1", "B3", "C2"]
  *   mode_paiement: string
  * }
+ * Note: code_client_id sera récupéré depuis req.user.id (via JWT)
  */
-router.post("/", createReservation);
+router.post("/", authMiddleware, createReservation);  // ✅ Protégé
 
 /**
  * @route   GET /api/reservations
  * @desc    Récupérer toutes les réservations du client connecté
- * @access  Public (à sécuriser avec req.user.id)
+ * @access  Private (authentification requise)
  */
-router.get("/", getReservations);
+router.get("/", authMiddleware, getReservations);  // ✅ Protégé
 
 /**
  * @route   PUT /api/reservations/:id/cancel
  * @desc    Annuler une réservation (libère les places)
- * @access  Public (à sécuriser)
+ * @access  Private (authentification requise)
  */
-router.put("/:id/cancel", cancelReservation);
+router.put("/:id/cancel", authMiddleware, cancelReservation);  // ✅ Protégé
 
 /**
  * @route   GET /api/reservations/client/:utilisateurId
  * @desc    Récupérer les réservations par ID utilisateur (client)
- * @access  Public (à utiliser en admin ou avec auth)
+ * @access  Private (admin ou le client lui-même)
  */
-router.get("/client/:utilisateurId", getReservationsByClient);
+router.get("/client/:utilisateurId", authMiddleware, getReservationsByClient);  // ✅ Protégé
 
 export default router;

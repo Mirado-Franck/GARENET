@@ -1,6 +1,6 @@
 // routes/avisRoutes.js
 import express from "express";
-import { createAvis, getAvisByVoyage } from "../controllers/avisController.js";
+import { createAvis, getAvisByVoyage, getLatestAvis } from "../controllers/avisController.js";
 
 const router = express.Router();
 
@@ -16,7 +16,7 @@ const router = express.Router();
  * @returns { avis, moyenne_satisfaction }
  */
 router.post("/", createAvis);
-
+router.get("/avis", getLatestAvis);
 /**
  * @route   GET /api/avis/voyage/:voyageId
  * @desc    Récupérer tous les avis d'un voyage (soft delete exclu)

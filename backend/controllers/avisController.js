@@ -148,4 +148,71 @@ const getAvisByVoyage = async (req, res, next) => {
   }
 };
 
-export { createAvis, getAvisByVoyage };
+// === LISTE DES AVIS LES PLUS RÉCENTS (GLOBAL) ===
+const getLatestAvis = async (req, res, next) => {
+  try {
+    const limit = parseInt(req.query.limit) || 10; // ?limit=5
+
+    const avis = await prisma.avis.findMany({
+      where: {
+        deleted_at: null
+      },
+      include: {
+        client: {
+          select: {
+            utilisateur: {
+              select: {
+                nom: true,
+                prenoms: true,
+                photo_identite: true
+              }
+            }
+          }
+        },
+        voyage: {
+          select: {
+            code_voyage: true,
+            date_depart: true,
+            trajet: {
+              select: {
+                station_depart: true,
+                station_arrivee: true
+              }
+            }
+          }
+        }
+      },
+      orderBy: {
+        date_avis: "desc"
+      },
+      take: limit
+    });
+
+    // Formater la réponse
+    const formattedAvis = avis.map(a => ({
+      id: a.id,
+      note: a.note,
+      commentaire: a.commentaire,
+      date_avis: a.date_avis,
+      client: {
+        nom_complet: `${a.client.utilisateur.prenoms || ""} ${a.client.utilisateur.nom}`.trim(),
+        photo: a.client.utilisateur.photo_identite
+      },
+      voyage: {
+        code: a.voyage.code_voyage,
+        trajet: `${a.voyage.trajet.station_depart} → ${a.voyage.trajet.station_arrivee}`,
+        date: a.voyage.date_depart
+      }
+    }));
+
+    res.json({
+      count: formattedAvis.length,
+      avis: formattedAvis
+    });
+  } catch (error) {
+    console.error("Erreur getLatestAvis:", error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export { createAvis, getAvisByVoyage, getLatestAvis };

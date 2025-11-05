@@ -4,29 +4,44 @@ const prisma = new PrismaClient();
 
 // === CRÉATION D'UNE RÉSERVATION ===
 const createReservation = async (req, res, next) => {
+
+
+ 
+
   try {
+
+    // ✅ LOGS DE DEBUG
+    //console.log('📦 Body reçu:', req.body);
+    //console.log('👤 User JWT:', req.user);
+    
     const {
-      code_trajet_id,
       code_voyage_id,
-      code_client_id,
-      nombre_places,
-      places, // Tableau de numéros de place: ["A1", "B3", "C2"]
-      mode_paiement
+      places,
     } = req.body;
 
+    console.log('🔍 code_voyage_id:', code_voyage_id, 'Type:', typeof code_voyage_id);
+    console.log('🔍 places:', places, 'IsArray:', Array.isArray(places));
+
+
+    // ✅ Récupérer l'ID client depuis le JWT (req.user est ajouté par authMiddleware)
+    const code_client_id = req.user.id;
+
     // === VALIDATION ===
-    if (!code_trajet_id || !code_voyage_id || !code_client_id || !nombre_places || !Array.isArray(places)) {
+    if (!code_voyage_id || !Array.isArray(places) || places.length === 0) {
       return res.status(400).json({ error: "Données manquantes ou invalides" });
     }
 
-    if (places.length !== nombre_places) {
-      return res.status(400).json({ error: "Le nombre de places ne correspond pas à la liste fournie" });
-    }
+    const nombre_places = places.length;
 
     // === VÉRIFIER QUE LE VOYAGE EXISTE ===
     const voyage = await prisma.voyage.findUnique({
       where: { id: code_voyage_id },
-      include: { voiture: { include: { places: true } } }
+      include: { 
+        voiture: { 
+          include: { places: true } 
+        },
+        trajet: true
+      }
     });
 
     if (!voyage) {
@@ -39,6 +54,7 @@ const createReservation = async (req, res, next) => {
 
     const invalidPlaces = [];
     const reservedPlaces = [];
+    const placeIds = []; // ✅ Stocker les IDs des places pour la création
 
     for (const numero of places) {
       const place = placeMap.get(numero);
@@ -48,6 +64,8 @@ const createReservation = async (req, res, next) => {
         invalidPlaces.push(`${numero} (siège chauffeur)`);
       } else if (place.est_reserve) {
         reservedPlaces.push(numero);
+      } else {
+        placeIds.push(place.id); // ✅ Place valide
       }
     }
 
@@ -65,49 +83,90 @@ const createReservation = async (req, res, next) => {
       });
     }
 
-    // === CRÉER LA RÉSERVATION ===
-    const code_reservation = `RES${Date.now()}${Math.floor(Math.random() * 100)}`;
+    // === CRÉER LA RÉSERVATION (TRANSACTION) ===
+    const code_reservation = `RES${Date.now()}${Math.floor(Math.random() * 1000)}`;
 
-    const reservation = await prisma.reservation.create({
-      data: {
-        code_trajet_id,
-        code_voyage_id,
-        code_client_id,
-        code_reservation,
-        date_reservation: new Date(),
-        statut: "en_attente",
-        nombre_places,
-        mode_paiement,
-        // Créer les liens avec les places
-        places: {
-          create: places.map(numero => ({
-            place: { connect: { voiture_id_numero: { voiture_id: voyage.code_voiture_id, numero } } }
-          }))
+    const reservation = await prisma.$transaction(async (tx) => {
+      // 1. Créer la réservation
+      const newReservation = await tx.reservation.create({
+        data: {
+          code_trajet_id: voyage.code_trajet_id,
+          code_voyage_id,
+          code_client_id,
+          code_reservation,
+          date_reservation: new Date(),
+          statut: "confirmee", // ✅ ou "en_attente" selon ta logique
+          nombre_places,
+          // ✅ Créer les liens avec les places
+          places: {
+            create: placeIds.map(place_id => ({
+              place_id
+            }))
+          }
+        },
+        include: {
+          places: { 
+            include: { place: true } 
+          },
+          voyage: {
+            include: {
+              trajet: true,
+              voiture: true
+            }
+          },
+          client: {
+            include: {
+              utilisateur: {
+                select: {
+                  nom: true,
+                  prenoms: true,
+                  email: true
+                }
+              }
+            }
+          }
         }
-      },
-      include: {
-        places: { include: { place: true } },
-        voyage: true,
-        client: true
-      }
-    });
+      });
 
-    // === MARQUER LES PLACES COMME RÉSERVÉES ===
-    await prisma.place_voiture.updateMany({
-      where: {
-        voiture_id: voyage.code_voiture_id,
-        numero: { in: places }
-      },
-      data: { est_reserve: true }
+      // 2. Marquer les places comme réservées
+      await tx.place_voiture.updateMany({
+        where: {
+          id: { in: placeIds }
+        },
+        data: { est_reserve: true }
+      });
+
+      return newReservation;
     });
 
     res.status(201).json({
       message: "Réservation créée avec succès",
-      reservation
+      reservation: {
+        id: reservation.id,
+        code_reservation: reservation.code_reservation,
+        date_reservation: reservation.date_reservation,
+        statut: reservation.statut,
+        nombre_places: reservation.nombre_places,
+        places: reservation.places.map(p => p.place.numero),
+        voyage: {
+          code: reservation.voyage.code_voyage,
+          trajet: `${reservation.voyage.trajet.station_depart} → ${reservation.voyage.trajet.station_arrivee}`,
+          date_depart: reservation.voyage.date_depart,
+          prix: reservation.voyage.prix
+        },
+        client: {
+          nom: reservation.client.utilisateur.nom,
+          prenoms: reservation.client.utilisateur.prenoms,
+          email: reservation.client.utilisateur.email
+        }
+      }
     });
   } catch (err) {
     console.error("Erreur création réservation:", err);
-    next(err);
+    res.status(500).json({ 
+      error: "Erreur lors de la création de la réservation",
+      details: err.message 
+    });
   }
 };
 

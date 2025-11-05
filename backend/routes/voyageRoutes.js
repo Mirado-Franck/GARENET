@@ -14,6 +14,6 @@ const router = express.Router();
 router.get('/search', searchVoyages);
 router.get('/', getVoyages);
 router.get('/cooperative/:cooperativeId', getVoyagesByCooperative);
-router.get('/:voyageId/places', getPlacesByVoyage);
+router.get("/:voyageId/places", getPlacesByVoyage);
 router.get('/:id', getVoyageById); 
 export default router;

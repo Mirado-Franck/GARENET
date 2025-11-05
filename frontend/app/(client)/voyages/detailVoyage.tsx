@@ -14,6 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../../contexts/AuthContext';
 import { voyageService, Voyage } from '../../../services/voyageService';
 import Button from '../../../components/ui/Button';
+import { theme } from '../../../constants/theme';
 
 export default function DetailVoyage() {
   const router = useRouter();
@@ -45,6 +46,11 @@ export default function DetailVoyage() {
   };
 
   const handleReserver = () => {
+    if (!voyage) {
+      Alert.alert('Erreur', 'Informations du voyage indisponibles');
+      return;
+    }
+
     if (!isConnecte) {
       Alert.alert(
         'Connexion requise',
@@ -60,8 +66,13 @@ export default function DetailVoyage() {
       return;
     }
 
-    // Rediriger vers la page de réservation
-    router.push(`/(client)/voyages/reservation?voyageId=${id}`);
+    router.push({
+      pathname: '/(client)/voyages/reservation',
+      params: {
+        voyageId: id,
+        prix: voyage.prix.toString(),
+      },
+    });
   };
 
   const formatDate = (dateString: string) => {
@@ -86,7 +97,7 @@ export default function DetailVoyage() {
   if (loading) {
     return (
       <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color="#4CAF50" />
+        <ActivityIndicator size="large" color={theme.colors.primary[500]} />
         <Text style={styles.loadingText}>Chargement...</Text>
       </View>
     );
@@ -95,7 +106,7 @@ export default function DetailVoyage() {
   if (error || !voyage) {
     return (
       <View style={styles.centerContainer}>
-        <Ionicons name="alert-circle" size={64} color="#e74c3c" />
+        <Ionicons name="alert-circle" size={64} color={theme.colors.semantic.error} />
         <Text style={styles.errorText}>{error || 'Voyage introuvable'}</Text>
         <TouchableOpacity style={styles.retryButton} onPress={loadVoyageDetail}>
           <Text style={styles.retryText}>Réessayer</Text>
@@ -109,7 +120,7 @@ export default function DetailVoyage() {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color="white" />
+          <Ionicons name="arrow-back" size={24} color={theme.colors.text.inverse} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Détail du voyage</Text>
       </View>
@@ -119,18 +130,18 @@ export default function DetailVoyage() {
         <View style={styles.trajetCard}>
           <View style={styles.trajetHeader}>
             <View style={styles.locationContainer}>
-              <Ionicons name="location" size={24} color="#4CAF50" />
+              <Ionicons name="location" size={24} color={theme.colors.primary[500]} />
               <Text style={styles.locationText}>{voyage.trajet.station_depart}</Text>
             </View>
-            <Ionicons name="arrow-forward" size={24} color="#666" />
+            <Ionicons name="arrow-forward" size={24} color={theme.colors.text.secondary} />
             <View style={styles.locationContainer}>
-              <Ionicons name="location" size={24} color="#e74c3c" />
+              <Ionicons name="location" size={24} color={theme.colors.semantic.error} />
               <Text style={styles.locationText}>{voyage.trajet.station_arrivee}</Text>
             </View>
           </View>
 
           <View style={styles.distanceContainer}>
-            <Ionicons name="map-outline" size={16} color="#666" />
+            <Ionicons name="map-outline" size={16} color={theme.colors.text.secondary} />
             <Text style={styles.distanceText}>
               Distance : {voyage.trajet.distance} km
             </Text>
@@ -142,25 +153,25 @@ export default function DetailVoyage() {
           <Text style={styles.sectionTitle}>Informations du voyage</Text>
 
           <View style={styles.infoRow}>
-            <Ionicons name="calendar" size={20} color="#4CAF50" />
+            <Ionicons name="calendar" size={20} color={theme.colors.primary[500]} />
             <Text style={styles.infoLabel}>Date de départ :</Text>
             <Text style={styles.infoValue}>{formatDate(voyage.date_depart)}</Text>
           </View>
 
           <View style={styles.infoRow}>
-            <Ionicons name="time" size={20} color="#4CAF50" />
+            <Ionicons name="time" size={20} color={theme.colors.primary[500]} />
             <Text style={styles.infoLabel}>Heure de départ :</Text>
             <Text style={styles.infoValue}>{formatHeure(voyage.heure_depart)}</Text>
           </View>
 
           <View style={styles.infoRow}>
-            <Ionicons name="cash" size={20} color="#4CAF50" />
+            <Ionicons name="cash" size={20} color={theme.colors.primary[500]} />
             <Text style={styles.infoLabel}>Prix :</Text>
             <Text style={styles.prixValue}>{voyage.prix.toLocaleString()} Ar</Text>
           </View>
 
           <View style={styles.infoRow}>
-            <Ionicons name="people" size={20} color="#4CAF50" />
+            <Ionicons name="people" size={20} color={theme.colors.primary[500]} />
             <Text style={styles.infoLabel}>Places disponibles :</Text>
             <Text style={styles.infoValue}>
               {(voyage as any).placesDisponibles || voyage.voiture.capacite} / {voyage.voiture.capacite}
@@ -181,13 +192,13 @@ export default function DetailVoyage() {
             <Text style={styles.cooperativeName}>{voyage.cooperative.nom}</Text>
             {voyage.cooperative.contact && (
               <View style={styles.infoRow}>
-                <Ionicons name="call" size={18} color="#4CAF50" />
+                <Ionicons name="call" size={18} color={theme.colors.primary[500]} />
                 <Text style={styles.cooperativeContact}>{voyage.cooperative.contact}</Text>
               </View>
             )}
             {voyage.cooperative.adresse && (
               <View style={styles.infoRow}>
-                <Ionicons name="location-outline" size={18} color="#4CAF50" />
+                <Ionicons name="location-outline" size={18} color={theme.colors.primary[500]} />
                 <Text style={styles.cooperativeAddress}>{voyage.cooperative.adresse}</Text>
               </View>
             )}
@@ -199,12 +210,12 @@ export default function DetailVoyage() {
           <Text style={styles.sectionTitle}>Véhicule</Text>
           <View style={styles.vehiculeInfo}>
             <View style={styles.infoRow}>
-              <Ionicons name="car" size={20} color="#4CAF50" />
+              <Ionicons name="car" size={20} color={theme.colors.primary[500]} />
               <Text style={styles.infoLabel}>Modèle :</Text>
               <Text style={styles.infoValue}>{voyage.voiture.modele}</Text>
             </View>
             <View style={styles.infoRow}>
-              <Ionicons name="card" size={20} color="#4CAF50" />
+              <Ionicons name="card" size={20} color={theme.colors.primary[500]} />
               <Text style={styles.infoLabel}>Immatriculation :</Text>
               <Text style={styles.infoValue}>{voyage.voiture.immatriculation}</Text>
             </View>
@@ -216,7 +227,7 @@ export default function DetailVoyage() {
           <Text style={styles.sectionTitle}>Chauffeur</Text>
           <View style={styles.chauffeurInfo}>
             <View style={styles.infoRow}>
-              <Ionicons name="person" size={20} color="#4CAF50" />
+              <Ionicons name="person" size={20} color={theme.colors.primary[500]} />
               <Text style={styles.chauffeurName}>{voyage.chauffeur.nom}</Text>
             </View>
           </View>
@@ -235,7 +246,7 @@ export default function DetailVoyage() {
       {/* Bouton de réservation fixe en bas */}
       <View style={styles.footer}>
         <Button
-          title="Réserver ce voyage"
+          title={`Réserver - ${voyage.prix.toLocaleString()} Ar/place`}
           onPress={handleReserver}
           variant="primary"
           disabled={voyage.status !== 'disponible'}
@@ -248,197 +259,189 @@ export default function DetailVoyage() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fff8',
+    backgroundColor: theme.colors.background.secondary,
   },
   centerContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    padding: theme.spacing.xl,
   },
   header: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: theme.colors.primary[500],
     paddingTop: 50,
-    paddingBottom: 20,
-    paddingHorizontal: 20,
+    paddingBottom: theme.spacing.xl,
+    paddingHorizontal: theme.spacing.xl,
     flexDirection: 'row',
     alignItems: 'center',
   },
   backButton: {
-    marginRight: 15,
+    marginRight: theme.spacing.lg,
   },
   headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: 'white',
+    fontSize: theme.typography.sizes.h2,
+    fontWeight: theme.typography.weights.bold,
+    color: theme.colors.text.inverse,
   },
   content: {
     flex: 1,
-    padding: 16,
+    padding: theme.spacing.lg,
   },
   trajetCard: {
-    backgroundColor: 'white',
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
+    backgroundColor: theme.colors.background.primary,
+    borderRadius: theme.borderRadius.lg,
+    padding: theme.spacing.xl,
+    marginBottom: theme.spacing.lg,
+    ...theme.shadows.md,
   },
   trajetHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: theme.spacing.md,
   },
   locationContainer: {
     flex: 1,
     alignItems: 'center',
   },
   locationText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
-    marginTop: 4,
+    fontSize: theme.typography.sizes.body,
+    fontWeight: theme.typography.weights.bold,
+    color: theme.colors.text.primary,
+    marginTop: theme.spacing.xs,
     textAlign: 'center',
   },
   distanceContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingTop: 12,
+    paddingTop: theme.spacing.md,
     borderTopWidth: 1,
-    borderTopColor: '#E0E0E0',
+    borderTopColor: theme.colors.neutral[300],
   },
   distanceText: {
-    fontSize: 14,
-    color: '#666',
-    marginLeft: 8,
+    fontSize: theme.typography.sizes.caption,
+    color: theme.colors.text.secondary,
+    marginLeft: theme.spacing.sm,
   },
   infoCard: {
-    backgroundColor: 'white',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    backgroundColor: theme.colors.background.primary,
+    borderRadius: theme.borderRadius.md,
+    padding: theme.spacing.lg,
+    marginBottom: theme.spacing.lg,
+    ...theme.shadows.sm,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#2E7D32',
-    marginBottom: 12,
+    fontSize: theme.typography.sizes.h3,
+    fontWeight: theme.typography.weights.bold,
+    color: theme.colors.primary[500],
+    marginBottom: theme.spacing.md,
   },
   infoRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: theme.spacing.md,
   },
   infoLabel: {
-    fontSize: 14,
-    color: '#666',
-    marginLeft: 8,
-    marginRight: 8,
+    fontSize: theme.typography.sizes.caption,
+    color: theme.colors.text.secondary,
+    marginLeft: theme.spacing.sm,
+    marginRight: theme.spacing.sm,
   },
   infoValue: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#333',
+    fontSize: theme.typography.sizes.caption,
+    fontWeight: theme.typography.weights.semibold,
+    color: theme.colors.text.primary,
     flex: 1,
   },
   prixValue: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#2E7D32',
+    fontSize: theme.typography.sizes.h3,
+    fontWeight: theme.typography.weights.bold,
+    color: theme.colors.primary[500],
     flex: 1,
   },
   statusBadge: {
     backgroundColor: '#E8F5E9',
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 20,
+    paddingVertical: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.lg,
+    borderRadius: theme.borderRadius.round,
     alignSelf: 'flex-start',
-    marginTop: 8,
+    marginTop: theme.spacing.sm,
   },
   statusText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#2E7D32',
+    fontSize: theme.typography.sizes.caption,
+    fontWeight: theme.typography.weights.semibold,
+    color: theme.colors.semantic.success,
   },
   cooperativeInfo: {
-    gap: 8,
+    gap: theme.spacing.sm,
   },
   cooperativeName: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#4CAF50',
-    marginBottom: 8,
+    fontSize: theme.typography.sizes.h3,
+    fontWeight: theme.typography.weights.bold,
+    color: theme.colors.primary[500],
+    marginBottom: theme.spacing.sm,
   },
   cooperativeContact: {
-    fontSize: 14,
-    color: '#333',
-    marginLeft: 8,
+    fontSize: theme.typography.sizes.caption,
+    color: theme.colors.text.primary,
+    marginLeft: theme.spacing.sm,
   },
   cooperativeAddress: {
-    fontSize: 14,
-    color: '#666',
-    marginLeft: 8,
+    fontSize: theme.typography.sizes.caption,
+    color: theme.colors.text.secondary,
+    marginLeft: theme.spacing.sm,
   },
   vehiculeInfo: {
-    gap: 8,
+    gap: theme.spacing.sm,
   },
   chauffeurInfo: {
-    gap: 8,
+    gap: theme.spacing.sm,
   },
   chauffeurName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-    marginLeft: 8,
+    fontSize: theme.typography.sizes.body,
+    fontWeight: theme.typography.weights.semibold,
+    color: theme.colors.text.primary,
+    marginLeft: theme.spacing.sm,
   },
   userInfo: {
     backgroundColor: '#E8F5E9',
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 16,
+    padding: theme.spacing.md,
+    borderRadius: theme.borderRadius.sm,
+    marginBottom: theme.spacing.lg,
   },
   userInfoText: {
-    fontSize: 14,
-    color: '#2E7D32',
+    fontSize: theme.typography.sizes.caption,
+    color: theme.colors.semantic.success,
     textAlign: 'center',
   },
   footer: {
-    padding: 16,
-    backgroundColor: 'white',
+    padding: theme.spacing.lg,
+    backgroundColor: theme.colors.background.primary,
     borderTopWidth: 1,
-    borderTopColor: '#E0E0E0',
+    borderTopColor: theme.colors.neutral[300],
   },
   loadingText: {
-    marginTop: 12,
-    fontSize: 16,
-    color: '#666',
+    marginTop: theme.spacing.md,
+    fontSize: theme.typography.sizes.body,
+    color: theme.colors.text.secondary,
   },
   errorText: {
-    fontSize: 16,
-    color: '#e74c3c',
+    fontSize: theme.typography.sizes.body,
+    color: theme.colors.semantic.error,
     textAlign: 'center',
-    marginVertical: 16,
+    marginVertical: theme.spacing.lg,
   },
   retryButton: {
-    backgroundColor: '#4CAF50',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
-    marginTop: 16,
+    backgroundColor: theme.colors.primary[500],
+    paddingHorizontal: theme.spacing.xl,
+    paddingVertical: theme.spacing.md,
+    borderRadius: theme.borderRadius.md,
+    marginTop: theme.spacing.lg,
   },
   retryText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '600',
+    color: theme.colors.text.inverse,
+    fontSize: theme.typography.sizes.body,
+    fontWeight: theme.typography.weights.semibold,
   },
 });

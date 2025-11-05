@@ -63,6 +63,21 @@ export interface PlacesResponse {
   places: Place[];
 }
 
+export interface Place {
+  numero: string;
+  est_reserve: boolean;
+  est_chauffeur: boolean;
+  selectionnable: boolean;
+}
+
+export interface PlacesVoyageResponse {
+  voyageId: number;
+  code_voyage: string;
+  voiture: string;
+  capacite: number;
+  places: Place[];
+}
+
 export const voyageService = {
   getAllVoyages: async (): Promise<Voyage[]> => {
     try {
@@ -74,6 +89,19 @@ export const voyageService = {
     }
   },
 
+  /**
+ * Récupérer les places disponibles d'un voyage
+ */
+getPlacesByVoyage: async (voyageId: number): Promise<PlacesVoyageResponse> => {
+  try {
+    const response = await api.get(`/voyages/${voyageId}/places`);
+    return response.data;
+  } catch (error: any) {
+    console.error('Erreur lors de la récupération des places:', error);
+    throw error.response?.data || { error: 'Erreur lors de la récupération des places' };
+  }
+},
+
   getVoyagesByCooperative: async (cooperativeId: number): Promise<Voyage[]> => {
     try {
       const response = await api.get(`/voyages/cooperative/${cooperativeId}`);
@@ -83,17 +111,6 @@ export const voyageService = {
       throw error;
     }
   },
-
-  getPlacesByVoyage: async (voyageId: number): Promise<PlacesResponse> => {
-    try {
-      const response = await api.get(`/voyages/${voyageId}/places`);
-      return response.data;
-    } catch (error) {
-      console.error('Erreur lors de la récupération des places:', error);
-      throw error;
-    }
-  },
-
 /**
  * Récupérer un voyage par ID avec tous ses détails
  */

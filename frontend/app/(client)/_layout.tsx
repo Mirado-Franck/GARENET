@@ -1,16 +1,14 @@
 // frontend/app/(client)/_layout.tsx
 import { LogBox } from 'react-native';
+import { Tabs } from 'expo-router';
+import { Text, View } from 'react-native';
+import { theme } from '../../constants/theme';
 
 // Supprimer le warning spécifique
 LogBox.ignoreLogs([
   'Image: style.resizeMode is deprecated. Please use props.resizeMode.',
 ]);
 
-
-import { Tabs } from 'expo-router';
-import { Text, View } from 'react-native';
-
-// 🔹 Petit composant pour les icônes (simple et clair)
 const TabIcon = ({
   emoji,
   color,
@@ -47,23 +45,23 @@ export default function ClientLayout() {
   return (
     <Tabs
       screenOptions={{
-        headerShown: false, // on cache les en-têtes
+        headerShown: false,
         tabBarStyle: {
-          backgroundColor: '#ffffff',
-          borderTopColor: '#E0E0E0',
+          backgroundColor: theme.colors.background.primary,
+          borderTopColor: theme.colors.neutral[300],
           height: 60,
-          paddingBottom: 6,
-          paddingTop: 6,
+          paddingBottom: theme.spacing.xs,
+          paddingTop: theme.spacing.xs,
         },
-        tabBarActiveTintColor: '#007bff', // bleu pour l’onglet actif
-        tabBarInactiveTintColor: '#666', // gris pour les autres
+        tabBarActiveTintColor: theme.colors.primary[500],
+        tabBarInactiveTintColor: theme.colors.text.secondary,
       }}
     >
       {/* 🏠 Accueil */}
       <Tabs.Screen
         name="home"
         options={{
-          title: 'home',
+          title: 'Accueil',
           tabBarIcon: ({ color, focused }) => (
             <TabIcon emoji="🏠" color={color} focused={focused} />
           ),
@@ -111,6 +109,112 @@ export default function ClientLayout() {
           tabBarIcon: ({ color, focused }) => (
             <TabIcon emoji="👤" color={color} focused={focused} />
           ),
+        }}
+      />
+
+      {/* 🚨 PAGES QUI NE DOIVENT PAS APPARAÎTRE DANS LA NAVBAR */}
+      
+      {/* Notification - Exclue de la navbar */}
+      <Tabs.Screen
+        name="notification"
+        options={{
+          href: null, // 👈 CECI EXCLUT LA PAGE DE LA NAVBAR
+        }}
+      />
+
+      {/* Index - Exclue de la navbar */}
+      <Tabs.Screen
+        name="index"
+        options={{
+          href: null, // 👈 CECI EXCLUT LA PAGE DE LA NAVBAR
+        }}
+      />
+
+      {/* 🔧 TOUTES LES AUTRES PAGES DANS LES SOUS-DOSSIERS DOIVENT ÊTRE EXCLUES */}
+      
+      {/* Pages dans voyages/ */}
+      <Tabs.Screen
+        name="voyages/detailCooperative"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="voyages/detailVoyage"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="voyages/listeCooperative"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="voyages/paiement"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="voyages/reservation"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="voyages/voyagePropose"
+        options={{
+          href: null,
+        }}
+      />
+
+      {/* Pages dans reservations/ */}
+      <Tabs.Screen
+        name="reservations/detailReservation"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="reservations/listeReservation"
+        options={{
+          href: null,
+        }}
+      />
+
+      {/* Pages dans historique/ */}
+      <Tabs.Screen
+        name="historique/avis"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="historique/detailVoyage"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="historique/listeVoyage"
+        options={{
+          href: null,
+        }}
+      />
+
+      {/* Pages dans profil/ */}
+      <Tabs.Screen
+        name="profil/modifierProfile"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="profil/profile"
+        options={{
+          href: null,
         }}
       />
     </Tabs>

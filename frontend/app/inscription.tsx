@@ -16,11 +16,11 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import Button from '../components/ui/Button';
 import { utilisateurService, InscriptionData } from '../services/utilisateurService';
+import { theme } from '../constants/theme';
 
 export default function Inscription() {
   const router = useRouter();
   
-  // États du formulaire
   const [formData, setFormData] = useState<InscriptionData>({
     nom: '',
     prenoms: '',
@@ -34,9 +34,8 @@ export default function Inscription() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Partial<InscriptionData & { confirmPassword: string; api: string }>>({});
-  const [successMessage, setSuccessMessage] = useState(''); // ✅ NOUVEAU : Message de succès
+  const [successMessage, setSuccessMessage] = useState('');
 
-  // Validation du formulaire
   const validateForm = (): boolean => {
     const newErrors: any = {};
 
@@ -70,9 +69,7 @@ export default function Inscription() {
     return Object.keys(newErrors).length === 0;
   };
 
-  // Gestion de l'inscription
   const handleInscription = async () => {
-    // ✅ Réinitialiser les messages
     setErrors({});
     setSuccessMessage('');
 
@@ -84,10 +81,8 @@ export default function Inscription() {
     try {
       const response = await utilisateurService.inscription(formData);
       
-      // ✅ SUCCÈS : Afficher message de succès
       setSuccessMessage('🎉 Inscription réussie ! Redirection...');
       
-      // Redirection après 2 secondes
       setTimeout(() => {
         router.replace('/se-connecter');
       }, 2000);
@@ -95,7 +90,6 @@ export default function Inscription() {
     } catch (error: any) {
       console.error('Erreur inscription:', error);
       
-      // ✅ GESTION SPÉCIFIQUE DES ERREURS
       if (error.error === "Email déjà utilisé") {
         setErrors(prev => ({ ...prev, email: 'Cet email est déjà utilisé' }));
       } else if (error.error === "Champs obligatoires manquants") {
@@ -116,7 +110,6 @@ export default function Inscription() {
 
   const updateFormData = (field: keyof InscriptionData, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
-    // Effacer l'erreur du champ modifié et les messages
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: undefined }));
     }
@@ -137,7 +130,6 @@ export default function Inscription() {
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
       >
-        {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity 
             style={styles.backButton}
@@ -148,30 +140,26 @@ export default function Inscription() {
           <Text style={styles.headerTitle}>Inscription</Text>
         </View>
 
-        {/* Formulaire */}
         <View style={styles.formContainer}>
           <Text style={styles.title}>Créer un compte</Text>
           <Text style={styles.subtitle}>
             Rejoignez Garenet pour réserver vos voyages
           </Text>
 
-          {/* ✅ Message de succès */}
           {successMessage ? (
             <View style={styles.successContainer}>
-              <Ionicons name="checkmark-circle" size={20} color="#2E7D32" />
+              <Ionicons name="checkmark-circle" size={20} color={theme.colors.semantic.success} />
               <Text style={styles.successText}>{successMessage}</Text>
             </View>
           ) : null}
 
-          {/* ✅ Message d'erreur API */}
           {errors.api ? (
             <View style={styles.errorApiContainer}>
-              <Ionicons name="alert-circle" size={20} color="#e74c3c" />
+              <Ionicons name="alert-circle" size={20} color={theme.colors.semantic.error} />
               <Text style={styles.errorApiText}>{errors.api}</Text>
             </View>
           ) : null}
 
-          {/* Nom */}
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Nom *</Text>
             <TextInput
@@ -184,7 +172,6 @@ export default function Inscription() {
             {errors.nom && <Text style={styles.errorText}>{errors.nom}</Text>}
           </View>
 
-          {/* Prénoms */}
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Prénoms</Text>
             <TextInput
@@ -196,7 +183,6 @@ export default function Inscription() {
             />
           </View>
 
-          {/* Email */}
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Email *</Text>
             <TextInput
@@ -210,7 +196,6 @@ export default function Inscription() {
             {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
           </View>
 
-          {/* Téléphone */}
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Téléphone *</Text>
             <TextInput
@@ -224,7 +209,6 @@ export default function Inscription() {
             {errors.telephone && <Text style={styles.errorText}>{errors.telephone}</Text>}
           </View>
 
-          {/* Mot de passe */}
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Mot de passe *</Text>
             <View style={styles.passwordContainer}>
@@ -246,7 +230,7 @@ export default function Inscription() {
                 <Ionicons 
                   name={showPassword ? "eye-off" : "eye"} 
                   size={22} 
-                  color="#666" 
+                  color={theme.colors.text.secondary}
                 />
               </TouchableOpacity>
             </View>
@@ -255,7 +239,6 @@ export default function Inscription() {
             )}
           </View>
 
-          {/* Confirmation mot de passe */}
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Confirmer le mot de passe *</Text>
             <View style={styles.passwordContainer}>
@@ -282,7 +265,7 @@ export default function Inscription() {
                 <Ionicons 
                   name={showConfirmPassword ? "eye-off" : "eye"} 
                   size={22} 
-                  color="#666" 
+                  color={theme.colors.text.secondary}
                 />
               </TouchableOpacity>
             </View>
@@ -291,20 +274,18 @@ export default function Inscription() {
             )}
           </View>
 
-          {/* Bouton d'inscription */}
           <Button
             title={loading ? 'Inscription en cours...' : 'S\'inscrire'}
             onPress={handleInscription}
             variant="primary"
             style={styles.submitButton}
-            disabled={loading || !!successMessage} // ✅ Désactiver pendant le succès
+            disabled={loading || !!successMessage}
           />
 
           {loading && (
-            <ActivityIndicator size="large" color="#4CAF50" style={styles.loader} />
+            <ActivityIndicator size="large" color={theme.colors.primary[500]} style={styles.loader} />
           )}
 
-          {/* Lien vers connexion */}
           <View style={styles.footer}>
             <Text style={styles.footerText}>Vous avez déjà un compte ? </Text>
             <TouchableOpacity onPress={handleSeConnecter}>
@@ -320,142 +301,141 @@ export default function Inscription() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fff8',
+    backgroundColor: theme.colors.background.secondary,
   },
   scrollContent: {
     flexGrow: 1,
   },
   header: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: theme.colors.primary[500],
     paddingTop: 50,
-    paddingBottom: 20,
-    paddingHorizontal: 20,
+    paddingBottom: theme.spacing.xl,
+    paddingHorizontal: theme.spacing.xl,
     flexDirection: 'row',
     alignItems: 'center',
   },
   backButton: {
-    marginRight: 15,
+    marginRight: theme.spacing.lg,
   },
   headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: 'white',
+    fontSize: theme.typography.sizes.h2,
+    fontWeight: theme.typography.weights.bold,
+    color: theme.colors.text.inverse,
   },
   formContainer: {
-    padding: 20,
+    padding: theme.spacing.xl,
   },
   title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#2E7D32',
-    marginBottom: 8,
+    fontSize: theme.typography.sizes.h1,
+    fontWeight: theme.typography.weights.bold,
+    color: theme.colors.primary[500],
+    marginBottom: theme.spacing.sm,
   },
   subtitle: {
-    fontSize: 16,
-    color: '#666',
-    marginBottom: 30,
+    fontSize: theme.typography.sizes.body,
+    color: theme.colors.text.secondary,
+    marginBottom: theme.spacing.xxxl,
   },
-  // ✅ NOUVEAUX STYLES POUR LES MESSAGES
   successContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#d4edda',
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 20,
+    padding: theme.spacing.md,
+    borderRadius: theme.borderRadius.sm,
+    marginBottom: theme.spacing.xl,
     borderWidth: 1,
     borderColor: '#c3e6cb',
   },
   successText: {
-    color: '#2E7D32',
-    marginLeft: 8,
-    fontSize: 14,
-    fontWeight: '500',
+    color: theme.colors.semantic.success,
+    marginLeft: theme.spacing.sm,
+    fontSize: theme.typography.sizes.caption,
+    fontWeight: theme.typography.weights.medium,
   },
   errorApiContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#f8d7da',
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 20,
+    padding: theme.spacing.md,
+    borderRadius: theme.borderRadius.sm,
+    marginBottom: theme.spacing.xl,
     borderWidth: 1,
     borderColor: '#f5c6cb',
   },
   errorApiText: {
-    color: '#e74c3c',
-    marginLeft: 8,
-    fontSize: 14,
-    fontWeight: '500',
+    color: theme.colors.semantic.error,
+    marginLeft: theme.spacing.sm,
+    fontSize: theme.typography.sizes.caption,
+    fontWeight: theme.typography.weights.medium,
   },
   inputGroup: {
-    marginBottom: 20,
+    marginBottom: theme.spacing.xl,
   },
   label: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 8,
+    fontSize: theme.typography.sizes.body,
+    fontWeight: theme.typography.weights.semibold,
+    color: theme.colors.text.primary,
+    marginBottom: theme.spacing.sm,
   },
   input: {
-    backgroundColor: 'white',
+    backgroundColor: theme.colors.background.primary,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
-    borderRadius: 12,
-    paddingHorizontal: 15,
-    paddingVertical: 12,
-    fontSize: 16,
-    color: '#333',
+    borderColor: theme.colors.neutral[300],
+    borderRadius: theme.borderRadius.md,
+    paddingHorizontal: theme.spacing.lg,
+    paddingVertical: theme.spacing.md,
+    fontSize: theme.typography.sizes.body,
+    color: theme.colors.text.primary,
   },
   inputError: {
-    borderColor: '#e74c3c',
+    borderColor: theme.colors.semantic.error,
     borderWidth: 1.5,
   },
   passwordContainer: {
     position: 'relative',
   },
   passwordInput: {
-    backgroundColor: 'white',
+    backgroundColor: theme.colors.background.primary,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
-    borderRadius: 12,
-    paddingHorizontal: 15,
-    paddingVertical: 12,
+    borderColor: theme.colors.neutral[300],
+    borderRadius: theme.borderRadius.md,
+    paddingHorizontal: theme.spacing.lg,
+    paddingVertical: theme.spacing.md,
     paddingRight: 50,
-    fontSize: 16,
-    color: '#333',
+    fontSize: theme.typography.sizes.body,
+    color: theme.colors.text.primary,
   },
   eyeIcon: {
     position: 'absolute',
-    right: 15,
-    top: 12,
+    right: theme.spacing.lg,
+    top: theme.spacing.md,
   },
   errorText: {
-    color: '#e74c3c',
-    fontSize: 12,
-    marginTop: 5,
-    marginLeft: 5,
+    color: theme.colors.semantic.error,
+    fontSize: theme.typography.sizes.small,
+    marginTop: theme.spacing.xs,
+    marginLeft: theme.spacing.xs,
   },
   submitButton: {
-    marginTop: 10,
-    marginBottom: 15,
+    marginTop: theme.spacing.md,
+    marginBottom: theme.spacing.lg,
   },
   loader: {
-    marginVertical: 10,
+    marginVertical: theme.spacing.md,
   },
   footer: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 20,
+    marginTop: theme.spacing.xl,
   },
   footerText: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: theme.typography.sizes.caption,
+    color: theme.colors.text.secondary,
   },
   linkText: {
-    fontSize: 14,
-    color: '#4CAF50',
-    fontWeight: '600',
+    fontSize: theme.typography.sizes.caption,
+    color: theme.colors.primary[500],
+    fontWeight: theme.typography.weights.semibold,
   },
 });

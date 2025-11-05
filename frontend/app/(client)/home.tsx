@@ -14,11 +14,11 @@ import { useAuth } from '../../contexts/AuthContext';
 import { router } from 'expo-router';
 import { cooperativeService, Cooperative } from '../../services/cooperativeService';
 import { avisService, Avis } from '../../services/avisService';
+import { theme } from '../../constants/theme';
 
 export default function Home() {
   const { utilisateur } = useAuth();
 
-  // États
   const [depart, setDepart] = useState('');
   const [arrivee, setArrivee] = useState('');
   const [cooperatives, setCooperatives] = useState<Cooperative[]>([]);
@@ -26,7 +26,6 @@ export default function Home() {
   const [loadingCooperatives, setLoadingCooperatives] = useState(true);
   const [loadingAvis, setLoadingAvis] = useState(true);
 
-  // Charger les données au montage
   useEffect(() => {
     loadCooperatives();
     loadAvis();
@@ -64,7 +63,6 @@ export default function Home() {
   };
 
   const handleSearch = () => {
-    // Rediriger vers la page de résultats avec paramètres
     router.push(`/acceuil?depart=${depart}&arrivee=${arrivee}`);
   };
 
@@ -126,7 +124,6 @@ export default function Home() {
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      {/* 🎨 Header */}
       <View style={styles.header}>
         <View style={styles.headerTop}>
           <View>
@@ -146,7 +143,6 @@ export default function Home() {
           <Text style={styles.locationText}>Fianarantsoa, Madagascar</Text>
         </View>
 
-        {/* 🔍 Barre de recherche */}
         <View style={styles.searchContainer}>
           <View style={styles.searchInputContainer}>
             <Text style={styles.searchIcon}>🚩</Text>
@@ -155,7 +151,7 @@ export default function Home() {
               placeholder="Départ"
               value={depart}
               onChangeText={setDepart}
-              placeholderTextColor="#999"
+              placeholderTextColor={theme.colors.text.tertiary}
             />
           </View>
           <View style={styles.searchInputContainer}>
@@ -165,7 +161,7 @@ export default function Home() {
               placeholder="Arrivée"
               value={arrivee}
               onChangeText={setArrivee}
-              placeholderTextColor="#999"
+              placeholderTextColor={theme.colors.text.tertiary}
             />
           </View>
           <TouchableOpacity style={styles.searchButton} onPress={handleSearch}>
@@ -174,7 +170,6 @@ export default function Home() {
         </View>
       </View>
 
-      {/* ⭐ Section 1 — Coopératives */}
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Coopératives ⭐</Text>
@@ -184,7 +179,7 @@ export default function Home() {
         </View>
 
         {loadingCooperatives ? (
-          <ActivityIndicator size="large" color="#007AFF" style={{ marginVertical: 20 }} />
+          <ActivityIndicator size="large" color={theme.colors.primary[500]} style={{ marginVertical: 20 }} />
         ) : cooperatives.length === 0 ? (
           <Text style={styles.emptyText}>Aucune coopérative disponible</Text>
         ) : (
@@ -199,14 +194,13 @@ export default function Home() {
         )}
       </View>
 
-      {/* 💬 Section 2 — Avis récents */}
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Avis récents 💬</Text>
         </View>
 
         {loadingAvis ? (
-          <ActivityIndicator size="large" color="#007AFF" style={{ marginVertical: 20 }} />
+          <ActivityIndicator size="large" color={theme.colors.primary[500]} style={{ marginVertical: 20 }} />
         ) : avis.length === 0 ? (
           <Text style={styles.emptyText}>Aucun avis pour le moment</Text>
         ) : (
@@ -225,37 +219,37 @@ export default function Home() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: theme.colors.background.secondary,
   },
   header: {
-    backgroundColor: '#007AFF',
+    backgroundColor: theme.colors.primary[500],
     paddingTop: 50,
-    paddingBottom: 30,
-    paddingHorizontal: 20,
-    borderBottomLeftRadius: 25,
-    borderBottomRightRadius: 25,
+    paddingBottom: theme.spacing.xxxl,
+    paddingHorizontal: theme.spacing.xl,
+    borderBottomLeftRadius: theme.borderRadius.xl,
+    borderBottomRightRadius: theme.borderRadius.xl,
   },
   headerTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 15,
+    marginBottom: theme.spacing.lg,
   },
   greeting: {
-    fontSize: 18,
-    color: '#E0F2FF',
+    fontSize: theme.typography.sizes.h3,
+    color: theme.colors.text.light,
   },
   userName: {
-    fontSize: 26,
-    fontWeight: 'bold',
-    color: '#fff',
-    marginTop: 4,
+    fontSize: theme.typography.sizes.h1,
+    fontWeight: theme.typography.weights.bold,
+    color: theme.colors.text.inverse,
+    marginTop: theme.spacing.xs,
   },
   notificationButton: {
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    backgroundColor: theme.colors.background.overlay,
     width: 44,
     height: 44,
-    borderRadius: 22,
+    borderRadius: theme.borderRadius.lg,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -265,113 +259,109 @@ const styles = StyleSheet.create({
   locationContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: theme.spacing.xl,
   },
   locationIcon: {
     fontSize: 16,
-    marginRight: 6,
+    marginRight: theme.spacing.sm,
   },
   locationText: {
-    color: '#E0F2FF',
-    fontSize: 14,
+    color: theme.colors.text.light,
+    fontSize: theme.typography.sizes.caption,
   },
   searchContainer: {
-    gap: 10,
+    gap: theme.spacing.md,
   },
   searchInputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    paddingHorizontal: 15,
+    backgroundColor: theme.colors.background.primary,
+    borderRadius: theme.borderRadius.md,
+    paddingHorizontal: theme.spacing.lg,
     height: 50,
   },
   searchIcon: {
     fontSize: 18,
-    marginRight: 10,
+    marginRight: theme.spacing.md,
   },
   searchInput: {
     flex: 1,
-    fontSize: 16,
-    color: '#333',
+    fontSize: theme.typography.sizes.body,
+    color: theme.colors.text.primary,
   },
   searchButton: {
-    backgroundColor: '#FF9500',
-    borderRadius: 12,
+    backgroundColor: theme.colors.secondary[500],
+    borderRadius: theme.borderRadius.md,
     height: 50,
     justifyContent: 'center',
     alignItems: 'center',
   },
   searchButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
+    color: theme.colors.text.inverse,
+    fontSize: theme.typography.sizes.body,
+    fontWeight: theme.typography.weights.semibold,
   },
   section: {
-    marginTop: 25,
-    paddingHorizontal: 20,
+    marginTop: theme.spacing.xxl,
+    paddingHorizontal: theme.spacing.xl,
   },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 15,
+    marginBottom: theme.spacing.lg,
   },
   sectionTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
+    fontSize: theme.typography.sizes.h2,
+    fontWeight: theme.typography.weights.bold,
+    color: theme.colors.text.primary,
   },
   seeAllButton: {
-    color: '#007AFF',
-    fontSize: 14,
-    fontWeight: '600',
+    color: theme.colors.primary[500],
+    fontSize: theme.typography.sizes.caption,
+    fontWeight: theme.typography.weights.semibold,
   },
   emptyText: {
     textAlign: 'center',
-    color: '#999',
-    fontSize: 14,
+    color: theme.colors.text.tertiary,
+    fontSize: theme.typography.sizes.caption,
     fontStyle: 'italic',
-    paddingVertical: 30,
+    paddingVertical: theme.spacing.xxxl,
   },
   horizontalList: {
-    paddingRight: 20,
+    paddingRight: theme.spacing.xl,
   },
   cooperativeCard: {
     width: 140,
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 12,
-    marginRight: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    backgroundColor: theme.colors.background.primary,
+    borderRadius: theme.borderRadius.md,
+    padding: theme.spacing.md,
+    marginRight: theme.spacing.md,
+    ...theme.shadows.sm,
   },
   cooperativeLogo: {
     width: '100%',
     height: 80,
-    backgroundColor: '#f0f0f0',
-    borderRadius: 8,
+    backgroundColor: theme.colors.neutral[200],
+    borderRadius: theme.borderRadius.sm,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: theme.spacing.sm,
   },
   logoImage: {
     width: '100%',
     height: '100%',
-    borderRadius: 8,
+    borderRadius: theme.borderRadius.sm,
     resizeMode: 'cover',
   },
   logoPlaceholder: {
     fontSize: 40,
   },
   cooperativeName: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 6,
+    fontSize: theme.typography.sizes.caption,
+    fontWeight: theme.typography.weights.semibold,
+    color: theme.colors.text.primary,
+    marginBottom: theme.spacing.sm,
     minHeight: 36,
   },
   ratingContainer: {
@@ -380,58 +370,54 @@ const styles = StyleSheet.create({
   },
   starIcon: {
     fontSize: 14,
-    marginRight: 4,
+    marginRight: theme.spacing.xs,
   },
   ratingText: {
-    fontSize: 14,
-    color: '#666',
-    fontWeight: '600',
+    fontSize: theme.typography.sizes.caption,
+    color: theme.colors.text.secondary,
+    fontWeight: theme.typography.weights.semibold,
   },
   avisCard: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 15,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    backgroundColor: theme.colors.background.primary,
+    borderRadius: theme.borderRadius.md,
+    padding: theme.spacing.lg,
+    marginBottom: theme.spacing.md,
+    ...theme.shadows.sm,
   },
   avisHeader: {
     flexDirection: 'row',
-    marginBottom: 10,
+    marginBottom: theme.spacing.md,
   },
   avatarContainer: {
-    marginRight: 12,
+    marginRight: theme.spacing.md,
   },
   avatar: {
     width: 50,
     height: 50,
-    borderRadius: 25,
+    borderRadius: theme.borderRadius.round,
   },
   avatarPlaceholder: {
     width: 50,
     height: 50,
-    borderRadius: 25,
-    backgroundColor: '#007AFF',
+    borderRadius: theme.borderRadius.round,
+    backgroundColor: theme.colors.primary[500],
     justifyContent: 'center',
     alignItems: 'center',
   },
   avatarText: {
-    color: '#fff',
+    color: theme.colors.text.inverse,
     fontSize: 20,
-    fontWeight: 'bold',
+    fontWeight: theme.typography.weights.bold,
   },
   avisInfo: {
     flex: 1,
     justifyContent: 'center',
   },
   clientName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 4,
+    fontSize: theme.typography.sizes.body,
+    fontWeight: theme.typography.weights.semibold,
+    color: theme.colors.text.primary,
+    marginBottom: theme.spacing.xs,
   },
   starsContainer: {
     flexDirection: 'row',
@@ -441,13 +427,13 @@ const styles = StyleSheet.create({
     marginRight: 2,
   },
   commentaire: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: theme.typography.sizes.caption,
+    color: theme.colors.text.secondary,
     lineHeight: 20,
-    marginBottom: 8,
+    marginBottom: theme.spacing.sm,
   },
   trajet: {
-    fontSize: 12,
-    color: '#999',
+    fontSize: theme.typography.sizes.small,
+    color: theme.colors.text.tertiary,
   },
 });

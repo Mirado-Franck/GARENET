@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { Animated, Text, StyleSheet, Dimensions } from 'react-native';
+import { theme } from '../../constants/theme';
 
 interface ToastProps {
   message: string;
@@ -18,7 +19,6 @@ export const Toast: React.FC<ToastProps> = ({
   const translateY = useRef(new Animated.Value(-100)).current;
 
   useEffect(() => {
-    // Animation d'entrée
     Animated.parallel([
       Animated.timing(opacity, {
         toValue: 1,
@@ -32,7 +32,6 @@ export const Toast: React.FC<ToastProps> = ({
       }),
     ]).start();
 
-    // Auto-dismiss après la durée spécifiée
     const timer = setTimeout(() => {
       hideToast();
     }, duration);
@@ -60,15 +59,15 @@ export const Toast: React.FC<ToastProps> = ({
   const getBackgroundColor = () => {
     switch (type) {
       case 'success':
-        return '#4CAF50';
+        return theme.colors.semantic.success;
       case 'error':
-        return '#F44336';
+        return theme.colors.semantic.error;
       case 'warning':
-        return '#FF9800';
+        return theme.colors.semantic.warning;
       case 'info':
-        return '#2196F3';
+        return theme.colors.primary[500];
       default:
-        return '#4CAF50';
+        return theme.colors.semantic.success;
     }
   };
 
@@ -108,11 +107,11 @@ const styles = StyleSheet.create({
   container: {
     position: 'absolute',
     top: 50,
-    left: 20,
-    right: 20,
-    paddingVertical: 16,
-    paddingHorizontal: 20,
-    borderRadius: 12,
+    left: theme.spacing.xl,
+    right: theme.spacing.xl,
+    paddingVertical: theme.spacing.md,
+    paddingHorizontal: theme.spacing.xl,
+    borderRadius: theme.borderRadius.md,
     flexDirection: 'row',
     alignItems: 'center',
     shadowColor: '#000',
@@ -124,14 +123,14 @@ const styles = StyleSheet.create({
   },
   icon: {
     fontSize: 24,
-    color: 'white',
-    marginRight: 12,
-    fontWeight: 'bold',
+    color: theme.colors.text.inverse,
+    marginRight: theme.spacing.md,
+    fontWeight: theme.typography.weights.bold,
   },
   message: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '600',
+    color: theme.colors.text.inverse,
+    fontSize: theme.typography.sizes.body,
+    fontWeight: theme.typography.weights.semibold,
     flex: 1,
   },
 });

@@ -2,7 +2,6 @@
 import React, { useEffect, useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../contexts/AuthContext';
-
 import {
   View,
   Text,
@@ -11,12 +10,12 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
-
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import Button from '../components/ui/Button';
 import SearchBar from '../components/ui/SearchBar';
 import { voyageService, Voyage } from '../services/voyageService';
+import { theme } from '../constants/theme'; // 👈 IMPORT DU THÈME
 
 export default function Acceuil() {
   const router = useRouter();
@@ -86,22 +85,20 @@ export default function Acceuil() {
     loadVoyages();
   };
 
-const handleSeConnecter = () => {
-  // ✅ Pas de redirection spécifique → ira vers home après login
-  setRedirectAfterLogin(null);
-  console.log('🔑 Connexion manuelle depuis accueil → Redirection home');
-  router.push('/se-connecter');
-};
+  const handleSeConnecter = () => {
+    setRedirectAfterLogin(null);
+    console.log('🔑 Connexion manuelle depuis accueil → Redirection home');
+    router.push('/se-connecter');
+  };
 
   const handleSInscrire = () => {
     router.push('/inscription');
   };
   
-const handleVoyagePress = (voyageId: number) => {
-  // ✅ Sauvegarder la destination avant login
-  setRedirectAfterLogin(`/(client)/voyages/detailVoyage?id=${voyageId}`);
-  router.push('/se-connecter');
-};
+  const handleVoyagePress = (voyageId: number) => {
+    setRedirectAfterLogin(`/(client)/voyages/detailVoyage?id=${voyageId}`);
+    router.push('/se-connecter');
+  };
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -175,7 +172,7 @@ const handleVoyagePress = (voyageId: number) => {
         >
           {(loading || searching) ? (
             <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color="#4CAF50" />
+              <ActivityIndicator size="large" color={theme.colors.primary[500]} />
               <Text style={styles.loadingText}>
                 {searching ? 'Recherche en cours...' : 'Chargement des voyages...'}
               </Text>
@@ -256,85 +253,80 @@ const handleVoyagePress = (voyageId: number) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fff8',
+    backgroundColor: theme.colors.background.secondary,
   },
   header: {
     alignItems: 'center',
-    paddingVertical: 30,
-    paddingHorizontal: 20,
-    backgroundColor: '#2E7D32',
-    borderBottomLeftRadius: 30,
-    borderBottomRightRadius: 30,
+    paddingVertical: theme.spacing.xxxl,
+    paddingHorizontal: theme.spacing.xl,
+    backgroundColor: theme.colors.primary[500],
+    borderBottomLeftRadius: theme.borderRadius.xl,
+    borderBottomRightRadius: theme.borderRadius.xl,
   },
   logo: {
     fontSize: 28,
-    fontWeight: 'bold',
-    color: 'white',
-    marginBottom: 8,
+    fontWeight: theme.typography.weights.bold,
+    color: theme.colors.text.inverse,
+    marginBottom: theme.spacing.sm,
   },
   title: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: 'white',
+    fontSize: theme.typography.sizes.h2,
+    fontWeight: theme.typography.weights.bold,
+    color: theme.colors.text.inverse,
     textAlign: 'center',
-    marginBottom: 8,
+    marginBottom: theme.spacing.sm,
   },
   subtitle: {
-    fontSize: 14,
-    color: 'rgba(255, 255, 255, 0.9)',
+    fontSize: theme.typography.sizes.caption,
+    color: theme.colors.text.light,
     textAlign: 'center',
   },
   section: {
-    padding: 20,
+    padding: theme.spacing.xl,
     marginTop: 0,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#2E7D32',
-    marginBottom: 15,
+    fontSize: theme.typography.sizes.h3,
+    fontWeight: theme.typography.weights.bold,
+    color: theme.colors.primary[500],
+    marginBottom: theme.spacing.lg,
   },
   localisationCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'white',
-    padding: 15,
-    borderRadius: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    elevation: 3,
+    backgroundColor: theme.colors.background.primary,
+    padding: theme.spacing.lg,
+    borderRadius: theme.borderRadius.md,
+    ...theme.shadows.sm,
   },
   localisationIcon: {
     fontSize: 24,
-    marginRight: 12,
+    marginRight: theme.spacing.md,
   },
   localisationText: {
     flex: 1,
   },
   villeActuelle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#2E7D32',
-    marginBottom: 4,
+    fontSize: theme.typography.sizes.body,
+    fontWeight: theme.typography.weights.bold,
+    color: theme.colors.primary[500],
+    marginBottom: theme.spacing.xs,
   },
   localisationSubtitle: {
-    fontSize: 12,
-    color: '#666',
+    fontSize: theme.typography.sizes.small,
+    color: theme.colors.text.secondary,
   },
   searchSection: {
-    paddingHorizontal: 20,
+    paddingHorizontal: theme.spacing.xl,
     marginBottom: 0,
     paddingTop: 0,
   },
   searchBar: {
     marginVertical: 0,
   },
-  // NOUVEAUX STYLES POUR LA SECTION SCROLLABLE
   voyagesSection: {
     flex: 1,
-    padding: 20,
+    padding: theme.spacing.xl,
     marginTop: 0,
   },
   scrollContainer: {
@@ -342,70 +334,66 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    paddingBottom: 10,
+    paddingBottom: theme.spacing.md,
   },
   loadingContainer: {
     alignItems: 'center',
-    paddingVertical: 40,
+    paddingVertical: theme.spacing.xxl,
   },
   loadingText: {
-    marginTop: 12,
-    fontSize: 14,
-    color: '#666',
+    marginTop: theme.spacing.md,
+    fontSize: theme.typography.sizes.caption,
+    color: theme.colors.text.secondary,
   },
   errorContainer: {
     alignItems: 'center',
-    paddingVertical: 40,
+    paddingVertical: theme.spacing.xxl,
   },
   errorText: {
-    fontSize: 14,
-    color: '#e74c3c',
+    fontSize: theme.typography.sizes.caption,
+    color: theme.colors.semantic.error,
     textAlign: 'center',
-    marginBottom: 16,
+    marginBottom: theme.spacing.md,
   },
   retryButton: {
-    backgroundColor: '#4CAF50',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 8,
+    backgroundColor: theme.colors.primary[500],
+    paddingHorizontal: theme.spacing.xl,
+    paddingVertical: theme.spacing.md,
+    borderRadius: theme.borderRadius.sm,
   },
   retryText: {
-    color: 'white',
-    fontSize: 14,
-    fontWeight: '600',
+    color: theme.colors.text.inverse,
+    fontSize: theme.typography.sizes.caption,
+    fontWeight: theme.typography.weights.semibold,
   },
   emptyContainer: {
     alignItems: 'center',
-    paddingVertical: 40,
+    paddingVertical: theme.spacing.xxl,
   },
   emptyText: {
-    fontSize: 14,
-    color: '#999',
+    fontSize: theme.typography.sizes.caption,
+    color: theme.colors.text.tertiary,
     textAlign: 'center',
   },
   voyagesContainer: {
-    gap: 12,
+    gap: theme.spacing.md,
   },
   voyageCard: {
     flexDirection: 'row',
-    backgroundColor: 'white',
-    borderRadius: 12,
-    padding: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    elevation: 3,
-    marginBottom: 8,
+    backgroundColor: theme.colors.background.primary,
+    borderRadius: theme.borderRadius.md,
+    padding: theme.spacing.md,
+    ...theme.shadows.sm,
+    marginBottom: theme.spacing.sm,
   },
   voyageImagePlaceholder: {
     width: 50,
     height: 50,
-    backgroundColor: '#E8F5E8',
-    borderRadius: 8,
+    backgroundColor: theme.colors.neutral[100],
+    borderRadius: theme.borderRadius.sm,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
+    marginRight: theme.spacing.md,
   },
   placeholderText: {
     fontSize: 20,
@@ -415,52 +403,52 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   voyageTitre: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 4,
+    fontSize: theme.typography.sizes.caption,
+    fontWeight: theme.typography.weights.bold,
+    color: theme.colors.text.primary,
+    marginBottom: theme.spacing.xs,
   },
   voyageDetails: {
-    fontSize: 12,
-    color: '#666',
-    marginBottom: 4,
+    fontSize: theme.typography.sizes.small,
+    color: theme.colors.text.secondary,
+    marginBottom: theme.spacing.xs,
   },
   voyagePrix: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#2E7D32',
-    marginBottom: 4,
+    fontSize: theme.typography.sizes.caption,
+    fontWeight: theme.typography.weights.bold,
+    color: theme.colors.primary[500],
+    marginBottom: theme.spacing.xs,
   },
   voyageCooperative: {
-    fontSize: 11,
-    color: '#4CAF50',
-    fontWeight: '600',
+    fontSize: theme.typography.sizes.small,
+    color: theme.colors.secondary[500],
+    fontWeight: theme.typography.weights.semibold,
     marginBottom: 2,
   },
   voyageCapacite: {
-    fontSize: 10,
-    color: '#999',
+    fontSize: theme.typography.sizes.small,
+    color: theme.colors.text.tertiary,
   },
   actionsSection: {
-    padding: 20,
-    gap: 10,
+    padding: theme.spacing.xl,
+    gap: theme.spacing.md,
     marginTop: 0,
-    paddingTop: 10,
+    paddingTop: theme.spacing.md,
   },
   actionButton: {
     marginHorizontal: 0,
   },
   footer: {
     alignItems: 'center',
-    paddingVertical: 15,
-    paddingHorizontal: 20,
+    paddingVertical: theme.spacing.lg,
+    paddingHorizontal: theme.spacing.xl,
     borderTopWidth: 1,
-    borderTopColor: '#E0E0E0',
+    borderTopColor: theme.colors.neutral[300],
     marginTop: 0,
   },
   footerText: {
-    fontSize: 12,
-    color: '#666',
+    fontSize: theme.typography.sizes.small,
+    color: theme.colors.text.secondary,
     fontStyle: 'italic',
     textAlign: 'center',
   },

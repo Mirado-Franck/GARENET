@@ -8,6 +8,7 @@ import {
   Keyboard,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { theme } from '../../constants/theme'; // 👈 IMPORT DU THÈME
 
 interface SearchBarProps {
   placeholder?: string;
@@ -38,8 +39,6 @@ export default function SearchBar({
 
   const handleChangeText = (text: string) => {
     setQuery(text);
-    // Recherche en temps réel optionnelle
-    // onSearch(text);
   };
 
   return (
@@ -49,7 +48,7 @@ export default function SearchBar({
         <Ionicons 
           name="search" 
           size={20} 
-          color="#666" 
+          color={theme.colors.text.tertiary} // 👈 UTILISATION DU THÈME
           style={styles.searchIcon} 
         />
         
@@ -62,18 +61,22 @@ export default function SearchBar({
           autoFocus={autoFocus}
           returnKeyType="search"
           onSubmitEditing={handleSearch}
-          placeholderTextColor="#999"
+          placeholderTextColor={theme.colors.text.tertiary} // 👈 UTILISATION DU THÈME
         />
         
         {/* Bouton effacer */}
         {query.length > 0 && (
           <TouchableOpacity onPress={handleClear} style={styles.clearButton}>
-            <Ionicons name="close-circle" size={18} color="#999" />
+            <Ionicons 
+              name="close-circle" 
+              size={18} 
+              color={theme.colors.text.tertiary} // 👈 UTILISATION DU THÈME
+            />
           </TouchableOpacity>
         )}
       </View>
       
-      {/* Bouton de recherche (optionnel) */}
+      {/* Bouton de recherche */}
       <TouchableOpacity 
         style={[
           styles.searchButton,
@@ -85,7 +88,11 @@ export default function SearchBar({
         <Ionicons 
           name="arrow-forward" 
           size={20} 
-          color={query.length === 0 ? '#CCC' : 'white'} 
+          color={
+            query.length === 0 
+              ? theme.colors.neutral[400] // 👈 UTILISATION DU THÈME
+              : theme.colors.text.inverse  // 👈 UTILISATION DU THÈME
+          } 
         />
       </TouchableOpacity>
     </View>
@@ -96,50 +103,42 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: 10,
+    marginVertical: theme.spacing.md, // 👈 UTILISATION DU THÈME
   },
   searchContainer: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'white',
-    borderRadius: 12,
+    backgroundColor: theme.colors.background.primary, // 👈 UTILISATION DU THÈME
+    borderRadius: theme.borderRadius.md, // 👈 UTILISATION DU THÈME
     borderWidth: 1,
-    borderColor: '#E0E0E0',
-    paddingHorizontal: 12,
-    marginRight: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 2,
+    borderColor: theme.colors.neutral[300], // 👈 UTILISATION DU THÈME
+    paddingHorizontal: theme.spacing.md, // 👈 UTILISATION DU THÈME
+    marginRight: theme.spacing.md, // 👈 UTILISATION DU THÈME
+    ...theme.shadows.sm, // 👈 UTILISATION DU THÈME
   },
   searchIcon: {
-    marginRight: 8,
+    marginRight: theme.spacing.sm, // 👈 UTILISATION DU THÈME
   },
   input: {
     flex: 1,
-    paddingVertical: 12,
-    fontSize: 16,
-    color: '#333',
+    paddingVertical: theme.spacing.md, // 👈 UTILISATION DU THÈME
+    fontSize: theme.typography.sizes.body, // 👈 UTILISATION DU THÈME
+    color: theme.colors.text.primary, // 👈 UTILISATION DU THÈME
   },
   clearButton: {
-    padding: 4,
+    padding: theme.spacing.xs, // 👈 UTILISATION DU THÈME
   },
   searchButton: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: theme.colors.primary[500], // 👈 BLEU DU THÈME (plus vert)
     width: 44,
     height: 44,
-    borderRadius: 12,
+    borderRadius: theme.borderRadius.md, // 👈 UTILISATION DU THÈME
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 3,
+    ...theme.shadows.sm, // 👈 UTILISATION DU THÈME
   },
   searchButtonDisabled: {
-    backgroundColor: '#E0E0E0',
+    backgroundColor: theme.colors.neutral[300], // 👈 UTILISATION DU THÈME
   },
 });

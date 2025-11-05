@@ -7,7 +7,9 @@ import {
   ActivityIndicator,
   ViewStyle,
   TextStyle,
+  StyleProp,
 } from 'react-native';
+import { theme } from '../../constants/theme';
 
 type ButtonVariant = 'primary' | 'success' | 'danger' | 'secondary';
 
@@ -17,8 +19,8 @@ interface ButtonProps {
   variant?: ButtonVariant;
   loading?: boolean;
   disabled?: boolean;
-  style?: ViewStyle;
-  textStyle?: TextStyle;
+  style?: StyleProp<ViewStyle>;
+  textStyle?: StyleProp<TextStyle>;
 }
 
 export default function Button({
@@ -30,11 +32,11 @@ export default function Button({
   style,
   textStyle,
 }: ButtonProps) {
-  const getButtonStyle = (): ViewStyle => {
+  const getButtonStyle = (): StyleProp<ViewStyle> => {
     const baseStyle: ViewStyle = {
-      paddingVertical: 12,
-      paddingHorizontal: 24,
-      borderRadius: 10,
+      paddingVertical: theme.spacing.md,
+      paddingHorizontal: theme.spacing.xl,
+      borderRadius: theme.borderRadius.md,
       alignItems: 'center',
       justifyContent: 'center',
       flexDirection: 'row',
@@ -42,40 +44,61 @@ export default function Button({
     };
 
     const variantStyles: Record<ButtonVariant, ViewStyle> = {
-      primary: { backgroundColor: '#4CAF50' },
-      success: { backgroundColor: '#2E7D32' },
-      danger: { backgroundColor: '#FF3B30' },
+      primary: { backgroundColor: theme.colors.primary[500] },
+      success: { backgroundColor: theme.colors.semantic.success },
+      danger: { backgroundColor: theme.colors.semantic.error },
       secondary: { 
         backgroundColor: 'transparent', 
         borderWidth: 2, 
-        borderColor: '#4CAF50' 
+        borderColor: theme.colors.primary[500],
       },
     };
 
     const disabledStyle: ViewStyle = disabled ? { 
-      backgroundColor: '#CCCCCC',
-      borderColor: '#CCCCCC'
+      backgroundColor: theme.colors.neutral[300],
+      borderColor: theme.colors.neutral[300],
     } : {};
 
-    return { ...baseStyle, ...variantStyles[variant], ...disabledStyle, ...style };
+    return [
+      baseStyle,
+      variantStyles[variant],
+      disabled && disabledStyle,
+      style,
+    ];
   };
 
-  const getTextStyle = (): TextStyle => {
+  const getTextStyle = (): StyleProp<TextStyle> => {
     const baseStyle: TextStyle = {
-      fontSize: 16,
-      fontWeight: 'bold',
+      fontSize: theme.typography.sizes.body,
+      fontWeight: theme.typography.weights.semibold, // ✅ MAINTENANT CORRECT
     };
 
     const variantTextStyles: Record<ButtonVariant, TextStyle> = {
-      primary: { color: 'white' },
-      success: { color: 'white' },
-      danger: { color: 'white' },
-      secondary: { color: '#4CAF50' },
+      primary: { color: theme.colors.text.inverse },
+      success: { color: theme.colors.text.inverse },
+      danger: { color: theme.colors.text.inverse },
+      secondary: { color: theme.colors.primary[500] },
     };
 
-    const disabledTextStyle: TextStyle = disabled ? { color: '#666666' } : {};
+    const disabledTextStyle: TextStyle = disabled ? { 
+      color: theme.colors.neutral[600],
+    } : {};
 
-    return { ...baseStyle, ...variantTextStyles[variant], ...disabledTextStyle, ...textStyle };
+    return [
+      baseStyle,
+      variantTextStyles[variant],
+      disabled && disabledTextStyle,
+      textStyle,
+    ];
+  };
+
+  const getActivityIndicatorColor = (): string => {
+    if (disabled) {
+      return theme.colors.neutral[600];
+    }
+    return variant === 'secondary' 
+      ? theme.colors.primary[500]
+      : theme.colors.text.inverse;
   };
 
   return (
@@ -86,7 +109,7 @@ export default function Button({
     >
       {loading ? (
         <ActivityIndicator 
-          color={variant === 'secondary' ? '#4CAF50' : 'white'} 
+          color={getActivityIndicatorColor()} 
           size="small" 
         />
       ) : (
@@ -96,7 +119,7 @@ export default function Button({
   );
 }
 
-// Styles additionnels si besoin
+// StyleSheet pour les styles constants (optionnel)
 const styles = StyleSheet.create({
-  // Vous pouvez ajouter des styles spécifiques ici
+  // Vous pouvez ajouter des styles spécifiques ici si besoin
 });

@@ -17,6 +17,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import Button from '../components/ui/Button';
 import { useAuth } from '../contexts/AuthContext';
+import { theme } from '../constants/theme';
 
 export default function SeConnecter() {
   const router = useRouter();
@@ -50,46 +51,43 @@ export default function SeConnecter() {
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
-    // ✅ Fonction pour afficher un toast
-    const showToast = (message: string, type: 'success' | 'error' | 'info' | 'warning' = 'success') => {
-      setToastMessage(message);
-      setToastType(type);
-      setToastVisible(true);
-    };
 
-         // ✅ Gestion de la soumission du formulaire
-    const handleConnexion = async () => {
-      if (!validateForm()) {
-        return;
-      }
+  const showToast = (message: string, type: 'success' | 'error' | 'info' | 'warning' = 'success') => {
+    setToastMessage(message);
+    setToastType(type);
+    setToastVisible(true);
+  };
 
-      setLoading(true);
-      try {
-        await login(formData.email, formData.mot_de_passe);
-        
-        // ✅ Afficher le toast de succès
-        showToast('Connexion réussie !', 'success');
-        
-        // ✅ Attendre un peu avant de rediriger (pour voir le toast)
-        setTimeout(() => {
-          if (redirectAfterLogin) {
-            console.log('🔀 Redirection vers:', redirectAfterLogin);
-            const path = redirectAfterLogin;
-            setRedirectAfterLogin(null);
-            router.replace(path as any);
-          } else {
-            console.log('🏠 Redirection vers home');
-            router.replace('/(client)/home');
-          }
-        }, 1000); // ✅ Délai de 1 seconde
-        
-      } catch (error: any) {
-        console.error('❌ Erreur connexion:', error);
-        showToast(error.error || 'Erreur de connexion', 'error'); // ✅ Toast d'erreur
-      } finally {
-        setLoading(false);
-      }
-    };
+  const handleConnexion = async () => {
+    if (!validateForm()) {
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await login(formData.email, formData.mot_de_passe);
+      
+      showToast('Connexion réussie !', 'success');
+      
+      setTimeout(() => {
+        if (redirectAfterLogin) {
+          console.log('🔀 Redirection vers:', redirectAfterLogin);
+          const path = redirectAfterLogin;
+          setRedirectAfterLogin(null);
+          router.replace(path as any);
+        } else {
+          console.log('🏠 Redirection vers home');
+          router.replace('/(client)/home');
+        }
+      }, 1000);
+      
+    } catch (error: any) {
+      console.error('❌ Erreur connexion:', error);
+      showToast(error.error || 'Erreur de connexion', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleInscription = () => {
     router.push('/inscription');
@@ -165,7 +163,7 @@ export default function SeConnecter() {
                 <Ionicons 
                   name={showPassword ? "eye-off" : "eye"} 
                   size={22} 
-                  color="#666" 
+                  color={theme.colors.text.secondary}
                 />
               </TouchableOpacity>
             </View>
@@ -187,7 +185,7 @@ export default function SeConnecter() {
           />
 
           {loading && (
-            <ActivityIndicator size="large" color="#4CAF50" style={styles.loader} />
+            <ActivityIndicator size="large" color={theme.colors.primary[500]} style={styles.loader} />
           )}
 
           <View style={styles.footer}>
@@ -197,137 +195,135 @@ export default function SeConnecter() {
             </TouchableOpacity>
           </View>
         </View>
-     {/* ✅ Toast notification */}
-    {toastVisible && (
-      <Toast
-        message={toastMessage}
-        type={toastType}
-        duration={3000}
-        onHide={() => setToastVisible(false)}
-      />
-    )}
+
+        {toastVisible && (
+          <Toast
+            message={toastMessage}
+            type={toastType}
+            duration={3000}
+            onHide={() => setToastVisible(false)}
+          />
+        )}
       </ScrollView>
     </KeyboardAvoidingView>
   );
 }
 
-// Styles identiques à avant...
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fff8',
+    backgroundColor: theme.colors.background.secondary,
   },
   scrollContent: {
     flexGrow: 1,
   },
   header: {
-    backgroundColor: '#4CAF50',
-    paddingTop: 50,
-    paddingBottom: 20,
-    paddingHorizontal: 20,
+    backgroundColor: theme.colors.primary[500],
+    paddingTop: theme.spacing.xxxl+20,
+    paddingBottom: theme.spacing.xl,
+    paddingHorizontal: theme.spacing.xl,
     flexDirection: 'row',
     alignItems: 'center',
   },
   backButton: {
-    marginRight: 15,
+    marginRight: theme.spacing.lg,
   },
   headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: 'white',
+    fontSize: theme.typography.sizes.h2,
+    fontWeight: theme.typography.weights.bold,
+    color: theme.colors.text.inverse,
   },
   formContainer: {
-    padding: 20,
+    padding: theme.spacing.xl,
   },
   title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#2E7D32',
-    marginBottom: 8,
+    fontSize: theme.typography.sizes.h1,
+    fontWeight: theme.typography.weights.bold,
+    color: theme.colors.primary[500],
+    marginBottom: theme.spacing.sm,
   },
   subtitle: {
-    fontSize: 16,
-    color: '#666',
-    marginBottom: 30,
+    fontSize: theme.typography.sizes.body,
+    color: theme.colors.text.secondary,
+    marginBottom: theme.spacing.xxxl,
   },
   inputGroup: {
-    marginBottom: 20,
+    marginBottom: theme.spacing.xl,
   },
   label: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 8,
+    fontSize: theme.typography.sizes.body,
+    fontWeight: theme.typography.weights.semibold,
+    color: theme.colors.text.primary,
+    marginBottom: theme.spacing.sm,
   },
   input: {
-    backgroundColor: 'white',
+    backgroundColor: theme.colors.background.primary,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
-    borderRadius: 12,
-    paddingHorizontal: 15,
-    paddingVertical: 12,
-    fontSize: 16,
-    color: '#333',
+    borderColor: theme.colors.neutral[300],
+    borderRadius: theme.borderRadius.md,
+    paddingHorizontal: theme.spacing.lg,
+    paddingVertical: theme.spacing.md,
+    fontSize: theme.typography.sizes.body,
+    color: theme.colors.text.primary,
   },
   inputError: {
-    borderColor: '#e74c3c',
+    borderColor: theme.colors.semantic.error,
     borderWidth: 1.5,
   },
   passwordContainer: {
     position: 'relative',
   },
   passwordInput: {
-    backgroundColor: 'white',
+    backgroundColor: theme.colors.background.primary,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
-    borderRadius: 12,
-    paddingHorizontal: 15,
-    paddingVertical: 12,
+    borderColor: theme.colors.neutral[300],
+    borderRadius: theme.borderRadius.md,
+    paddingHorizontal: theme.spacing.lg,
+    paddingVertical: theme.spacing.md,
     paddingRight: 50,
-    fontSize: 16,
-    color: '#333',
+    fontSize: theme.typography.sizes.body,
+    color: theme.colors.text.primary,
   },
   eyeIcon: {
     position: 'absolute',
-    right: 15,
-    top: 12,
+    right: theme.spacing.lg,
+    top: theme.spacing.md,
   },
   errorText: {
-    color: '#e74c3c',
-    fontSize: 12,
-    marginTop: 5,
-    marginLeft: 5,
+    color: theme.colors.semantic.error,
+    fontSize: theme.typography.sizes.small,
+    marginTop: theme.spacing.xs,
+    marginLeft: theme.spacing.xs,
   },
   forgotPassword: {
     alignSelf: 'flex-end',
-    marginBottom: 20,
+    marginBottom: theme.spacing.xl,
   },
   forgotPasswordText: {
-    color: '#4CAF50',
-    fontSize: 14,
-    fontWeight: '600',
+    color: theme.colors.primary[500],
+    fontSize: theme.typography.sizes.caption,
+    fontWeight: theme.typography.weights.semibold,
   },
   submitButton: {
-    marginTop: 10,
-    marginBottom: 15,
+    marginTop: theme.spacing.md,
+    marginBottom: theme.spacing.lg,
   },
   loader: {
-    marginVertical: 10,
+    marginVertical: theme.spacing.md,
   },
   footer: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 20,
+    marginTop: theme.spacing.xl,
   },
   footerText: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: theme.typography.sizes.caption,
+    color: theme.colors.text.secondary,
   },
   linkText: {
-    fontSize: 14,
-    color: '#4CAF50',
-    fontWeight: '600',
+    fontSize: theme.typography.sizes.caption,
+    color: theme.colors.primary[500],
+    fontWeight: theme.typography.weights.semibold,
   },
 });
-

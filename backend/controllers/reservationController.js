@@ -170,32 +170,95 @@ const createReservation = async (req, res, next) => {
   }
 };
 
-// === RÉCUPÉRER TOUTES LES RÉSERVATIONS D'UN CLIENT ===
+// === RÉCUPÉRER TOUTES LES RÉSERVATIONS DU CLIENT CONNECTÉ ===
 const getReservations = async (req, res, next) => {
   try {
-    const clientId = req.user?.id || req.body.code_client_id; // À adapter avec auth
+    // ✅ Récupérer l'ID client depuis le JWT (req.user ajouté par authMiddleware)
+    const clientId = req.user.id;
+
     if (!clientId) {
-      return res.status(400).json({ error: "ID client manquant" });
+      return res.status(401).json({ 
+        success: false,
+        error: "Authentification requise" 
+      });
     }
 
     const reservations = await prisma.reservation.findMany({
-      where: { code_client_id: clientId },
+      where: { 
+        code_client_id: clientId,
+        // ✅ Optionnel : exclure les réservations annulées
+        // statut: { not: "annulee" }
+      },
       include: {
         trajet: true,
-        voyage: true,
+        voyage: {
+          include: {
+            trajet: true,
+            voiture: true,
+            cooperative: true
+          }
+        },
+        places: { 
+          include: { 
+            place: {
+              select: {
+                numero: true,
+                id: true
+              }
+            } 
+          } 
+        },
         paiement: true,
-        recu: true,
-        places: { include: { place: true } }
+        recu: true
       },
       orderBy: { date_reservation: "desc" }
     });
 
-    res.json(reservations);
-  } catch (err) {
-    next(err);
+    // ✅ Formater la réponse pour le frontend
+    const formattedReservations = reservations.map(reservation => ({
+      id: reservation.id,
+      code_reservation: reservation.code_reservation,
+      date_reservation: reservation.date_reservation,
+      statut: reservation.statut,
+      nombre_places: reservation.nombre_places,
+      places: reservation.places.map(p => p.place.numero), // ["A1", "B3"]
+      voyage: {
+        code: reservation.voyage.code_voyage,
+        date_depart: reservation.voyage.date_depart,
+        heure_depart: reservation.voyage.heure_depart,
+        prix: reservation.voyage.prix,
+        trajet: {
+          depart: reservation.voyage.trajet.station_depart,
+          arrivee: reservation.voyage.trajet.station_arrivee,
+          distance: reservation.voyage.trajet.distance
+        },
+        voiture: {
+          modele: reservation.voyage.voiture.modele,
+          immatriculation: reservation.voyage.voiture.immatriculation
+        },
+        cooperative: {
+          nom: reservation.voyage.cooperative.nom
+        }
+      },
+      paiement: reservation.paiement.length > 0 ? reservation.paiement[0] : null,
+      recu: reservation.recu.length > 0 ? reservation.recu[0] : null
+    }));
+
+    res.status(200).json({
+      success: true,
+      count: formattedReservations.length,
+      reservations: formattedReservations
+    });
+
+  } catch (error) {
+    console.error("Erreur getReservations:", error);
+    res.status(500).json({ 
+      success: false,
+      error: "Erreur lors de la récupération des réservations",
+      details: error.message 
+    });
   }
 };
-
 // === ANNULER UNE RÉSERVATION ===
 const cancelReservation = async (req, res, next) => {
   try {
@@ -241,31 +304,10 @@ const cancelReservation = async (req, res, next) => {
   }
 };
 
-// === RÉCUPÉRER PAR CLIENT (via param) ===
-const getReservationsByClient = async (req, res, next) => {
-  try {
-    const { utilisateurId } = req.params;
 
-    // On suppose que client.id == utilisateur.id
-    const reservations = await prisma.reservation.findMany({
-      where: { code_client_id: parseInt(utilisateurId) },
-      include: {
-        voyage: { include: { trajet: true } },
-        places: { include: { place: true } },
-        paiement: true
-      },
-      orderBy: { date_reservation: "desc" }
-    });
-
-    res.json(reservations);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-};
 
 export {
   createReservation,
   getReservations,
   cancelReservation,
-  getReservationsByClient
 };

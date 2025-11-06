@@ -7,6 +7,8 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
+  Platform,
+  Modal,
 } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { voyageService, PlacesVoyageResponse, Place } from '../../../services/voyageService';
@@ -27,6 +29,12 @@ export default function Reservation() {
   const [toastVisible, setToastVisible] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [toastType, setToastType] = useState<'success' | 'error'>('success');
+  
+  // ✅ État pour la modal de confirmation
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+
+  // Calculer le prix total
+  const prixTotal = selectedPlaces.length * prixUnitaire;
 
   useEffect(() => {
     loadPlaces();
@@ -56,28 +64,23 @@ export default function Reservation() {
   };
 
   const handleValidate = async () => {
+    console.log('🔵 handleValidate appelé');
+    console.log('📋 selectedPlaces:', selectedPlaces);
+
     if (selectedPlaces.length === 0) {
+      console.log('⚠️ Aucune place sélectionnée');
       Alert.alert('Attention', 'Veuillez sélectionner au moins une place');
       return;
     }
 
-    Alert.alert(
-      'Confirmer la réservation',
-      `Vous allez réserver ${selectedPlaces.length} place(s) pour un total de ${prixTotal.toLocaleString()} Ar.\n\nPlaces : ${selectedPlaces.join(', ')}`,
-      [
-        { text: 'Annuler', style: 'cancel' },
-        {
-          text: 'Confirmer',
-          onPress: confirmReservation,
-        },
-      ]
-    );
+    // ✅ Afficher la modal stylisée au lieu de Alert
+    setShowConfirmModal(true);
   };
 
   const confirmReservation = async () => {
     try {
       setSubmitting(true);
-      const response = await reservationService.createReservation({
+      await reservationService.createReservation({
         code_voyage_id: voyageId,
         places: selectedPlaces,
       });
@@ -87,7 +90,7 @@ export default function Reservation() {
       setToastVisible(true);
 
       setTimeout(() => {
-        router.replace('/(client)/mesReservations');
+        router.replace('/(client)/reservations/listeReservation');
       }, 2000);
     } catch (error: any) {
       console.error('Erreur réservation:', error);
@@ -98,8 +101,6 @@ export default function Reservation() {
       setSubmitting(false);
     }
   };
-
-  const prixTotal = selectedPlaces.length * prixUnitaire;
 
   const getPlaceStyle = (place: Place) => {
     if (place.est_chauffeur) return styles.placeChauffeur;
@@ -114,22 +115,22 @@ export default function Reservation() {
     return styles.placeTextAvailable;
   };
 
-  // Fonction pour organiser les places en disposition de bus
-  const organizeBusLayout = (places: Place[]) => {
+  const organizeCarLayout = (places: Place[]) => {
     const chauffeur = places.find(place => place.est_chauffeur);
     const voyageurs = places.filter(place => !place.est_chauffeur);
     
-    // Disposition typique d'un bus : 2 colonnes de chaque côté + allée au milieu
     const rows = [];
     
-    // Première ligne : seulement le chauffeur
-    if (chauffeur) {
-      rows.push([chauffeur]);
-    }
+    const row1 = [];
+    if (chauffeur) row1.push(chauffeur);
     
-    // Organiser les places voyageurs en rangées de 4 places (2 de chaque côté)
-    for (let i = 0; i < voyageurs.length; i += 4) {
-      const row = voyageurs.slice(i, i + 4);
+    const avantPassagers = voyageurs.slice(0, 2);
+    row1.push(...avantPassagers);
+    rows.push(row1);
+    
+    const placesRestantes = voyageurs.slice(2);
+    for (let i = 0; i < placesRestantes.length; i += 4) {
+      const row = placesRestantes.slice(i, i + 4);
       rows.push(row);
     }
     
@@ -153,7 +154,7 @@ export default function Reservation() {
     );
   }
 
-  const busLayout = organizeBusLayout(placesData.places);
+  const carLayout = organizeCarLayout(placesData.places);
 
   return (
     <View style={styles.container}>
@@ -183,31 +184,29 @@ export default function Reservation() {
           </View>
         </View>
 
-        {/* Disposition du bus */}
-        <View style={styles.busContainer}>
-          <View style={styles.busHeader}>
-            <Text style={styles.busDirection}>⬆️ Avant</Text>
+        <View style={styles.carContainer}>
+          <View style={styles.carHeader}>
+            <Text style={styles.carDirection}>⬆️ Avant du véhicule</Text>
           </View>
           
-          {/* Volant */}
           <View style={styles.steeringWheelContainer}>
             <Text style={styles.steeringWheel}>🚗</Text>
           </View>
 
-          {/* Grille de places organisée */}
-          <View style={styles.busLayout}>
-            {busLayout.map((row, rowIndex) => (
+          <View style={styles.carLayout}>
+            {carLayout.map((row, rowIndex) => (
               <View key={rowIndex} style={[
-                styles.busRow,
-                rowIndex === 0 && styles.chauffeurRow // Première ligne pour le chauffeur
+                styles.carRow,
+                rowIndex === 0 && styles.frontRow
               ]}>
-                {row.map((place: Place) => (
+                {row.map((place: Place, seatIndex: number) => (
                   <TouchableOpacity
                     key={place.numero}
                     style={[
-                      styles.place,
+                      styles.seat,
                       getPlaceStyle(place),
-                      rowIndex === 0 && styles.chauffeurPlace // Style spécial pour le chauffeur
+                      rowIndex === 0 && styles.frontSeat,
+                      seatIndex === 0 && rowIndex === 0 && styles.driverSeat,
                     ]}
                     onPress={() => togglePlace(place.numero, place)}
                     disabled={!place.selectionnable || submitting}
@@ -215,20 +214,16 @@ export default function Reservation() {
                   >
                     <Text style={getPlaceTextStyle(place)}>
                       {place.numero}
-                      {rowIndex === 0 && " 🪑"}
+                      {seatIndex === 0 && rowIndex === 0 && " 🪑"}
                     </Text>
                   </TouchableOpacity>
                 ))}
-                {/* Allée visuelle pour les rangées de voyageurs */}
-                {rowIndex > 0 && row.length > 2 && (
-                  <View style={styles.aisle} />
-                )}
               </View>
             ))}
           </View>
 
-          <View style={styles.busFooter}>
-            <Text style={styles.busDirection}>⬇️ Arrière</Text>
+          <View style={styles.carFooter}>
+            <Text style={styles.carDirection}>⬇️ Arrière du véhicule</Text>
           </View>
         </View>
 
@@ -277,6 +272,50 @@ export default function Reservation() {
         </TouchableOpacity>
       </View>
 
+      {/* ✅ Modal de confirmation stylisée */}
+      <Modal
+        visible={showConfirmModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowConfirmModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Confirmer la réservation</Text>
+            
+            <Text style={styles.modalMessage}>
+              Vous allez réserver {selectedPlaces.length} place(s) pour un total de{' '}
+              <Text style={styles.modalPrice}>{prixTotal.toLocaleString()} Ar</Text>
+            </Text>
+            
+            <View style={styles.modalPlaces}>
+              <Text style={styles.modalPlacesLabel}>Places :</Text>
+              <Text style={styles.modalPlacesList}>{selectedPlaces.join(', ')}</Text>
+            </View>
+
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalButtonCancel]}
+                onPress={() => setShowConfirmModal(false)}
+              >
+                <Text style={styles.modalButtonTextCancel}>Annuler</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalButtonConfirm]}
+                onPress={() => {
+                  setShowConfirmModal(false);
+                  confirmReservation();
+                }}
+              >
+                <Text style={styles.modalButtonTextConfirm}>Confirmer</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Toast */}
       {toastVisible && (
         <Toast
           message={toastMessage}
@@ -354,18 +393,17 @@ const styles = StyleSheet.create({
     fontSize: theme.typography.sizes.small,
     color: theme.colors.text.secondary,
   },
-  // Styles pour la disposition du bus
-  busContainer: {
+  carContainer: {
     marginBottom: theme.spacing.xl,
     backgroundColor: theme.colors.background.primary,
     borderRadius: theme.borderRadius.md,
     padding: theme.spacing.lg,
   },
-  busHeader: {
+  carHeader: {
     alignItems: 'center',
     marginBottom: theme.spacing.md,
   },
-  busDirection: {
+  carDirection: {
     fontSize: theme.typography.sizes.caption,
     color: theme.colors.text.secondary,
     fontWeight: theme.typography.weights.semibold,
@@ -377,30 +415,19 @@ const styles = StyleSheet.create({
   steeringWheel: {
     fontSize: 24,
   },
-  busLayout: {
+  carLayout: {
     alignItems: 'center',
   },
-  busRow: {
+  carRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: theme.spacing.md,
+    marginBottom: theme.spacing.lg,
     gap: theme.spacing.md,
   },
-  chauffeurRow: {
+  frontRow: {
     marginBottom: theme.spacing.xl,
   },
-  aisle: {
-    width: 40,
-    height: 60,
-    backgroundColor: theme.colors.neutral[200],
-    borderRadius: theme.borderRadius.sm,
-    marginHorizontal: theme.spacing.sm,
-  },
-  busFooter: {
-    alignItems: 'center',
-    marginTop: theme.spacing.md,
-  },
-  place: {
+  seat: {
     width: 50,
     height: 50,
     justifyContent: 'center',
@@ -408,9 +435,19 @@ const styles = StyleSheet.create({
     borderRadius: theme.borderRadius.sm,
     borderWidth: 2,
   },
-  chauffeurPlace: {
-    width: 80,
+  frontSeat: {
+    width: 55,
+    height: 55,
+  },
+  driverSeat: {
+    backgroundColor: '#FFF3E0',
+    borderColor: theme.colors.semantic.warning,
+    width: 60,
     height: 60,
+  },
+  carFooter: {
+    alignItems: 'center',
+    marginTop: theme.spacing.md,
   },
   placeAvailable: {
     backgroundColor: '#E8F5E9',
@@ -514,6 +551,87 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.neutral[400],
   },
   validateButtonText: {
+    color: theme.colors.text.inverse,
+    fontSize: theme.typography.sizes.body,
+    fontWeight: theme.typography.weights.bold,
+  },
+  // ✅ Styles de la modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: theme.colors.background.primary,
+    borderRadius: theme.borderRadius.lg,
+    padding: 24,
+    width: '100%',
+    maxWidth: 400,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 10,
+  },
+  modalTitle: {
+    fontSize: theme.typography.sizes.h2,
+    fontWeight: theme.typography.weights.bold,
+    color: theme.colors.text.primary,
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  modalMessage: {
+    fontSize: theme.typography.sizes.body,
+    color: theme.colors.text.secondary,
+    lineHeight: 24,
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  modalPrice: {
+    fontWeight: theme.typography.weights.bold,
+    color: theme.colors.primary[500],
+    fontSize: theme.typography.sizes.h3,
+  },
+  modalPlaces: {
+    backgroundColor: theme.colors.background.secondary,
+    padding: 12,
+    borderRadius: theme.borderRadius.sm,
+    marginBottom: 24,
+  },
+  modalPlacesLabel: {
+    fontSize: theme.typography.sizes.small,
+    color: theme.colors.text.secondary,
+    marginBottom: 4,
+  },
+  modalPlacesList: {
+    fontSize: theme.typography.sizes.h3,
+    fontWeight: theme.typography.weights.bold,
+    color: theme.colors.primary[700],
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  modalButton: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: theme.borderRadius.md,
+    alignItems: 'center',
+  },
+  modalButtonCancel: {
+    backgroundColor: theme.colors.neutral[200],
+  },
+  modalButtonConfirm: {
+    backgroundColor: theme.colors.primary[500],
+  },
+  modalButtonTextCancel: {
+    color: theme.colors.text.secondary,
+    fontSize: theme.typography.sizes.body,
+    fontWeight: theme.typography.weights.semibold,
+  },
+  modalButtonTextConfirm: {
     color: theme.colors.text.inverse,
     fontSize: theme.typography.sizes.body,
     fontWeight: theme.typography.weights.bold,

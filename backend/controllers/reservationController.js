@@ -259,14 +259,19 @@ const getReservations = async (req, res, next) => {
     });
   }
 };
+
 // === ANNULER UNE RÉSERVATION ===
 const cancelReservation = async (req, res, next) => {
   try {
     const { id } = req.params;
 
+    // ✅ CORRECTION : Inclure voyage pour avoir code_voiture_id
     const reservation = await prisma.reservation.findUnique({
       where: { id: parseInt(id) },
-      include: { places: { include: { place: true } } }
+      include: { 
+        places: { include: { place: true } },
+        voyage: true  // ✅ AJOUT : Inclure voyage
+      }
     });
 
     if (!reservation) {
@@ -278,12 +283,12 @@ const cancelReservation = async (req, res, next) => {
     }
 
     // === LIBÉRER LES PLACES ===
-    const placeNumeros = reservation.places.map(rp => rp.place.numero);
+    const placeIds = reservation.places.map(rp => rp.place.id);
 
+    // ✅ CORRECTION : Utiliser les IDs des places au lieu de voiture_id + numero
     await prisma.place_voiture.updateMany({
       where: {
-        voiture_id: reservation.voyage.code_voiture_id,
-        numero: { in: placeNumeros }
+        id: { in: placeIds }
       },
       data: { est_reserve: false }
     });
@@ -291,16 +296,19 @@ const cancelReservation = async (req, res, next) => {
     // === METTRE À JOUR LE STATUT ===
     const updated = await prisma.reservation.update({
       where: { id: parseInt(id) },
-      data: { statut: "annulee" },
-      include: { places: { include: { place: true } } }
+      data: { statut: "annulee" }
     });
 
     res.json({
-      message: "Réservation annulée",
+      message: "Réservation annulée avec succès",
       reservation: updated
     });
   } catch (err) {
-    next(err);
+    console.error("Erreur cancelReservation:", err);
+    res.status(500).json({ 
+      error: "Erreur lors de l'annulation",
+      details: err.message 
+    });
   }
 };
 

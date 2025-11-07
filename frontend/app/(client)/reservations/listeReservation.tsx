@@ -12,6 +12,7 @@ import {
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { reservationService, Reservation } from '../../../services/reservationService';
+import { Toast } from '../../../components/ui/Toast';
 import { theme } from '../../../constants/theme';
 
 export default function ListeReservation() {
@@ -19,31 +20,37 @@ export default function ListeReservation() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
+  // ✅ États pour le Toast
+  const [toastVisible, setToastVisible] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+  const [toastType, setToastType] = useState<'success' | 'error'>('success');
+
   useEffect(() => {
     loadReservations();
   }, []);
 
-const loadReservations = async () => {
-  try {
-    setLoading(true);
-    const data = await reservationService.getMyReservations();
-    
-    // ✅ Sécurité : vérifier que data est bien un tableau
-    if (Array.isArray(data)) {
-      setReservations(data);
-    } else {
-      console.warn('⚠️ Réponse invalide, pas un tableau:', data);
+  const loadReservations = async () => {
+    try {
+      setLoading(true);
+      const data = await reservationService.getMyReservations();
+      
+      if (Array.isArray(data)) {
+        setReservations(data);
+      } else {
+        console.warn('⚠️ Réponse invalide, pas un tableau:', data);
+        setReservations([]);
+      }
+    } catch (error: any) {
+      console.error('Erreur chargement réservations:', error);
       setReservations([]);
+      setToastMessage('Impossible de charger vos réservations');
+      setToastType('error');
+      setToastVisible(true);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
     }
-  } catch (error: any) {
-    console.error('Erreur chargement réservations:', error);
-    setReservations([]); // ✅ Assurer que c'est toujours un tableau
-    Alert.alert('Erreur', 'Impossible de charger vos réservations');
-  } finally {
-    setLoading(false);
-    setRefreshing(false);
-  }
-};
+  };
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -62,10 +69,18 @@ const loadReservations = async () => {
           onPress: async () => {
             try {
               await reservationService.cancelReservation(reservation.id);
-              Alert.alert('Succès', 'Réservation annulée avec succès');
-              loadReservations(); // Recharger la liste
+              
+              // ✅ Toast de succès
+              setToastMessage('Réservation annulée avec succès');
+              setToastType('success');
+              setToastVisible(true);
+              
+              loadReservations();
             } catch (error: any) {
-              Alert.alert('Erreur', error.error || 'Impossible d\'annuler la réservation');
+              // ✅ Toast d'erreur
+              setToastMessage(error.error || 'Impossible d\'annuler la réservation');
+              setToastType('error');
+              setToastVisible(true);
             }
           },
         },
@@ -249,6 +264,16 @@ const loadReservations = async () => {
           reservations.map((reservation) => renderReservationCard(reservation))
         )}
       </ScrollView>
+
+      {/* ✅ Toast notification */}
+      {toastVisible && (
+        <Toast
+          message={toastMessage}
+          type={toastType}
+          duration={3000}
+          onHide={() => setToastVisible(false)}
+        />
+      )}
     </View>
   );
 }

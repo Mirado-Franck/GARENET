@@ -105,6 +105,7 @@ export const theme = {
     lg: 22,
     xl: 25,
     round: 50,
+    full: 9999,
   },
 
   // ========== OMBRES ==========

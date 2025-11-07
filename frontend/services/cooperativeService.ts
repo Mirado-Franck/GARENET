@@ -16,6 +16,14 @@ export interface Cooperative {
   note_moyenne?: number;
 }
 
+export interface CooperativeDetail extends Cooperative {
+  date_inscription?: string;
+  stations?: any[];
+  voitures?: any[];
+  responsables?: any[];
+  prochains_voyages?: any[];
+}
+
 export interface CooperativesResponse {
   cooperatives: Cooperative[];
   total: number;
@@ -32,6 +40,19 @@ export const cooperativeService = {
     } catch (error: any) {
       console.error('Erreur lors de la récupération des coopératives:', error);
       throw error.response?.data || { error: 'Erreur lors de la récupération des coopératives' };
+    }
+  },
+
+  /**
+   * Récupérer les détails d'une coopérative par ID
+   */
+  getCooperativeById: async (id: number): Promise<CooperativeDetail> => {
+    try {
+      const response = await api.get(`/cooperatives/${id}`);
+      return response.data;
+    } catch (error: any) {
+      console.error('Erreur lors de la récupération de la coopérative:', error);
+      throw error.response?.data || { error: 'Erreur lors de la récupération de la coopérative' };
     }
   },
 };

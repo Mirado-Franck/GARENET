@@ -7,7 +7,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
-  Alert,
+  Modal,
 } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -19,11 +19,15 @@ export default function ListeReservation() {
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-
+  
+    const [reservation, setReservation] = useState<Reservation | null>(null);
   // ✅ États pour le Toast
   const [toastVisible, setToastVisible] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [toastType, setToastType] = useState<'success' | 'error'>('success');
+
+    // ✅ Modal de confirmation annulation
+    const [showCancelModal, setShowCancelModal] = useState(false);
 
   useEffect(() => {
     loadReservations();
@@ -57,35 +61,29 @@ export default function ListeReservation() {
     loadReservations();
   };
 
-  const handleCancelReservation = (reservation: Reservation) => {
-    Alert.alert(
-      'Annuler la réservation',
-      `Voulez-vous vraiment annuler la réservation ${reservation.code_reservation} ?\n\nCette action est irréversible.`,
-      [
-        { text: 'Non', style: 'cancel' },
-        {
-          text: 'Oui, annuler',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await reservationService.cancelReservation(reservation.id);
-              
-              // ✅ Toast de succès
-              setToastMessage('Réservation annulée avec succès');
-              setToastType('success');
-              setToastVisible(true);
-              
-              loadReservations();
-            } catch (error: any) {
-              // ✅ Toast d'erreur
-              setToastMessage(error.error || 'Impossible d\'annuler la réservation');
-              setToastType('error');
-              setToastVisible(true);
-            }
-          },
-        },
-      ]
-    );
+  const handleCancelReservation = () => {
+    if (!reservation) return;
+    setShowCancelModal(true);
+  };
+
+  const performCancellation = async () => {
+    setShowCancelModal(false);
+    
+    try {
+      await reservationService.cancelReservation(reservation!.id);
+      
+      setToastMessage('Réservation annulée avec succès');
+      setToastType('success');
+      setToastVisible(true);
+      
+      setTimeout(() => {
+        router.back();
+      }, 2000);
+    } catch (error: any) {
+      setToastMessage(error.error || 'Impossible d\'annuler la réservation');
+      setToastType('error');
+      setToastVisible(true);
+    }
   };
 
   const handleViewDetails = (reservationId: number) => {
@@ -205,7 +203,7 @@ export default function ListeReservation() {
             <Text style={styles.detailsButtonText}>Voir détails</Text>
           </TouchableOpacity>
 
-          {reservation.statut === 'confirmee' && (
+          {/* {reservation.statut === 'confirmee' && (
             <TouchableOpacity
               style={styles.cancelButton}
               onPress={() => handleCancelReservation(reservation)}
@@ -213,7 +211,7 @@ export default function ListeReservation() {
               <Ionicons name="close-circle-outline" size={18} color={theme.colors.semantic.error} />
               <Text style={styles.cancelButtonText}>Annuler</Text>
             </TouchableOpacity>
-          )}
+          )} */}
         </View>
       </View>
     );
@@ -237,7 +235,6 @@ export default function ListeReservation() {
           {reservations.length} {reservations.length > 1 ? 'réservations' : 'réservation'}
         </Text>
       </View>
-
       {/* Liste des réservations */}
       <ScrollView
         style={styles.scrollView}

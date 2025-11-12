@@ -24,14 +24,13 @@ export interface CreateReservationData {
   places: string[]; // ["A1", "B3", "C2"]
 }
 
-// ✅ Interfaces mises à jour pour correspondre au backend
 export interface Reservation {
   id: number;
   code_reservation: string;
   date_reservation: string;
   statut: string;
   nombre_places: number;
-  places: string[]; // ["A1", "B3"]
+  places: string[];
   voyage: {
     code: string;
     date_depart: string;
@@ -49,9 +48,11 @@ export interface Reservation {
     cooperative: {
       nom: string;
     };
+    id?: number;  // ✅ Ajoute aussi l'id du voyage si pas déjà là
   };
   paiement: Paiement | null;
   recu: Recu | null;
+  avis_donne?: boolean;  // ✅ AJOUTE CETTE LIGNE
 }
 
 export interface Paiement {
@@ -137,4 +138,17 @@ export const reservationService = {
       throw error.response?.data || { error: 'Erreur lors de l\'annulation' };
     }
   },
+  /**
+ * Récupérer l'historique des réservations terminées
+ */
+getHistorique: async (): Promise<Reservation[]> => {
+  try {
+    const response = await api.get<MyReservationsResponse>('/reservations/historique');
+    console.log('📋 Historique reçu:', response.data);
+    return response.data.reservations;
+  } catch (error: any) {
+    console.error('Erreur lors de la récupération de l\'historique:', error);
+    throw error.response?.data || { error: 'Erreur lors de la récupération de l\'historique' };
+  }
+},
 };

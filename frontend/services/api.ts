@@ -5,7 +5,7 @@ import { router } from 'expo-router';
 import { Platform } from 'react-native';
 
 // Configuration de l'URL de base
-const API_URL =   Platform.OS === 'android'
+const API_URL = Platform.OS === 'android'
     ? 'http://192.168.1.232:3000/api'
     : 'http://localhost:3000/api';
 
@@ -32,7 +32,7 @@ api.interceptors.request.use(
   }
 );
 
-// ✅ Intercepteur pour gérer les erreurs globalement (notamment 401)
+// ✅ Intercepteur pour gérer les erreurs globalement (MODIFICATION IMPORTANTE)
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
@@ -51,21 +51,15 @@ api.interceptors.response.use(
       // Rediriger vers la page de connexion
       router.replace('/se-connecter');
       
-      // Retourner une erreur personnalisée
-      return Promise.reject({
-        error: 'Session expirée. Veuillez vous reconnecter.',
-        status: 401,
-        needsReauth: true
-      });
+      // 🔥 CHANGEMENT : Rejeter l'erreur originale pour que le service puisse la traiter
+      return Promise.reject(error);
     }
 
     // 🟡 Gestion des erreurs 403 (accès refusé)
     if (status === 403) {
       console.error('🟡 Erreur 403 : Accès refusé');
-      return Promise.reject({
-        error: 'Vous n\'avez pas les permissions nécessaires.',
-        status: 403
-      });
+      // 🔥 CHANGEMENT : Rejeter l'erreur originale
+      return Promise.reject(error);
     }
 
     // ⚪ Autres erreurs

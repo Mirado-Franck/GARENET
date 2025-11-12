@@ -1,18 +1,9 @@
 /**
  * Service de gestion des utilisateurs
- * 
- * Rôle :
- * - Gestion de l'authentification (login, inscription, logout)
- * - Gestion du profil utilisateur (récupérer, modifier, supprimer)
- * - Stockage et récupération du token JWT (AsyncStorage)
- * 
- * Utilisé par : se-connecter.tsx, inscription.tsx, profile.tsx, etc.
  */
-
 import { api } from './api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// Types basés sur votre modèle Prisma
 export interface Utilisateur {
   id: number;
   ref_utilisateur: string;
@@ -43,7 +34,8 @@ export interface ConnexionData {
 export interface AuthResponse {
   message: string;
   utilisateur: Utilisateur;
-  token?: string; // Si vous utilisez JWT
+  token?: string;
+  error?: string; // 👈 AJOUTÉ
 }
 
 export const utilisateurService = {
@@ -54,7 +46,6 @@ export const utilisateurService = {
     try {
       const response = await api.post('/utilisateurs/register', data);
       
-      // Sauvegarder le token si fourni par le backend
       if (response.data.token) {
         await AsyncStorage.setItem('token', response.data.token);
         await AsyncStorage.setItem('utilisateur', JSON.stringify(response.data.utilisateur));
@@ -67,43 +58,43 @@ export const utilisateurService = {
     }
   },
 
-/**
- * Connexion d'un utilisateur existant
- */
-connexion: async (data: ConnexionData): Promise<AuthResponse> => {
-  try {
-    console.log('🔄 Tentative de connexion avec:', data.email); // Pour déboguer
-    
-    const response = await api.post('/utilisateurs/login', data);
-    
-    console.log('✅ Réponse du backend:', response.data); // Pour déboguer
-    
-    // ✅ Sauvegarder le token ET l'utilisateur
-    if (response.data.token) {
-      await AsyncStorage.setItem('token', response.data.token);
-      console.log('🔐 Token JWT sauvegardé');
-    }
+    /**
+   * Connexion d'un utilisateur existant - CORRIGÉ
+   */
+  connexion: async (data: ConnexionData): Promise<AuthResponse> => {
+    try {
+      console.log('🔄 Tentative de connexion avec:', data.email);
+      
+      const response = await api.post('/utilisateurs/login', data);
+      
+      console.log('✅ Réponse du backend:', response.data);
+      
+      if (response.data.token) {
+        await AsyncStorage.setItem('token', response.data.token);
+        console.log('🔐 Token JWT sauvegardé');
+      }
 
-    // Sauvegarder les infos utilisateur
-    await AsyncStorage.setItem('utilisateur', JSON.stringify(response.data.utilisateur));
-    console.log('👤 Utilisateur sauvegardé:', response.data.utilisateur.email);
-    
-    return response.data;
-  } catch (error: any) {
-    console.error('❌ Erreur lors de la connexion:', error.response?.data || error);
-    
-    // Gestion d'erreur améliorée
-    if (error.response?.status === 401) {
-      throw { error: 'Email ou mot de passe incorrect' };
+      await AsyncStorage.setItem('utilisateur', JSON.stringify(response.data.utilisateur));
+      console.log('👤 Utilisateur sauvegardé:', response.data.utilisateur.email);
+      
+      return response.data;
+    } catch (error: any) {
+      console.error('❌ Erreur lors de la connexion:', error.response?.data || error);
+      
+      let errorMessage = 'Erreur lors de la connexion';
+      
+      if (error.response?.status === 401) {
+        errorMessage = 'Email ou mot de passe incorrect';
+      } else if (error.response?.status === 403) {
+        errorMessage = error.response.data.error || 'Compte désactivé';
+      } else if (error.response?.data?.error) {
+        errorMessage = error.response.data.error;
+      }
+      
+      // 🔥 CHANGEMENT IMPORTANT : Lancer une exception au lieu de retourner un objet
+      throw new Error(errorMessage);
     }
-    
-    if (error.response?.status === 403) {
-      throw { error: error.response.data.error || 'Compte désactivé' };
-    }
-    
-    throw error.response?.data || { error: 'Erreur lors de la connexion' };
-  }
-},
+  },
 
   /**
    * Déconnexion
@@ -133,15 +124,15 @@ connexion: async (data: ConnexionData): Promise<AuthResponse> => {
   /**
    * Vérifier si l'utilisateur est connecté
    */
-    isConnecte: async (): Promise<boolean> => {
-      try {
-        const token = await AsyncStorage.getItem('token');
-        const utilisateur = await AsyncStorage.getItem('utilisateur');
-        return token !== null && utilisateur !== null;
-      } catch (error) {
-        return false;
-      }
-    },
+  isConnecte: async (): Promise<boolean> => {
+    try {
+      const token = await AsyncStorage.getItem('token');
+      const utilisateur = await AsyncStorage.getItem('utilisateur');
+      return token !== null && utilisateur !== null;
+    } catch (error) {
+      return false;
+    }
+  },
 
   /**
    * Récupérer le token JWT

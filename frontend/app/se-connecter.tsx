@@ -8,7 +8,7 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Alert,
+  Modal,
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
@@ -26,6 +26,8 @@ export default function SeConnecter() {
   const [toastMessage, setToastMessage] = useState('');
   const [toastType, setToastType] = useState<'success' | 'error' | 'info' | 'warning'>('success');
   
+  
+// ...existing code...
   const [formData, setFormData] = useState({
     email: '',
     mot_de_passe: '',
@@ -58,36 +60,37 @@ export default function SeConnecter() {
     setToastVisible(true);
   };
 
-  const handleConnexion = async () => {
-    if (!validateForm()) {
-      return;
-    }
+    const handleConnexion = async () => {
+      if (!validateForm()) return;
 
-    setLoading(true);
-    try {
-      await login(formData.email, formData.mot_de_passe);
-      
-      showToast('Connexion réussie !', 'success');
-      
-      setTimeout(() => {
-        if (redirectAfterLogin) {
-          console.log('🔀 Redirection vers:', redirectAfterLogin);
-          const path = redirectAfterLogin;
-          setRedirectAfterLogin(null);
-          router.replace(path as any);
-        } else {
-          console.log('🏠 Redirection vers home');
-          router.replace('/(client)/home');
-        }
-      }, 1000);
-      
-    } catch (error: any) {
-      console.error('❌ Erreur connexion:', error);
-      showToast(error.error || 'Erreur de connexion', 'error');
-    } finally {
-      setLoading(false);
-    }
-  };
+      setLoading(true);
+      try {
+        console.log('🔄 Début de la connexion...');
+        await login(formData.email, formData.mot_de_passe);
+
+        console.log('✅ Connexion réussie - Affichage Toast succès');
+        showToast('Connexion réussie !', 'success');
+
+        setTimeout(() => {
+          if (redirectAfterLogin) {
+            const path = redirectAfterLogin;
+            setRedirectAfterLogin(null);
+            router.replace(path as any);
+          } else {
+            router.replace('/(client)/home');
+          }
+        }, 1000);
+      } catch (error: any) {
+        console.error('❌ Erreur capturée dans handleConnexion:', error);
+        
+        // ✅ Afficher le Toast d'erreur
+        setToastMessage(error.error || 'Email ou mot de passe invalide');
+        setToastType('error');
+        setToastVisible(true);
+      } finally {
+        setLoading(false);
+      }
+    };
 
   const handleInscription = () => {
     router.push('/inscription');

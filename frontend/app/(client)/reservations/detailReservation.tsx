@@ -577,6 +577,7 @@ if (Platform.OS === 'web') {
               ⚠️ Cette action est irréversible
             </Text>
 
+            {/* Fenetre de confirmation */}
             <View style={styles.modalButtons}>
               <TouchableOpacity
                 style={[styles.modalButton, styles.modalButtonCancel]}
@@ -592,6 +593,7 @@ if (Platform.OS === 'web') {
                 <Text style={styles.modalButtonTextConfirm}>Oui, annuler</Text>
               </TouchableOpacity>
             </View>
+            
           </View>
         </View>
       </Modal>

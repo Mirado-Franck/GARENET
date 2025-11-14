@@ -2,69 +2,69 @@
 export const theme = {
   // ========== COULEURS ==========
   colors: {
-    // Couleur principale (ton bleu #007AFF)
+    // Couleur principale (bleu moderne dégradé)
     primary: {
-      50: '#e3f2fd',
-      100: '#bbdefb',
-      200: '#90caf9', // 👈 AJOUTÉ
-      300: '#64b5f6', // 👈 AJOUTÉ
-      400: '#42a5f5', // 👈 AJOUTÉ
-      500: '#007AFF', // TON BLEU PRINCIPAL
-      600: '#1e88e5',
-      700: '#1976d2', // 👈 AJOUTÉ
-      800: '#1565c0', // 👈 AJOUTÉ
-      900: '#0d47a1', // 👈 AJOUTÉ
+      50: '#eff6ff',
+      100: '#dbeafe',
+      200: '#bfdbfe',
+      300: '#93c5fd',
+      400: '#60a5fa',
+      500: '#3b82f6', // Bleu moderne principal (au lieu de #007AFF)
+      600: '#2563eb',
+      700: '#1d4ed8',
+      800: '#1e40af',
+      900: '#1e3a8a',
     },
     
-    // Couleur secondaire (ton orange #FF9500)
+    // Couleur secondaire (orange corail moderne dégradé)
     secondary: {
-      50: '#fff3e0',
-      100: '#ffe0b2',
-      200: '#ffcc80',
-      300: '#ffb74d',
-      400: '#ffa726',
-      500: '#FF9500', // TON ORANGE
-      600: '#fb8c00',
-      700: '#f57c00',
-      800: '#ef6c00',
-      900: '#e65100',
+      50: '#fff7ed',
+      100: '#ffedd5',
+      200: '#fed7aa',
+      300: '#fdba74',
+      400: '#fb923c',
+      500: '#f97316', // Orange moderne (au lieu de #FF9500)
+      600: '#ea580c',
+      700: '#c2410c',
+      800: '#9a3412',
+      900: '#7c2d12',
     },
     
-    // Couleurs neutres - COMPLÉTÉES
+    // Couleurs neutres - tons plus doux
     neutral: {
       50: '#fafafa',
-      100: '#f5f5f5', // TON BACKGROUND
-      200: '#eeeeee', // 👈 AJOUTÉ
-      300: '#e0e0e0', // 👈 AJOUTÉ (utilisé dans Button disabled)
-      400: '#bdbdbd', // 👈 AJOUTÉ (utilisé dans SearchBar disabled)
-      500: '#999999', // TON TEXTE SECONDARY
-      600: '#757575', // 👈 AJOUTÉ (utilisé dans Button disabled text)
-      700: '#616161', // 👈 AJOUTÉ
-      800: '#424242', // 👈 AJOUTÉ
-      900: '#333333', // TON TEXTE PRINCIPAL
+      100: '#f4f4f5',
+      200: '#e4e4e7',
+      300: '#d4d4d8',
+      400: '#a1a1aa',
+      500: '#71717a', // Gris moderne (au lieu de #999999)
+      600: '#52525b',
+      700: '#3f3f46',
+      800: '#27272a',
+      900: '#18181b', // Noir doux (au lieu de #333333)
     },
     
-    // 👇 AJOUT DES COULEURS SÉMANTIQUES (manquantes)
+    // Couleurs sémantiques modernes
     semantic: {
-      success: '#4CAF50',   // 👈 AJOUTÉ (utilisé dans Button success)
-      warning: '#FF9800',   // 👈 AJOUTÉ
-      error: '#f44336',     // 👈 AJOUTÉ (utilisé dans Button danger)
-      info: '#2196f3',      // 👈 AJOUTÉ
+      success: '#22c55e',   // Vert moderne
+      warning: '#f59e0b',   // Ambre moderne
+      error: '#ef4444',     // Rouge moderne
+      info: '#06b6d4',      // Cyan moderne
     },
     
     // Couleurs de texte
     text: {
-      primary: '#333333',
-      secondary: '#666666',
-      tertiary: '#999999',
+      primary: '#0f172a',   // Bleu-noir doux (au lieu de #333333)
+      secondary: '#475569', // Gris-bleu (au lieu de #666666)
+      tertiary: '#94a3b8',  // Gris clair moderne (au lieu de #999999)
       inverse: '#ffffff',
-      light: '#E0F2FF',
+      light: '#e0f2fe',     // Bleu très clair
     },
     
     // Backgrounds
     background: {
       primary: '#ffffff',
-      secondary: '#f5f5f5',
+      secondary: '#f8fafc', // Gris très clair moderne (au lieu de #f5f5f5)
       overlay: 'rgba(255,255,255,0.2)',
     }
   },
@@ -80,10 +80,10 @@ export const theme = {
       small: 12,
     },
     weights: {
-      regular: '400' as const,        // 👈 AJOUTE 'as const'
-      medium: '500' as const,         // 👈 AJOUTE 'as const'  
-      semibold: '600' as const,       // 👈 AJOUTE 'as const'
-      bold: 'bold' as const,          // 👈 AJOUTE 'as const'
+      regular: '400' as const,
+      medium: '500' as const,
+      semibold: '600' as const,
+      bold: 'bold' as const,
     }
   },
 

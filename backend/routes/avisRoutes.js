@@ -1,7 +1,7 @@
 // routes/avisRoutes.js
 import express from "express";
 import { createAvis, getAvisByVoyage, getLatestAvis } from "../controllers/avisController.js";
-
+import { authMiddleware } from "../middlewares/authMiddleware.js"; 
 const router = express.Router();
 
 /**
@@ -15,7 +15,7 @@ const router = express.Router();
  * }
  * @returns { avis, moyenne_satisfaction }
  */
-router.post("/", createAvis);
+router.post("/", authMiddleware, createAvis);
 router.get("/avis", getLatestAvis);
 /**
  * @route   GET /api/avis/voyage/:voyageId

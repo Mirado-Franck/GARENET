@@ -93,7 +93,55 @@ const getCooperativeById = async (req, res, next) => {
   }
 };
 
+// === 3. ✨ NOUVELLE FONCTION : MOYENNE DES AVIS D'UNE COOPÉRATIVE ===
+const getMoyenneAvis = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    // Vérifier que la coopérative existe
+    const cooperative = await prisma.cooperative.findUnique({
+      where: { id: parseInt(id) },
+      select: { id: true, nom: true }
+    });
+
+    if (!cooperative) {
+      return res.status(404).json({ error: "Coopérative non trouvée" });
+    }
+
+    // Récupérer tous les avis des voyages de cette coopérative
+    const avis = await prisma.avis.findMany({
+      where: {
+        voyage: {
+          code_cooperative_id: parseInt(id)
+        },
+        deleted_at: null // Exclure les avis supprimés
+      },
+      select: {
+        note: true
+      }
+    });
+
+    // Calculer la moyenne
+    const nombreAvis = avis.length;
+    const moyenne = nombreAvis > 0
+      ? avis.reduce((sum, a) => sum + a.note, 0) / nombreAvis
+      : 0;
+
+    res.json({
+      cooperative_id: parseInt(id),
+      cooperative_nom: cooperative.nom,
+      nombre_avis: nombreAvis,
+      note_moyenne: parseFloat(moyenne.toFixed(2))
+    });
+
+  } catch (error) {
+    console.error("Erreur getMoyenneAvis:", error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
 export {
   getAllCooperatives,
-  getCooperativeById
+  getCooperativeById,
+  getMoyenneAvis // ✅ Export ajouté
 };

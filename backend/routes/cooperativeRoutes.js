@@ -2,7 +2,8 @@
 import express from "express";
 import {
   getAllCooperatives,
-  getCooperativeById
+  getCooperativeById,
+  getMoyenneAvis // ✅ Import ajouté
 } from "../controllers/cooperativeController.js";
 
 const router = express.Router();
@@ -20,5 +21,13 @@ router.get("/", getAllCooperatives);
  * @access  Public
  */
 router.get("/:id", getCooperativeById);
+
+/**
+ * ✨ NOUVELLE ROUTE
+ * @route   GET /api/cooperatives/:id/moyenne
+ * @desc    Récupérer la note moyenne et le nombre d'avis de la coopérative
+ * @access  Public
+ */
+router.get("/:id/moyenne", getMoyenneAvis);
 
 export default router;

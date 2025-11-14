@@ -1,3 +1,4 @@
+// app/(client)/historique/listeVoyage.tsx
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -12,11 +13,19 @@ import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { reservationService, Reservation } from '../../../services/reservationService';
 import { theme } from '../../../constants/theme';
+import AvisModal from '../../../components/ui/AvisModal'; // ✅ Import ajouté
 
 export default function ListeVoyage() {
   const [voyages, setVoyages] = useState<Reservation[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  
+  // ✅ État pour la modal
+  const [modalVisible, setModalVisible] = useState(false);
+  const [selectedVoyage, setSelectedVoyage] = useState<{
+    voyageId: number;
+    trajetInfo: string;
+  } | null>(null);
 
   useEffect(() => {
     loadHistorique();
@@ -44,8 +53,19 @@ export default function ListeVoyage() {
     router.push(`/(client)/historique/detailVoyage?id=${reservationId}`);
   };
 
-  const handleDonnerAvis = (reservationId: number, voyageId: number) => {
-    router.push(`/(client)/historique/avis?reservationId=${reservationId}&voyageId=${voyageId}`);
+  // ✅ Handler modifié pour ouvrir la modal
+  const handleDonnerAvis = (reservation: Reservation) => {
+    setSelectedVoyage({
+      voyageId: reservation.voyage.id || 0,
+      trajetInfo: `${reservation.voyage.trajet.depart} → ${reservation.voyage.trajet.arrivee}`,
+    });
+    setModalVisible(true);
+  };
+
+  // ✅ Callback après succès de l'avis
+  const handleAvisSuccess = () => {
+    // Recharger l'historique pour mettre à jour l'état avis_donne
+    loadHistorique();
   };
 
   const formatDate = (dateString: string) => {
@@ -126,7 +146,7 @@ export default function ListeVoyage() {
           {!item.avis_donne && (
             <TouchableOpacity
               style={styles.avisButton}
-              onPress={() => handleDonnerAvis(item.id, item.voyage.id || 0)}
+              onPress={() => handleDonnerAvis(item)} // ✅ Passe l'objet complet
             >
               <Ionicons name="star-outline" size={16} color="#FFB800" />
               <Text style={styles.avisButtonText}>Donner un avis</Text>
@@ -192,6 +212,20 @@ export default function ListeVoyage() {
               colors={[theme.colors.primary[500]]}
             />
           }
+        />
+      )}
+
+      {/* ✅ Modal d'avis */}
+      {selectedVoyage && (
+        <AvisModal
+          visible={modalVisible}
+          onClose={() => {
+            setModalVisible(false);
+            setSelectedVoyage(null);
+          }}
+          voyageId={selectedVoyage.voyageId}
+          trajetInfo={selectedVoyage.trajetInfo}
+          onSuccess={handleAvisSuccess}
         />
       )}
     </View>

@@ -2,107 +2,88 @@ import { PrismaClient } from "../generated/prisma/index.js";
 
 const prisma = new PrismaClient();
 
-// === CRÉER UN AVIS ===
 const createAvis = async (req, res, next) => {
   try {
-    const {
-      code_voyage_id,
-      note,
-      commentaire
-    } = req.body;
+    const { code_voyage_id, note, commentaire } = req.body;
 
-    const code_client_id = req.user?.id || req.body.code_client_id; // À adapter avec auth
-
-    // === VALIDATION ===
-    if (!code_voyage_id || !code_client_id || note === undefined) {
-      return res.status(400).json({ error: "Données manquantes" });
+    // ✅ Sécurité : on utilise l'ID du token JWT, pas celui du body
+    const code_client_id = req.user?.id;
+    if (!code_client_id) {
+      return res.status(401).json({ error: "Authentification requise" });
     }
 
-    if (note < 0 || note > 5) {
-      return res.status(400).json({ error: "La note doit être entre 0 et 5" });
+    // ✅ Validation
+    if (!code_voyage_id || note === undefined) {
+      return res.status(400).json({ error: "L'ID du voyage et la note sont requis" });
+    }
+    if (typeof note !== 'number' || note < 1 || note > 5) {
+      return res.status(400).json({ error: "La note doit être un nombre entre 1 et 5" });
     }
 
-    // === VÉRIFIER QUE LE VOYAGE EXISTE ET EST TERMINÉ ===
+    // ✅ Vérifier que le voyage existe et est terminé
     const voyage = await prisma.voyage.findUnique({
-      where: { id: code_voyage_id },
-      select: { status: true, date_depart: true }
+      where: { id: Number(code_voyage_id) }
     });
-
     if (!voyage) {
       return res.status(404).json({ error: "Voyage non trouvé" });
     }
 
-    if (voyage.status !== "termine") {
+    // ✅ Gérer toutes les variantes de "terminé"
+    const voyageStatus = (voyage.status || "").toLowerCase();
+    if (voyageStatus !== 'terminée' && voyageStatus !== 'terminé' && voyageStatus !== 'termine') {
       return res.status(400).json({ error: "Impossible de noter un voyage non terminé" });
     }
 
-    // === VÉRIFIER QUE LE CLIENT A RÉSERVÉ CE VOYAGE ===
+    // ✅ Vérifier que le client a bien réservé ce voyage
     const reservation = await prisma.reservation.findFirst({
       where: {
-        code_voyage_id,
-        code_client_id,
-        statut: "confirmee"
+        code_voyage_id: Number(code_voyage_id),
+        code_client_id: Number(code_client_id),
+        statut: { in: ["confirmee", "confirmée"] }
       }
     });
-
     if (!reservation) {
-      return res.status(403).json({ error: "Vous n'avez pas voyagé avec ce trajet" });
+      return res.status(403).json({ error: "Vous n'avez pas effectué ce voyage" });
     }
 
-    // === ÉVITER LES DOUBLONS ===
+    // ✅ Empêcher de donner un avis deux fois
     const existingAvis = await prisma.avis.findFirst({
       where: {
-        code_voyage_id,
-        code_client_id,
-        deleted_at: null
+        code_voyage_id: Number(code_voyage_id),
+        code_client_id: Number(code_client_id)
       }
     });
-
     if (existingAvis) {
-      return res.status(409).json({ error: "Vous avez déjà laissé un avis" });
+      return res.status(409).json({ error: "Vous avez déjà laissé un avis pour ce voyage" });
     }
 
-    // === GÉNÉRER ref_avis ===
-    const ref_avis = `AVIS${Date.now()}${Math.floor(Math.random() * 100)}`;
+    // Créer la référence de l'avis
+    const ref_avis = `AVIS-${Date.now()}`;
 
-    // === CRÉER L'AVIS ===
+    // ✅ Créer l'avis
     const avis = await prisma.avis.create({
       data: {
-        code_voyage_id,
-        code_client_id,
+        code_voyage_id: Number(code_voyage_id),
+        code_client_id: Number(code_client_id),
         ref_avis,
-        note: parseFloat(note),
-        commentaire: commentaire?.trim() || null,
+        note: Number(note),
+        commentaire: commentaire?.toString().trim() || null,
         date_avis: new Date()
-      },
-      include: {
-        client: { select: { utilisateur: { select: { nom: true, prenoms: true } } } },
-        voyage: { select: { code_voyage: true } }
       }
-    });
-
-    // === METTRE À JOUR LA MOYENNE DU CLIENT ===
-    const stats = await prisma.avis.aggregate({
-      where: { code_client_id, deleted_at: null },
-      _avg: { note: true },
-      _count: { note: true }
-    });
-
-    const moyenne = stats._avg.note || 0;
-
-    await prisma.client.update({
-      where: { id: code_client_id },
-      data: { moyenne_satisfaction: parseFloat(moyenne.toFixed(2)) }
     });
 
     res.status(201).json({
-      message: "Avis enregistré avec succès",
-      avis,
-      moyenne_satisfaction: moyenne.toFixed(2)
+      success: true,
+      message: "Merci pour votre avis !",
+      avis
     });
   } catch (err) {
     console.error("Erreur createAvis:", err);
-    next(err);
+    res.status(500).json({
+      success: false,
+      error: "Erreur lors de l'enregistrement de l'avis",
+      details: err.message
+    });
   }
 };
 

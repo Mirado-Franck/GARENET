@@ -1,3 +1,4 @@
+// app/(client)/voyages/detailCooperative.tsx
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -11,7 +12,7 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { cooperativeService, CooperativeDetail } from '../../../services/cooperativeService';
+import { cooperativeService, CooperativeDetail, MoyenneAvisResponse } from '../../../services/cooperativeService';
 import { theme } from '../../../constants/theme';
 
 export default function DetailCooperative() {
@@ -19,6 +20,7 @@ export default function DetailCooperative() {
   const cooperativeId = parseInt(params.id as string);
 
   const [cooperative, setCooperative] = useState<CooperativeDetail | null>(null);
+  const [moyenneAvis, setMoyenneAvis] = useState<MoyenneAvisResponse | null>(null); // ✅ État ajouté
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -29,8 +31,14 @@ export default function DetailCooperative() {
   const loadCooperative = async () => {
     try {
       setLoading(true);
-      const data = await cooperativeService.getCooperativeById(cooperativeId);
-      setCooperative(data);
+      // ✅ Charger les détails ET la moyenne en parallèle
+      const [cooperativeData, moyenneData] = await Promise.all([
+        cooperativeService.getCooperativeById(cooperativeId),
+        cooperativeService.getMoyenneAvis(cooperativeId)
+      ]);
+      
+      setCooperative(cooperativeData);
+      setMoyenneAvis(moyenneData);
     } catch (error) {
       console.error('Erreur chargement coopérative:', error);
     } finally {
@@ -56,6 +64,37 @@ export default function DetailCooperative() {
       month: 'long',
       year: 'numeric',
     });
+  };
+
+  // ✨ Fonction pour afficher les étoiles avec demi-étoiles
+  const renderStars = (note: number) => {
+    const stars = [];
+    const fullStars = Math.floor(note);
+    const hasHalfStar = note % 1 >= 0.5;
+
+    // Étoiles pleines
+    for (let i = 0; i < fullStars; i++) {
+      stars.push(
+        <Ionicons key={`full-${i}`} name="star" size={24} color="#FFB800" />
+      );
+    }
+
+    // Demi-étoile
+    if (hasHalfStar) {
+      stars.push(
+        <Ionicons key="half" name="star-half" size={24} color="#FFB800" />
+      );
+    }
+
+    // Étoiles vides
+    const emptyStars = 5 - Math.ceil(note);
+    for (let i = 0; i < emptyStars; i++) {
+      stars.push(
+        <Ionicons key={`empty-${i}`} name="star-outline" size={24} color="#FFB800" />
+      );
+    }
+
+    return stars;
   };
 
   if (loading) {
@@ -114,18 +153,28 @@ export default function DetailCooperative() {
           <Text style={styles.cooperativeName}>{cooperative.nom}</Text>
           <Text style={styles.codeCooperative}>{cooperative.code_cooperative}</Text>
 
-          {/* Note moyenne */}
-          {cooperative.note_moyenne && (
-            <View style={styles.ratingContainer}>
-              {[...Array(5)].map((_, i) => (
-                <Ionicons
-                  key={i}
-                  name={i < Math.floor(cooperative.note_moyenne!) ? 'star' : 'star-outline'}
-                  size={24}
-                  color="#FFB800"
-                />
-              ))}
-              <Text style={styles.ratingValue}>{cooperative.note_moyenne.toFixed(1)}</Text>
+          {/* ✨ Note moyenne - NOUVELLE SECTION */}
+          {moyenneAvis && moyenneAvis.nombre_avis > 0 && (
+            <View style={styles.ratingSection}>
+              <View style={styles.starsRow}>
+                {renderStars(moyenneAvis.note_moyenne)}
+              </View>
+              <View style={styles.ratingInfoRow}>
+                <Text style={styles.ratingValue}>
+                  {moyenneAvis.note_moyenne.toFixed(1)}/5
+                </Text>
+                <Text style={styles.ratingCount}>
+                  ({moyenneAvis.nombre_avis} {moyenneAvis.nombre_avis > 1 ? 'avis' : 'avis'})
+                </Text>
+              </View>
+            </View>
+          )}
+
+          {/* Message si pas d'avis */}
+          {moyenneAvis && moyenneAvis.nombre_avis === 0 && (
+            <View style={styles.noRatingContainer}>
+              <Ionicons name="star-outline" size={24} color={theme.colors.neutral[400]} />
+              <Text style={styles.noRatingText}>Aucun avis pour le moment</Text>
             </View>
           )}
 
@@ -405,18 +454,53 @@ const styles = StyleSheet.create({
     color: theme.colors.text.secondary,
     marginBottom: theme.spacing.md,
   },
-  ratingContainer: {
+  // ✨ NOUVEAUX STYLES POUR LA NOTE
+  ratingSection: {
+    alignItems: 'center',
+    marginBottom: theme.spacing.md,
+    paddingVertical: theme.spacing.md,
+    paddingHorizontal: theme.spacing.lg,
+    backgroundColor: '#FFF9E6',
+    borderRadius: theme.borderRadius.md,
+    borderWidth: 1,
+    borderColor: '#FFB800',
+  },
+  starsRow: {
+    flexDirection: 'row',
+    gap: 4,
+    marginBottom: theme.spacing.sm,
+  },
+  ratingInfoRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    marginBottom: theme.spacing.md,
+    gap: theme.spacing.sm,
   },
   ratingValue: {
-    fontSize: theme.typography.sizes.h3,
+    fontSize: theme.typography.sizes.h2,
     fontWeight: theme.typography.weights.bold,
-    color: theme.colors.text.primary,
-    marginLeft: theme.spacing.sm,
+    color: '#FFB800',
   },
+  ratingCount: {
+    fontSize: theme.typography.sizes.body,
+    color: theme.colors.text.secondary,
+    fontWeight: theme.typography.weights.medium,
+  },
+  noRatingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.sm,
+    paddingVertical: theme.spacing.md,
+    paddingHorizontal: theme.spacing.lg,
+    backgroundColor: theme.colors.neutral[100],
+    borderRadius: theme.borderRadius.md,
+    marginBottom: theme.spacing.md,
+  },
+  noRatingText: {
+    fontSize: theme.typography.sizes.body,
+    color: theme.colors.text.secondary,
+    fontStyle: 'italic',
+  },
+  // FIN NOUVEAUX STYLES
   statusBadge: {
     paddingHorizontal: theme.spacing.lg,
     paddingVertical: theme.spacing.sm,

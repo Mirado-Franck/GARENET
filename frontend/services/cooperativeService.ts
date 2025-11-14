@@ -1,3 +1,4 @@
+// services/cooperativeService.ts
 /**
  * Service de gestion des coopératives
  */
@@ -29,6 +30,14 @@ export interface CooperativesResponse {
   total: number;
 }
 
+// ✨ NOUVEAU : Interface pour la moyenne des avis
+export interface MoyenneAvisResponse {
+  cooperative_id: number;
+  cooperative_nom: string;
+  nombre_avis: number;
+  note_moyenne: number;
+}
+
 export const cooperativeService = {
   /**
    * Récupérer toutes les coopératives
@@ -53,6 +62,19 @@ export const cooperativeService = {
     } catch (error: any) {
       console.error('Erreur lors de la récupération de la coopérative:', error);
       throw error.response?.data || { error: 'Erreur lors de la récupération de la coopérative' };
+    }
+  },
+
+  /**
+   * ✨ NOUVELLE FONCTION : Récupérer la note moyenne d'une coopérative
+   */
+  getMoyenneAvis: async (id: number): Promise<MoyenneAvisResponse> => {
+    try {
+      const response = await api.get(`/cooperatives/${id}/moyenne`);
+      return response.data;
+    } catch (error: any) {
+      console.error('Erreur lors de la récupération de la moyenne des avis:', error);
+      throw error.response?.data || { error: 'Erreur lors de la récupération de la moyenne' };
     }
   },
 };

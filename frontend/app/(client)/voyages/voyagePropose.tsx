@@ -7,8 +7,9 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
+  StatusBar,
 } from 'react-native';
-import { useLocalSearchParams, router } from 'expo-router';
+import { useLocalSearchParams, router, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { voyageService } from '../../../services/voyageService';
 import { theme } from '../../../constants/theme';
@@ -109,9 +110,9 @@ export default function VoyagePropose() {
     };
 
     return (
-      <View style={[styles.statusBadge, { backgroundColor: config.color + '20', borderColor: config.color }]}>
+       <View style={[styles.statusBadge, { backgroundColor: config.color + '20', borderColor: config.color }]}>
         <Ionicons name={config.icon as any} size={14} color={config.color} />
-        <Text style={[styles.statusText, { color: config.color }]}>{config.label}</Text>
+       <Text style={[styles.statusText, { color: config.color }]}>{config.label}</Text>
       </View>
     );
   };
@@ -201,6 +202,8 @@ export default function VoyagePropose() {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
+        <Stack.Screen options={{ headerShown: false }} />
+        <StatusBar backgroundColor={theme.colors.primary[500]} barStyle="light-content" />
         <ActivityIndicator size="large" color={theme.colors.primary[500]} />
         <Text style={styles.loadingText}>Chargement des voyages...</Text>
       </View>
@@ -209,61 +212,67 @@ export default function VoyagePropose() {
 
   return (
     <View style={styles.container}>
-      {/* Header */}
+      {/* Configuration pour cacher le header par défaut d'Expo Router */}
+      <Stack.Screen options={{ headerShown: false }} />
+      
+      <StatusBar backgroundColor={theme.colors.primary[500]} barStyle="light-content" />
+      
+      {/* Header Bleu Unique */}
       <View style={styles.header}>
-            <TouchableOpacity 
-            style={styles.headerBackButton} 
-            onPress={() => {
-                // Si on peut revenir en arrière, on le fait
-                if (router.canGoBack()) {
-                router.back();
-                } else {
-                // Sinon on va vers la liste des coopératives
-                router.push('/(client)/voyages/listeCooperative');
-                }
-            }}
-            >
-            <Ionicons name="arrow-back" size={24} color={theme.colors.text.inverse} />
-            </TouchableOpacity>
+        <TouchableOpacity 
+          style={styles.headerBackButton} 
+          onPress={() => {
+            if (router.canGoBack()) {
+              router.back();
+            } else {
+              router.push('/(client)/voyages/listeCooperative');
+            }
+          }}
+        >
+          <Ionicons name="arrow-back" size={24} color={theme.colors.text.inverse} />
+        </TouchableOpacity>
         <View style={styles.headerContent}>
           <Text style={styles.title}>Voyages proposés</Text>
           {cooperativeName && <Text style={styles.subtitle}>{cooperativeName}</Text>}
         </View>
-        <View style={{ width: 24 }} />
+        <View style={{ width: 40 }} />
       </View>
 
-      {/* Compteur */}
-      <View style={styles.countContainer}>
-        <Text style={styles.countText}>
-          {voyages.length} {voyages.length > 1 ? 'voyages' : 'voyage'} disponible{voyages.length > 1 ? 's' : ''}
-        </Text>
-      </View>
-
-      {/* Liste des voyages */}
-      {voyages.length === 0 ? (
-        <View style={styles.emptyContainer}>
-          <Ionicons name="bus-outline" size={80} color={theme.colors.neutral[300]} />
-          <Text style={styles.emptyTitle}>Aucun voyage disponible</Text>
-          <Text style={styles.emptySubtitle}>
-            Cette coopérative n'a pas de voyages programmés pour le moment.
+      {/* Contenu principal */}
+      <View style={styles.content}>
+        {/* Compteur */}
+        <View style={styles.countContainer}>
+          <Text style={styles.countText}>
+            {voyages.length} {voyages.length > 1 ? 'voyages' : 'voyage'} disponible{voyages.length > 1 ? 's' : ''}
           </Text>
         </View>
-      ) : (
-        <FlatList
-          data={voyages}
-          renderItem={renderVoyageCard}
-          keyExtractor={(item) => item.id.toString()}
-          contentContainerStyle={styles.listContent}
-          showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-              colors={[theme.colors.primary[500]]}
-            />
-          }
-        />
-      )}
+
+        {/* Liste des voyages */}
+        {voyages.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <Ionicons name="bus-outline" size={80} color={theme.colors.neutral[300]} />
+            <Text style={styles.emptyTitle}>Aucun voyage disponible</Text>
+            <Text style={styles.emptySubtitle}>
+              Cette coopérative n'a pas de voyages programmés pour le moment.
+            </Text>
+          </View>
+        ) : (
+          <FlatList
+            data={voyages}
+            renderItem={renderVoyageCard}
+            keyExtractor={(item) => item.id.toString()}
+            contentContainerStyle={styles.listContent}
+            showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                colors={[theme.colors.primary[500]]}
+              />
+            }
+          />
+        )}
+      </View>
     </View>
   );
 }
@@ -273,10 +282,14 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: theme.colors.background.secondary,
   },
+  content: {
+    flex: 1,
+  },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: theme.colors.background.secondary,
   },
   loadingText: {
     marginTop: theme.spacing.md,
@@ -289,8 +302,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingTop: 50,
-    paddingBottom: 20,
-    paddingHorizontal: 20,
+    paddingBottom: theme.spacing.lg,
+    paddingHorizontal: theme.spacing.lg,
   },
   headerBackButton: {
     width: 40,
@@ -319,6 +332,7 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.background.primary,
     marginHorizontal: theme.spacing.lg,
     marginTop: theme.spacing.lg,
+    marginBottom: theme.spacing.sm,
     padding: theme.spacing.md,
     borderRadius: theme.borderRadius.sm,
     alignItems: 'center',
@@ -330,7 +344,7 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingHorizontal: theme.spacing.lg,
-    paddingTop: theme.spacing.md,
+    paddingTop: theme.spacing.sm,
     paddingBottom: theme.spacing.xl,
   },
   card: {
@@ -338,11 +352,7 @@ const styles = StyleSheet.create({
     borderRadius: theme.borderRadius.md,
     padding: theme.spacing.lg,
     marginBottom: theme.spacing.lg,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    ...theme.shadows.sm,
   },
   cardHeader: {
     flexDirection: 'row',
@@ -466,7 +476,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 40,
+    paddingHorizontal: theme.spacing.xl,
   },
   emptyTitle: {
     fontSize: theme.typography.sizes.h2,

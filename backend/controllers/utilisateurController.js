@@ -1,11 +1,17 @@
 // controllers/utilisateurController.js
 import { PrismaClient } from "../generated/prisma/index.js";
 import bcrypt from "bcryptjs";
-import { generateToken } from '../utils/jwtUtils.js';  // ✅ Syntaxe ES6 avec .js
+import { generateToken } from '../utils/jwtUtils.js';
+import path from 'path';
+import fs from 'fs';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const prisma = new PrismaClient();
 
-// === CRÉER UN CLIENT (SÉCURISÉ + HACHAGE) ===
+// === CRÉER UN CLIENT (AVEC PHOTO OPTIONNELLE) ===
 const createUtilisateur = async (req, res) => {
   try {
     const {
@@ -36,6 +42,9 @@ const createUtilisateur = async (req, res) => {
     // === GÉNÉRER RÉFÉRENCES ===
     const ref_utilisateur = `USER${Date.now()}${Math.floor(Math.random() * 100)}`;
 
+    // ✅ Récupérer le chemin de la photo si uploadée
+    const photo_identite = req.file ? `/uploads/photos/${req.file.filename}` : null;
+
     // === CRÉER L'UTILISATEUR ===
     const utilisateur = await prisma.utilisateur.create({
       data: {
@@ -44,9 +53,10 @@ const createUtilisateur = async (req, res) => {
         prenoms: prenoms || null,
         email,
         telephone: telephone.toString(),
-        mot_de_passe: mot_de_passe_hache, // HACHÉ
-        role: "client",                   // PAR DÉFAUT
-        type_utilisateur: "standard",     // ou "client" si tu veux
+        mot_de_passe: mot_de_passe_hache,
+        photo_identite, // ✅ Ajout photo
+        role: "client",
+        type_utilisateur: "standard",
         statut_compte: "actif",
         date_creation_compte: new Date()
       }
@@ -72,6 +82,7 @@ const createUtilisateur = async (req, res) => {
         prenoms: utilisateur.prenoms,
         email: utilisateur.email,
         telephone: utilisateur.telephone,
+        photo_identite: utilisateur.photo_identite, // ✅ Inclure la photo
         role: utilisateur.role
       }
     });
@@ -81,53 +92,45 @@ const createUtilisateur = async (req, res) => {
   }
 };
 
-// === CONNEXION (LOGIN) ===
+// === CONNEXION (LOGIN) - INCHANGÉ ===
 const loginUtilisateur = async (req, res) => {
   try {
     const { email, mot_de_passe } = req.body;
 
-    // Validation
     if (!email || !mot_de_passe) {
       return res.status(400).json({ error: "Email et mot de passe requis" });
     }
 
-    // Rechercher l'utilisateur par email
     const utilisateur = await prisma.utilisateur.findUnique({
       where: { email },
       include: {
-        client: true // Inclure les infos client si c'est un client
+        client: true
       }
     });
 
-    // Vérifier si l'utilisateur existe
     if (!utilisateur) {
       return res.status(401).json({ error: "Email ou mot de passe incorrect" });
     }
 
-    // Vérifier si le compte est actif
     if (utilisateur.statut_compte !== 'actif') {
       return res.status(403).json({ error: "Compte désactivé" });
     }
 
-    // Vérifier si le compte est supprimé (soft delete)
     if (utilisateur.deleted_at !== null) {
       return res.status(403).json({ error: "Ce compte n'existe plus" });
     }
 
-    // ✅ Vérifier le mot de passe (avec bcrypt)
     const motDePasseValide = await bcrypt.compare(mot_de_passe, utilisateur.mot_de_passe);
 
     if (!motDePasseValide) {
       return res.status(401).json({ error: "Email ou mot de passe incorrect" });
     }
 
-    // ✅ Mettre à jour la date de dernier accès
     await prisma.utilisateur.update({
       where: { id: utilisateur.id },
       data: { dernier_acces: new Date() }
     });
 
-    // ✅ Générer le token JWT
     const payload = {
       id: utilisateur.id,
       email: utilisateur.email,
@@ -137,7 +140,6 @@ const loginUtilisateur = async (req, res) => {
 
     const token = generateToken(payload);
 
-    // ✅ Retourner les infos utilisateur (sans le mot de passe)
     const { mot_de_passe: _, ...utilisateurSansMotDePasse } = utilisateur;
 
     res.status(200).json({
@@ -155,7 +157,7 @@ const loginUtilisateur = async (req, res) => {
   }
 };
 
-// === GET, UPDATE, DELETE (inchangés) ===
+// === GET UTILISATEUR ===
 const getUtilisateur = async (req, res) => {
   try {
     const { id } = req.params;
@@ -166,31 +168,109 @@ const getUtilisateur = async (req, res) => {
     if (!utilisateur || utilisateur.deleted_at) {
       return res.status(404).json({ error: "Utilisateur non trouvé" });
     }
-    res.json(utilisateur);
+    
+    // ✅ Ne pas retourner le mot de passe
+    const { mot_de_passe, ...utilisateurSansMotDePasse } = utilisateur;
+    res.json(utilisateurSansMotDePasse);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 };
 
+// === ✨ NOUVELLE FONCTION : UPDATE UTILISATEUR AVEC PHOTO ===
 const updateUtilisateur = async (req, res) => {
   try {
     const { id } = req.params;
     const data = { ...req.body };
+    
+    // Empêcher la modification de certains champs sensibles
     delete data.mot_de_passe;
     delete data.role;
+    delete data.deleted_at;
+    delete data.date_creation_compte;
+    
     if (data.telephone) data.telephone = data.telephone.toString();
+
+    // ✅ Si nouvelle photo uploadée
+    if (req.file) {
+      // Récupérer l'ancien utilisateur pour supprimer l'ancienne photo
+      const oldUser = await prisma.utilisateur.findUnique({
+        where: { id: parseInt(id) }
+      });
+
+      // Supprimer l'ancienne photo si elle existe
+      if (oldUser?.photo_identite) {
+        const oldPhotoPath = path.join(__dirname, '..', oldUser.photo_identite);
+        if (fs.existsSync(oldPhotoPath)) {
+          fs.unlinkSync(oldPhotoPath);
+        }
+      }
+
+      data.photo_identite = `/uploads/photos/${req.file.filename}`;
+    }
 
     const utilisateur = await prisma.utilisateur.update({
       where: { id: parseInt(id) },
       data,
       include: { client: true }
     });
-    res.json({ message: "Mis à jour", utilisateur });
+
+    const { mot_de_passe, ...utilisateurSansMotDePasse } = utilisateur;
+    res.json({ message: "Profil mis à jour avec succès", utilisateur: utilisateurSansMotDePasse });
   } catch (error) {
+    console.error("Erreur update:", error);
     res.status(500).json({ error: error.message });
   }
 };
 
+// === ✨ NOUVELLE FONCTION : CHANGER LE MOT DE PASSE ===
+const changePassword = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { ancien_mot_de_passe, nouveau_mot_de_passe } = req.body;
+
+    if (!ancien_mot_de_passe || !nouveau_mot_de_passe) {
+      return res.status(400).json({ error: "Ancien et nouveau mot de passe requis" });
+    }
+
+    if (nouveau_mot_de_passe.length < 6) {
+      return res.status(400).json({ error: "Le nouveau mot de passe doit contenir au moins 6 caractères" });
+    }
+
+    // Récupérer l'utilisateur
+    const utilisateur = await prisma.utilisateur.findUnique({
+      where: { id: parseInt(id) }
+    });
+
+    if (!utilisateur) {
+      return res.status(404).json({ error: "Utilisateur non trouvé" });
+    }
+
+    // Vérifier l'ancien mot de passe
+    const motDePasseValide = await bcrypt.compare(ancien_mot_de_passe, utilisateur.mot_de_passe);
+
+    if (!motDePasseValide) {
+      return res.status(401).json({ error: "Ancien mot de passe incorrect" });
+    }
+
+    // Hacher le nouveau mot de passe
+    const salt = await bcrypt.genSalt(10);
+    const nouveau_mot_de_passe_hache = await bcrypt.hash(nouveau_mot_de_passe, salt);
+
+    // Mettre à jour
+    await prisma.utilisateur.update({
+      where: { id: parseInt(id) },
+      data: { mot_de_passe: nouveau_mot_de_passe_hache }
+    });
+
+    res.json({ message: "Mot de passe modifié avec succès" });
+  } catch (error) {
+    console.error("Erreur changement mot de passe:", error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// === DELETE (SOFT) ===
 const deleteUtilisateur = async (req, res) => {
   try {
     const { id } = req.params;
@@ -198,7 +278,7 @@ const deleteUtilisateur = async (req, res) => {
       where: { id: parseInt(id) },
       data: { deleted_at: new Date() }
     });
-    res.json({ message: "Supprimé (soft delete)" });
+    res.json({ message: "Compte supprimé (soft delete)" });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -209,5 +289,6 @@ export {
   getUtilisateur,
   updateUtilisateur,
   deleteUtilisateur, 
-  loginUtilisateur
+  loginUtilisateur,
+  changePassword
 };

@@ -1,8 +1,7 @@
-/**
- * Service de gestion des utilisateurs
- */
+// frontend/services/utilisateurService.ts
 import { api } from './api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as FileSystem from 'expo-file-system';
 
 export interface Utilisateur {
   id: number;
@@ -16,6 +15,7 @@ export interface Utilisateur {
   type_utilisateur: string;
   date_creation_compte: string;
   photo_identite: string | null;
+  dernier_acces?: string | null;
 }
 
 export interface InscriptionData {
@@ -24,6 +24,18 @@ export interface InscriptionData {
   email: string;
   mot_de_passe: string;
   telephone: string;
+}
+
+export interface UpdateProfileData {
+  nom?: string;
+  prenoms?: string;
+  email?: string;
+  telephone?: string;
+}
+
+export interface ChangePasswordData {
+  ancien_mot_de_passe: string;
+  nouveau_mot_de_passe: string;
 }
 
 export interface ConnexionData {
@@ -35,31 +47,59 @@ export interface AuthResponse {
   message: string;
   utilisateur: Utilisateur;
   token?: string;
-  error?: string; // 👈 AJOUTÉ
 }
 
 export const utilisateurService = {
   /**
-   * Inscription d'un nouveau client
+   * ✨ INSCRIPTION AVEC PHOTO
    */
-  inscription: async (data: InscriptionData): Promise<AuthResponse> => {
+  inscription: async (data: InscriptionData, photoUri?: string): Promise<AuthResponse> => {
     try {
-      const response = await api.post('/utilisateurs/register', data);
+      const formData = new FormData();
       
+      // Ajouter les données texte
+      formData.append('nom', data.nom);
+      formData.append('email', data.email);
+      formData.append('mot_de_passe', data.mot_de_passe);
+      formData.append('telephone', data.telephone);
+      
+      if (data.prenoms) {
+        formData.append('prenoms', data.prenoms);
+      }
+
+      // ✅ Ajouter la photo si elle existe
+      if (photoUri) {
+        const filename = photoUri.split('/').pop() || 'photo.jpg';
+        const match = /\.(\w+)$/.exec(filename);
+        const type = match ? `image/${match[1]}` : 'image/jpeg';
+
+        formData.append('photo', {
+          uri: photoUri,
+          name: filename,
+          type: type,
+        } as any);
+      }
+
+      const response = await api.post('/utilisateurs/register', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
       if (response.data.token) {
         await AsyncStorage.setItem('token', response.data.token);
         await AsyncStorage.setItem('utilisateur', JSON.stringify(response.data.utilisateur));
       }
-      
+
       return response.data;
     } catch (error: any) {
-      console.error('Erreur lors de l\'inscription:', error);
+      console.error('❌ Erreur inscription:', error);
       throw error.response?.data || { error: 'Erreur lors de l\'inscription' };
     }
   },
 
-    /**
-   * Connexion d'un utilisateur existant - CORRIGÉ
+  /**
+   * CONNEXION
    */
   connexion: async (data: ConnexionData): Promise<AuthResponse> => {
     try {
@@ -91,13 +131,88 @@ export const utilisateurService = {
         errorMessage = error.response.data.error;
       }
       
-      // 🔥 CHANGEMENT IMPORTANT : Lancer une exception au lieu de retourner un objet
       throw new Error(errorMessage);
     }
   },
 
   /**
-   * Déconnexion
+   * ✨ METTRE À JOUR LE PROFIL AVEC PHOTO
+   */
+  updateProfile: async (
+    userId: number,
+    data: UpdateProfileData,
+    photoUri?: string
+  ): Promise<Utilisateur> => {
+    try {
+      const formData = new FormData();
+
+      // Ajouter les données texte
+      if (data.nom) formData.append('nom', data.nom);
+      if (data.prenoms) formData.append('prenoms', data.prenoms);
+      if (data.email) formData.append('email', data.email);
+      if (data.telephone) formData.append('telephone', data.telephone);
+
+      // ✅ Ajouter la photo si elle existe
+      if (photoUri) {
+        const filename = photoUri.split('/').pop() || 'photo.jpg';
+        const match = /\.(\w+)$/.exec(filename);
+        const type = match ? `image/${match[1]}` : 'image/jpeg';
+
+        formData.append('photo', {
+          uri: photoUri,
+          name: filename,
+          type: type,
+        } as any);
+      }
+
+      const response = await api.put(`/utilisateurs/${userId}`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      // Mettre à jour le stockage local
+      await AsyncStorage.setItem('utilisateur', JSON.stringify(response.data.utilisateur));
+
+      return response.data.utilisateur;
+    } catch (error: any) {
+      console.error('❌ Erreur update profile:', error);
+      throw error.response?.data || { error: 'Erreur lors de la mise à jour' };
+    }
+  },
+
+  /**
+   * ✨ CHANGER LE MOT DE PASSE
+   */
+  changePassword: async (userId: number, data: ChangePasswordData): Promise<void> => {
+    try {
+      await api.put(`/utilisateurs/${userId}/password`, data);
+    } catch (error: any) {
+      console.error('❌ Erreur changement mot de passe:', error);
+      
+      if (error.response?.status === 401) {
+        throw new Error('Ancien mot de passe incorrect');
+      }
+      
+      throw error.response?.data || { error: 'Erreur lors du changement de mot de passe' };
+    }
+  },
+
+  /**
+   * RÉCUPÉRER UN UTILISATEUR PAR ID
+   */
+  getUtilisateurById: async (id: number): Promise<Utilisateur> => {
+    try {
+      const response = await api.get(`/utilisateurs/${id}`);
+      return response.data;
+    } catch (error: any) {
+      console.error('❌ Erreur récupération utilisateur:', error);
+      throw error.response?.data || { error: 'Utilisateur introuvable' };
+    }
+  },
+
+  /**
+   * DÉCONNEXION
    */
   deconnexion: async (): Promise<void> => {
     try {
@@ -109,20 +224,20 @@ export const utilisateurService = {
   },
 
   /**
-   * Récupérer l'utilisateur connecté depuis le stockage local
+   * RÉCUPÉRER L'UTILISATEUR CONNECTÉ
    */
   getUtilisateurConnecte: async (): Promise<Utilisateur | null> => {
     try {
       const utilisateurJson = await AsyncStorage.getItem('utilisateur');
       return utilisateurJson ? JSON.parse(utilisateurJson) : null;
     } catch (error) {
-      console.error('Erreur lors de la récupération de l\'utilisateur:', error);
+      console.error('Erreur récupération utilisateur:', error);
       return null;
     }
   },
 
   /**
-   * Vérifier si l'utilisateur est connecté
+   * VÉRIFIER SI CONNECTÉ
    */
   isConnecte: async (): Promise<boolean> => {
     try {
@@ -135,14 +250,30 @@ export const utilisateurService = {
   },
 
   /**
-   * Récupérer le token JWT
+   * RÉCUPÉRER LE TOKEN
    */
   getToken: async (): Promise<string | null> => {
     try {
       return await AsyncStorage.getItem('token');
     } catch (error) {
-      console.error('Erreur lors de la récupération du token:', error);
+      console.error('Erreur récupération token:', error);
       return null;
     }
+  },
+
+  /**
+   * ✨ HELPER : Obtenir l'URL complète de la photo
+   */
+  getPhotoUrl: (photoPath: string | null): string | null => {
+    if (!photoPath) return null;
+    
+    // Si c'est déjà une URL complète, la retourner
+    if (photoPath.startsWith('http')) {
+      return photoPath;
+    }
+    
+    // Sinon, construire l'URL avec l'API
+    const API_URL = api.defaults.baseURL?.replace('/api', '') || 'http://localhost:3000';
+    return `${API_URL}${photoPath}`;
   },
 };

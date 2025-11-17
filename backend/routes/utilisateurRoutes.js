@@ -5,19 +5,30 @@ import {
   getUtilisateur,
   updateUtilisateur,
   deleteUtilisateur,
-  loginUtilisateur
+  loginUtilisateur,
+  changePassword
 } from "../controllers/utilisateurController.js";
+import { upload } from "../config/multerConfig.js"; // ✅ Import multer
+import { authMiddleware } from "../middlewares/authMiddleware.js";
 
 const router = express.Router();
 
+// ✅ Inscription avec upload de photo optionnelle
+router.post("/register", upload.single('photo'), createUtilisateur);
 
-router.post("/register", createUtilisateur);
+// Connexion
 router.post('/login', loginUtilisateur);
 
-router.get("/:id", getUtilisateur);
+// Récupérer un utilisateur (protégé)
+router.get("/:id", authMiddleware, getUtilisateur);
 
-router.put("/:id", updateUtilisateur);
+// ✅ Mettre à jour avec photo optionnelle (protégé)
+router.put("/:id", authMiddleware, upload.single('photo'), updateUtilisateur);
 
-router.delete("/:id", deleteUtilisateur);
+// ✅ Changer le mot de passe (protégé)
+router.put("/:id/password", authMiddleware, changePassword);
+
+// Supprimer (soft delete)
+router.delete("/:id", authMiddleware, deleteUtilisateur);
 
 export default router;

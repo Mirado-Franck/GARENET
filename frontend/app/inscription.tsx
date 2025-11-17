@@ -7,13 +7,15 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Alert,
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  Image,
+  Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 import Button from '../components/ui/Button';
 import { utilisateurService, InscriptionData } from '../services/utilisateurService';
 import { theme } from '../constants/theme';
@@ -29,12 +31,85 @@ export default function Inscription() {
     telephone: '',
   });
   
+  const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Partial<InscriptionData & { confirmPassword: string; api: string }>>({});
   const [successMessage, setSuccessMessage] = useState('');
+
+  const handlePickImage = async () => {
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      
+      if (status !== 'granted') {
+        Alert.alert('Permission refusée', 'Nous avons besoin de votre permission pour accéder à vos photos');
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.7,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        setPhotoUri(result.assets[0].uri);
+      }
+    } catch (error) {
+      console.error('Erreur sélection image:', error);
+      Alert.alert('Erreur', 'Impossible de sélectionner l\'image');
+    }
+  };
+
+  const handleTakePhoto = async () => {
+    try {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      
+      if (status !== 'granted') {
+        Alert.alert('Permission refusée', 'Nous avons besoin de votre permission pour utiliser la caméra');
+        return;
+      }
+
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.7,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        setPhotoUri(result.assets[0].uri);
+      }
+    } catch (error) {
+      console.error('Erreur prise photo:', error);
+      Alert.alert('Erreur', 'Impossible de prendre la photo');
+    }
+  };
+
+  const showPhotoOptions = () => {
+    Alert.alert(
+      'Photo de profil',
+      'Choisissez une option',
+      [
+        {
+          text: 'Prendre une photo',
+          onPress: handleTakePhoto,
+        },
+        {
+          text: 'Choisir dans la galerie',
+          onPress: handlePickImage,
+        },
+        {
+          text: 'Annuler',
+          style: 'cancel',
+        },
+      ],
+      { cancelable: true }
+    );
+  };
 
   const validateForm = (): boolean => {
     const newErrors: any = {};
@@ -79,7 +154,7 @@ export default function Inscription() {
 
     setLoading(true);
     try {
-      const response = await utilisateurService.inscription(formData);
+      const response = await utilisateurService.inscription(formData, photoUri || undefined);
       
       setSuccessMessage('🎉 Inscription réussie ! Redirection...');
       
@@ -122,30 +197,59 @@ export default function Inscription() {
   };
 
   return (
-    <KeyboardAvoidingView 
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={styles.container}
-    >
-      <ScrollView 
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
+    <View style={styles.container}>
+      {/* HEADER FIXE */}
+      <View style={styles.header}>
+        <TouchableOpacity 
+          style={styles.backButton}
+          onPress={() => router.back()}
+        >
+          <Ionicons name="arrow-back" size={24} color="white" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Inscription</Text>
+      </View>
+
+      <KeyboardAvoidingView 
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.keyboardAvoidingView}
       >
-        <View style={styles.header}>
-          <TouchableOpacity 
-            style={styles.backButton}
-            onPress={() => router.back()}
-          >
-            <Ionicons name="arrow-back" size={24} color="white" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Inscription</Text>
-        </View>
+        {/* CONTENU PRINCIPAL FIXE */}
+        <View style={styles.mainContent}>
+          {/* TITRE ET SOUS-TITRE FIXES */}
+          <View style={styles.titleSection}>
+            <Text style={styles.title}>Créer un compte</Text>
+            <Text style={styles.subtitle}>
+              Rejoignez Garenet pour réserver vos voyages
+            </Text>
+          </View>
 
-        <View style={styles.formContainer}>
-          <Text style={styles.title}>Créer un compte</Text>
-          <Text style={styles.subtitle}>
-            Rejoignez Garenet pour réserver vos voyages
-          </Text>
+          {/* SECTION PHOTO FIXE */}
+          <View style={styles.photoSection}>
+            <Text style={styles.photoLabel}>Photo de profil (optionnel)</Text>
+            <TouchableOpacity 
+              style={styles.photoContainer}
+              onPress={showPhotoOptions}
+            >
+              {photoUri ? (
+                <Image source={{ uri: photoUri }} style={styles.photoPreview} />
+              ) : (
+                <View style={styles.photoPlaceholder}>
+                  <Ionicons name="camera" size={40} color={theme.colors.neutral[400]} />
+                  <Text style={styles.photoPlaceholderText}>Ajouter une photo</Text>
+                </View>
+              )}
+            </TouchableOpacity>
+            {photoUri && (
+              <TouchableOpacity 
+                style={styles.removePhotoButton}
+                onPress={() => setPhotoUri(null)}
+              >
+                <Text style={styles.removePhotoText}>Supprimer la photo</Text>
+              </TouchableOpacity>
+            )}
+          </View>
 
+          {/* MESSAGES FIXES */}
           {successMessage ? (
             <View style={styles.successContainer}>
               <Ionicons name="checkmark-circle" size={20} color={theme.colors.semantic.success} />
@@ -160,141 +264,152 @@ export default function Inscription() {
             </View>
           ) : null}
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Nom *</Text>
-            <TextInput
-              style={[styles.input, errors.nom && styles.inputError]}
-              placeholder="Votre nom"
-              value={formData.nom}
-              onChangeText={(text) => updateFormData('nom', text)}
-              autoCapitalize="words"
-            />
-            {errors.nom && <Text style={styles.errorText}>{errors.nom}</Text>}
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Prénoms</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Vos prénoms"
-              value={formData.prenoms}
-              onChangeText={(text) => updateFormData('prenoms', text)}
-              autoCapitalize="words"
-            />
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Email *</Text>
-            <TextInput
-              style={[styles.input, errors.email && styles.inputError]}
-              placeholder="exemple@email.com"
-              value={formData.email}
-              onChangeText={(text) => updateFormData('email', text)}
-              keyboardType="email-address"
-              autoCapitalize="none"
-            />
-            {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Téléphone *</Text>
-            <TextInput
-              style={[styles.input, errors.telephone && styles.inputError]}
-              placeholder="0340000000"
-              value={formData.telephone}
-              onChangeText={(text) => updateFormData('telephone', text)}
-              keyboardType="phone-pad"
-              maxLength={10}
-            />
-            {errors.telephone && <Text style={styles.errorText}>{errors.telephone}</Text>}
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Mot de passe *</Text>
-            <View style={styles.passwordContainer}>
+          {/* 🔥 FORMULAIRE SCROLLABLE (SEULEMENT LES CHAMPS) */}
+          <ScrollView 
+            style={styles.formScrollView}
+            contentContainerStyle={styles.formScrollContent}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Nom *</Text>
               <TextInput
-                style={[
-                  styles.passwordInput,
-                  errors.mot_de_passe && styles.inputError
-                ]}
-                placeholder="Minimum 6 caractères"
-                value={formData.mot_de_passe}
-                onChangeText={(text) => updateFormData('mot_de_passe', text)}
-                secureTextEntry={!showPassword}
+                style={[styles.input, errors.nom && styles.inputError]}
+                placeholder="Votre nom"
+                value={formData.nom}
+                onChangeText={(text) => updateFormData('nom', text)}
+                autoCapitalize="words"
+              />
+              {errors.nom && <Text style={styles.errorText}>{errors.nom}</Text>}
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Prénoms</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Vos prénoms"
+                value={formData.prenoms}
+                onChangeText={(text) => updateFormData('prenoms', text)}
+                autoCapitalize="words"
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Email *</Text>
+              <TextInput
+                style={[styles.input, errors.email && styles.inputError]}
+                placeholder="exemple@email.com"
+                value={formData.email}
+                onChangeText={(text) => updateFormData('email', text)}
+                keyboardType="email-address"
                 autoCapitalize="none"
               />
-              <TouchableOpacity 
-                style={styles.eyeIcon}
-                onPress={() => setShowPassword(!showPassword)}
-              >
-                <Ionicons 
-                  name={showPassword ? "eye-off" : "eye"} 
-                  size={22} 
-                  color={theme.colors.text.secondary}
-                />
-              </TouchableOpacity>
+              {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
             </View>
-            {errors.mot_de_passe && (
-              <Text style={styles.errorText}>{errors.mot_de_passe}</Text>
-            )}
-          </View>
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Confirmer le mot de passe *</Text>
-            <View style={styles.passwordContainer}>
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Téléphone *</Text>
               <TextInput
-                style={[
-                  styles.passwordInput,
-                  errors.confirmPassword && styles.inputError
-                ]}
-                placeholder="Confirmer le mot de passe"
-                value={confirmPassword}
-                onChangeText={(text) => {
-                  setConfirmPassword(text);
-                  if (errors.confirmPassword) {
-                    setErrors(prev => ({ ...prev, confirmPassword: undefined }));
-                  }
-                }}
-                secureTextEntry={!showConfirmPassword}
-                autoCapitalize="none"
+                style={[styles.input, errors.telephone && styles.inputError]}
+                placeholder="0340000000"
+                value={formData.telephone}
+                onChangeText={(text) => updateFormData('telephone', text)}
+                keyboardType="phone-pad"
+                maxLength={10}
               />
-              <TouchableOpacity 
-                style={styles.eyeIcon}
-                onPress={() => setShowConfirmPassword(!showConfirmPassword)}
-              >
-                <Ionicons 
-                  name={showConfirmPassword ? "eye-off" : "eye"} 
-                  size={22} 
-                  color={theme.colors.text.secondary}
+              {errors.telephone && <Text style={styles.errorText}>{errors.telephone}</Text>}
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Mot de passe *</Text>
+              <View style={styles.passwordContainer}>
+                <TextInput
+                  style={[
+                    styles.passwordInput,
+                    errors.mot_de_passe && styles.inputError
+                  ]}
+                  placeholder="Minimum 6 caractères"
+                  value={formData.mot_de_passe}
+                  onChangeText={(text) => updateFormData('mot_de_passe', text)}
+                  secureTextEntry={!showPassword}
+                  autoCapitalize="none"
                 />
+                <TouchableOpacity 
+                  style={styles.eyeIcon}
+                  onPress={() => setShowPassword(!showPassword)}
+                >
+                  <Ionicons 
+                    name={showPassword ? "eye-off" : "eye"} 
+                    size={22} 
+                    color={theme.colors.text.secondary}
+                  />
+                </TouchableOpacity>
+              </View>
+              {errors.mot_de_passe && (
+                <Text style={styles.errorText}>{errors.mot_de_passe}</Text>
+              )}
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Confirmer le mot de passe *</Text>
+              <View style={styles.passwordContainer}>
+                <TextInput
+                  style={[
+                    styles.passwordInput,
+                    errors.confirmPassword && styles.inputError
+                  ]}
+                  placeholder="Confirmer le mot de passe"
+                  value={confirmPassword}
+                  onChangeText={(text) => {
+                    setConfirmPassword(text);
+                    if (errors.confirmPassword) {
+                      setErrors(prev => ({ ...prev, confirmPassword: undefined }));
+                    }
+                  }}
+                  secureTextEntry={!showConfirmPassword}
+                  autoCapitalize="none"
+                />
+                <TouchableOpacity 
+                  style={styles.eyeIcon}
+                  onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                >
+                  <Ionicons 
+                    name={showConfirmPassword ? "eye-off" : "eye"} 
+                    size={22} 
+                    color={theme.colors.text.secondary}
+                  />
+                </TouchableOpacity>
+              </View>
+              {errors.confirmPassword && (
+                <Text style={styles.errorText}>{errors.confirmPassword}</Text>
+              )}
+            </View>
+          </ScrollView>
+
+          {/* BOUTON ET FOOTER FIXES */}
+          <View style={styles.actionSection}>
+            <Button
+              title={loading ? 'Inscription en cours...' : 'S\'inscrire'}
+              onPress={handleInscription}
+              variant="primary"
+              style={styles.submitButton}
+              disabled={loading || !!successMessage}
+            />
+
+            {loading && (
+              <ActivityIndicator size="large" color={theme.colors.primary[500]} style={styles.loader} />
+            )}
+
+            <View style={styles.footer}>
+              <Text style={styles.footerText}>Vous avez déjà un compte ? </Text>
+              <TouchableOpacity onPress={handleSeConnecter}>
+                <Text style={styles.linkText}>Se connecter</Text>
               </TouchableOpacity>
             </View>
-            {errors.confirmPassword && (
-              <Text style={styles.errorText}>{errors.confirmPassword}</Text>
-            )}
-          </View>
-
-          <Button
-            title={loading ? 'Inscription en cours...' : 'S\'inscrire'}
-            onPress={handleInscription}
-            variant="primary"
-            style={styles.submitButton}
-            disabled={loading || !!successMessage}
-          />
-
-          {loading && (
-            <ActivityIndicator size="large" color={theme.colors.primary[500]} style={styles.loader} />
-          )}
-
-          <View style={styles.footer}>
-            <Text style={styles.footerText}>Vous avez déjà un compte ? </Text>
-            <TouchableOpacity onPress={handleSeConnecter}>
-              <Text style={styles.linkText}>Se connecter</Text>
-            </TouchableOpacity>
           </View>
         </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingView>
+    </View>
   );
 }
 
@@ -302,9 +417,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background.secondary,
-  },
-  scrollContent: {
-    flexGrow: 1,
   },
   header: {
     backgroundColor: theme.colors.primary[500],
@@ -314,16 +426,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  backButton: {
-    marginRight: theme.spacing.lg,
+  keyboardAvoidingView: {
+    flex: 1,
   },
-  headerTitle: {
-    fontSize: theme.typography.sizes.h2,
-    fontWeight: theme.typography.weights.bold,
-    color: theme.colors.text.inverse,
-  },
-  formContainer: {
+  mainContent: {
+    flex: 1,
     padding: theme.spacing.xl,
+  },
+  // SECTIONS FIXES
+  titleSection: {
+    marginBottom: theme.spacing.xl,
   },
   title: {
     fontSize: theme.typography.sizes.h1,
@@ -334,7 +446,71 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: theme.typography.sizes.body,
     color: theme.colors.text.secondary,
-    marginBottom: theme.spacing.xxxl,
+  },
+  photoSection: {
+    alignItems: 'center',
+    marginBottom: theme.spacing.xl,
+  },
+  actionSection: {
+    marginTop: 'auto', // Pousse vers le bas
+  },
+  // FORMULAIRE SCROLLABLE
+  formScrollView: {
+    flex: 1,
+    marginBottom: theme.spacing.lg,
+  },
+  formScrollContent: {
+    flexGrow: 1,
+  },
+  backButton: {
+    marginRight: theme.spacing.lg,
+  },
+  headerTitle: {
+    fontSize: theme.typography.sizes.h2,
+    fontWeight: theme.typography.weights.bold,
+    color: theme.colors.text.inverse,
+  },
+  photoLabel: {
+    fontSize: theme.typography.sizes.body,
+    fontWeight: theme.typography.weights.semibold,
+    color: theme.colors.text.primary,
+    marginBottom: theme.spacing.md,
+  },
+  photoContainer: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    overflow: 'hidden',
+    marginBottom: theme.spacing.sm,
+  },
+  photoPreview: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
+  },
+  photoPlaceholder: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: theme.colors.neutral[100],
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: theme.colors.neutral[300],
+    borderStyle: 'dashed',
+  },
+  photoPlaceholderText: {
+    fontSize: theme.typography.sizes.small,
+    color: theme.colors.neutral[400],
+    marginTop: theme.spacing.xs,
+  },
+  removePhotoButton: {
+    paddingVertical: theme.spacing.xs,
+    paddingHorizontal: theme.spacing.md,
+  },
+  removePhotoText: {
+    fontSize: theme.typography.sizes.small,
+    color: theme.colors.semantic.error,
+    fontWeight: theme.typography.weights.semibold,
   },
   successContainer: {
     flexDirection: 'row',
@@ -417,7 +593,6 @@ const styles = StyleSheet.create({
     marginLeft: theme.spacing.xs,
   },
   submitButton: {
-    marginTop: theme.spacing.md,
     marginBottom: theme.spacing.lg,
   },
   loader: {
@@ -427,7 +602,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: theme.spacing.xl,
   },
   footerText: {
     fontSize: theme.typography.sizes.caption,

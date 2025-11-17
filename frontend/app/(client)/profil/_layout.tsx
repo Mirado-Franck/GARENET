@@ -14,6 +14,9 @@ export default function RootLayout() {
     <Stack>
       <Stack.Screen name="profile" options={{ headerShown: false }} />
       <Stack.Screen name="modifierProfile" options={{ headerShown: false }} />
+      <Stack.Screen name="about" options={{ headerShown: false }} />
+      <Stack.Screen name="privacy" options={{ headerShown: false }} />
+      <Stack.Screen name="help" options={{ headerShown: false }} />
     </Stack>
   );
 }

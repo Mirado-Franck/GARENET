@@ -1,3 +1,4 @@
+// app/(client)/voyages/voyagePropose.tsx
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -8,11 +9,14 @@ import {
   ActivityIndicator,
   RefreshControl,
   StatusBar,
+  Animated,
 } from 'react-native';
 import { useLocalSearchParams, router, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { voyageService } from '../../../services/voyageService';
+import { voyageService, VoyageFilterParams } from '../../../services/voyageService';
 import { theme } from '../../../constants/theme';
+import DatePicker from '../../../components/ui/DatePicker';
+import Select, { SelectOption } from '../../../components/ui/Select';
 
 interface Voyage {
   id: number;
@@ -35,14 +39,28 @@ interface Voyage {
   };
 }
 
+// ✨ Options pour le select de status
+const STATUS_OPTIONS: SelectOption[] = [
+  { value: 'tous', label: 'Tous les voyages' },
+  { value: 'disponible', label: 'Disponible' },
+  { value: 'termine', label: 'Terminé' },
+];
+
 export default function VoyagePropose() {
   const params = useLocalSearchParams();
   const cooperativeId = parseInt(params.cooperativeId as string);
 
+  // États
   const [voyages, setVoyages] = useState<Voyage[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [cooperativeName, setCooperativeName] = useState('');
+
+  // ✨ États des filtres
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [selectedStatus, setSelectedStatus] = useState<string>('disponible'); // Par défaut: disponible
+  const [showFilters, setShowFilters] = useState(false);
+  const [filterAnimation] = useState(new Animated.Value(0));
 
   useEffect(() => {
     loadVoyages();
@@ -51,14 +69,17 @@ export default function VoyagePropose() {
   const loadVoyages = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`http://localhost:3000/api/voyages/cooperative/${cooperativeId}`);
-      const data = await response.json();
       
-      if (Array.isArray(data)) {
-        setVoyages(data);
-        if (data.length > 0) {
-          setCooperativeName(data[0].cooperative.nom);
-        }
+      // Par défaut, charger les voyages disponibles
+      const filters: VoyageFilterParams = {
+        status: 'disponible',
+      };
+
+      const data = await voyageService.filterVoyagesByCooperative(cooperativeId, filters);
+
+      setVoyages(data);
+      if (data.length > 0) {
+        setCooperativeName(data[0].cooperative.nom);
       }
     } catch (error) {
       console.error('Erreur chargement voyages:', error);
@@ -67,6 +88,73 @@ export default function VoyagePropose() {
       setRefreshing(false);
     }
   };
+
+  // ✨ Appliquer les filtres
+  const applyFilters = async () => {
+    try {
+      setLoading(true);
+
+      const filters: VoyageFilterParams = {
+        status: selectedStatus as any,
+      };
+
+      // Ajouter la date si sélectionnée
+      if (selectedDate) {
+        filters.date = selectedDate.toISOString().split('T')[0]; // Format YYYY-MM-DD
+      }
+
+      console.log('🔍 Application des filtres:', filters);
+
+      const data = await voyageService.filterVoyagesByCooperative(cooperativeId, filters);
+      setVoyages(data);
+
+      // Fermer la section filtres après application
+      toggleFilters();
+    } catch (error) {
+      console.error('Erreur application filtres:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ✨ Réinitialiser les filtres
+  const resetFilters = async () => {
+    setSelectedDate(null);
+    setSelectedStatus('disponible');
+
+    try {
+      setLoading(true);
+
+      const filters: VoyageFilterParams = {
+        status: 'disponible',
+      };
+
+      const data = await voyageService.filterVoyagesByCooperative(cooperativeId, filters);
+      setVoyages(data);
+      
+      toggleFilters();
+    } catch (error) {
+      console.error('Erreur réinitialisation:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ✨ Toggle section filtres avec animation
+  const toggleFilters = () => {
+    const toValue = showFilters ? 0 : 1;
+    Animated.timing(filterAnimation, {
+      toValue,
+      duration: 300,
+      useNativeDriver: false,
+    }).start();
+    setShowFilters(!showFilters);
+  };
+
+  const filterHeight = filterAnimation.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, 300], // Hauteur de la section filtres
+  });
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -99,8 +187,7 @@ export default function VoyagePropose() {
   const getStatusBadge = (status: string) => {
     const statusConfig = {
       disponible: { color: theme.colors.semantic.success, label: 'Disponible', icon: 'checkmark-circle' },
-      complet: { color: theme.colors.semantic.error, label: 'Complet', icon: 'close-circle' },
-      annule: { color: theme.colors.neutral[500], label: 'Annulé', icon: 'ban' },
+      termine: { color: theme.colors.neutral[500], label: 'Terminé', icon: 'checkmark-done-circle' },
     };
 
     const config = statusConfig[status as keyof typeof statusConfig] || {
@@ -110,9 +197,9 @@ export default function VoyagePropose() {
     };
 
     return (
-       <View style={[styles.statusBadge, { backgroundColor: config.color + '20', borderColor: config.color }]}>
+      <View style={[styles.statusBadge, { backgroundColor: config.color + '20', borderColor: config.color }]}>
         <Ionicons name={config.icon as any} size={14} color={config.color} />
-       <Text style={[styles.statusText, { color: config.color }]}>{config.label}</Text>
+        <Text style={[styles.statusText, { color: config.color }]}>{config.label}</Text>
       </View>
     );
   };
@@ -199,7 +286,7 @@ export default function VoyagePropose() {
     </View>
   );
 
-  if (loading) {
+  if (loading && !refreshing) {
     return (
       <View style={styles.loadingContainer}>
         <Stack.Screen options={{ headerShown: false }} />
@@ -212,15 +299,13 @@ export default function VoyagePropose() {
 
   return (
     <View style={styles.container}>
-      {/* Configuration pour cacher le header par défaut d'Expo Router */}
       <Stack.Screen options={{ headerShown: false }} />
-      
       <StatusBar backgroundColor={theme.colors.primary[500]} barStyle="light-content" />
-      
-      {/* Header Bleu Unique */}
+
+      {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity 
-          style={styles.headerBackButton} 
+        <TouchableOpacity
+          style={styles.headerBackButton}
           onPress={() => {
             if (router.canGoBack()) {
               router.back();
@@ -240,10 +325,57 @@ export default function VoyagePropose() {
 
       {/* Contenu principal */}
       <View style={styles.content}>
+        {/* ✨ Bouton filtres */}
+        <TouchableOpacity style={styles.filterToggleButton} onPress={toggleFilters}>
+          <Ionicons name="filter" size={20} color={theme.colors.primary[500]} />
+          <Text style={styles.filterToggleText}>
+            {showFilters ? 'Masquer les filtres' : 'Afficher les filtres'}
+          </Text>
+          <Ionicons
+            name={showFilters ? 'chevron-up' : 'chevron-down'}
+            size={20}
+            color={theme.colors.primary[500]}
+          />
+        </TouchableOpacity>
+
+        {/* ✨ Section filtres animée */}
+        <Animated.View style={[styles.filtersSection, { height: filterHeight, overflow: 'hidden' }]}>
+          {showFilters && (
+            <View style={styles.filtersContent}>
+              <DatePicker
+                value={selectedDate}
+                onChange={setSelectedDate}
+                label="Date de départ"
+                placeholder="Sélectionner une date"
+                minimumDate={new Date()}
+              />
+
+              <Select
+                options={STATUS_OPTIONS}
+                value={selectedStatus}
+                onChange={setSelectedStatus}
+                label="Status du voyage"
+              />
+
+              <View style={styles.filterButtons}>
+                <TouchableOpacity style={styles.applyButton} onPress={applyFilters}>
+                  <Ionicons name="checkmark-circle" size={20} color="#fff" />
+                  <Text style={styles.applyButtonText}>Appliquer</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity style={styles.resetButton} onPress={resetFilters}>
+                  <Ionicons name="refresh" size={20} color={theme.colors.neutral[600]} />
+                  <Text style={styles.resetButtonText}>Réinitialiser</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
+        </Animated.View>
+
         {/* Compteur */}
         <View style={styles.countContainer}>
           <Text style={styles.countText}>
-            {voyages.length} {voyages.length > 1 ? 'voyages' : 'voyage'} disponible{voyages.length > 1 ? 's' : ''}
+            {voyages.length} {voyages.length > 1 ? 'voyages' : 'voyage'} trouvé{voyages.length > 1 ? 's' : ''}
           </Text>
         </View>
 
@@ -251,10 +383,13 @@ export default function VoyagePropose() {
         {voyages.length === 0 ? (
           <View style={styles.emptyContainer}>
             <Ionicons name="bus-outline" size={80} color={theme.colors.neutral[300]} />
-            <Text style={styles.emptyTitle}>Aucun voyage disponible</Text>
+            <Text style={styles.emptyTitle}>Aucun voyage trouvé</Text>
             <Text style={styles.emptySubtitle}>
-              Cette coopérative n'a pas de voyages programmés pour le moment.
+              Aucun voyage ne correspond aux critères sélectionnés.
             </Text>
+            <TouchableOpacity style={styles.resetFiltersButton} onPress={resetFilters}>
+              <Text style={styles.resetFiltersButtonText}>Réinitialiser les filtres</Text>
+            </TouchableOpacity>
           </View>
         ) : (
           <FlatList
@@ -264,11 +399,7 @@ export default function VoyagePropose() {
             contentContainerStyle={styles.listContent}
             showsVerticalScrollIndicator={false}
             refreshControl={
-              <RefreshControl
-                refreshing={refreshing}
-                onRefresh={onRefresh}
-                colors={[theme.colors.primary[500]]}
-              />
+              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[theme.colors.primary[500]]} />
             }
           />
         )}
@@ -328,6 +459,74 @@ const styles = StyleSheet.create({
     opacity: 0.9,
     marginTop: 4,
   },
+  // ✨ Styles filtres
+  filterToggleButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: theme.spacing.sm,
+    backgroundColor: theme.colors.background.primary,
+    marginHorizontal: theme.spacing.lg,
+    marginTop: theme.spacing.lg,
+    marginBottom: theme.spacing.sm,
+    padding: theme.spacing.md,
+    borderRadius: theme.borderRadius.md,
+    borderWidth: 1,
+    borderColor: theme.colors.primary[500],
+    ...theme.shadows.sm,
+  },
+  filterToggleText: {
+    fontSize: theme.typography.sizes.body,
+    fontWeight: theme.typography.weights.semibold,
+    color: theme.colors.primary[500],
+  },
+  filtersSection: {
+    marginHorizontal: theme.spacing.lg,
+    backgroundColor: theme.colors.background.primary,
+    borderRadius: theme.borderRadius.md,
+    ...theme.shadows.sm,
+  },
+  filtersContent: {
+    padding: theme.spacing.lg,
+  },
+  filterButtons: {
+    flexDirection: 'row',
+    gap: theme.spacing.md,
+    marginTop: theme.spacing.md,
+  },
+  applyButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: theme.spacing.sm,
+    backgroundColor: theme.colors.primary[500],
+    paddingVertical: theme.spacing.md,
+    borderRadius: theme.borderRadius.md,
+  },
+  applyButtonText: {
+    fontSize: theme.typography.sizes.body,
+    fontWeight: theme.typography.weights.bold,
+    color: theme.colors.text.inverse,
+  },
+  resetButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: theme.spacing.sm,
+    backgroundColor: theme.colors.background.secondary,
+    paddingVertical: theme.spacing.md,
+    borderRadius: theme.borderRadius.md,
+    borderWidth: 1,
+    borderColor: theme.colors.neutral[300],
+  },
+  resetButtonText: {
+    fontSize: theme.typography.sizes.body,
+    fontWeight: theme.typography.weights.semibold,
+    color: theme.colors.neutral[600],
+  },
+  // FIN Styles filtres
   countContainer: {
     backgroundColor: theme.colors.background.primary,
     marginHorizontal: theme.spacing.lg,
@@ -490,5 +689,17 @@ const styles = StyleSheet.create({
     fontSize: theme.typography.sizes.body,
     color: theme.colors.text.secondary,
     textAlign: 'center',
+    marginBottom: theme.spacing.lg,
+  },
+  resetFiltersButton: {
+    backgroundColor: theme.colors.primary[500],
+    paddingHorizontal: theme.spacing.xl,
+    paddingVertical: theme.spacing.md,
+    borderRadius: theme.borderRadius.md,
+  },
+  resetFiltersButtonText: {
+    fontSize: theme.typography.sizes.body,
+    fontWeight: theme.typography.weights.bold,
+    color: theme.colors.text.inverse,
   },
 });

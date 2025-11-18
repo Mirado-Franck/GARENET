@@ -10,14 +10,12 @@ import {
   ActivityIndicator,
   RefreshControl,
   Image,
-  Modal,
-  KeyboardAvoidingView,
-  Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
 import { cooperativeService, Cooperative } from '../../services/cooperativeService';
+import { voyageService, Voyage } from '../../services/voyageService';
 import { avisService } from '../../services/avisService';
 import { theme } from '../../constants/theme';
 
@@ -25,42 +23,39 @@ export default function Home() {
   const router = useRouter();
   const { utilisateur } = useAuth();
 
-  // États existants
+  // États
   const [cooperatives, setCooperatives] = useState<Cooperative[]>([]);
-  const [filteredCooperatives, setFilteredCooperatives] = useState<Cooperative[]>([]);
+  const [voyages, setVoyages] = useState<Voyage[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
+  const [searching, setSearching] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [lastAvis, setLastAvis] = useState<any[]>([]);
-
-  // 🔥 NOUVEAUX ÉTATS POUR L'ASSISTANT IA
-  const [showAIModal, setShowAIModal] = useState(false);
-  const [aiMessage, setAiMessage] = useState('');
-  const [chatMessages, setChatMessages] = useState<Array<{text: string, isUser: boolean}>>([]);
-  const [isAiTyping, setIsAiTyping] = useState(false);
+  const [isSearchMode, setIsSearchMode] = useState(false);
 
   useEffect(() => {
     loadData();
   }, []);
 
+  // ✨ Recherche automatique de voyages
   useEffect(() => {
     if (searchQuery.trim() === '') {
-      setFilteredCooperatives([]);
+      setIsSearchMode(false);
+      setVoyages([]);
     } else {
-      const filtered = cooperatives.filter((coop) =>
-        coop.nom.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-      setFilteredCooperatives(filtered);
+      handleSearch(searchQuery);
     }
-  }, [searchQuery, cooperatives]);
+  }, [searchQuery]);
 
   const loadData = async () => {
     try {
       setLoading(true);
-      
+
+      // Charger les coopératives
       const coopData = await cooperativeService.getAllCooperatives();
       setCooperatives(coopData);
 
+      // Charger les derniers avis
       try {
         const avisData = await avisService.getLatestAvis(3);
         setLastAvis(avisData.avis || []);
@@ -75,13 +70,40 @@ export default function Home() {
     }
   };
 
+  const handleSearch = async (query: string) => {
+    if (!query || query.trim() === '') {
+      setIsSearchMode(false);
+      setVoyages([]);
+      return;
+    }
+
+    try {
+      setSearching(true);
+      setIsSearchMode(true);
+
+      const results = await voyageService.searchVoyages(query);
+      setVoyages(results);
+    } catch (error) {
+      console.error('Erreur recherche:', error);
+      setVoyages([]);
+    } finally {
+      setSearching(false);
+    }
+  };
+
   const onRefresh = () => {
     setRefreshing(true);
+    setSearchQuery('');
+    setIsSearchMode(false);
     loadData();
   };
 
   const handleCooperativePress = (cooperativeId: number) => {
     router.push(`/(client)/voyages/detailCooperative?id=${cooperativeId}`);
+  };
+
+  const handleVoyagePress = (voyageId: number) => {
+    router.push(`/(client)/voyages/detailVoyage?id=${voyageId}`);
   };
 
   const handleVoirTout = () => {
@@ -95,85 +117,23 @@ export default function Home() {
     return 'Bonsoir';
   };
 
-  // 🔥 FONCTIONS POUR L'ASSISTANT IA
-  const openAIAssistant = () => {
-    setShowAIModal(true);
-    setChatMessages([
-      {
-        text: "👋 Bonjour ! Je suis votre assistant Garenet ! Comment puis-je vous aider aujourd'hui ?",
-        isUser: false
-      }
-    ]);
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('fr-FR', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+    });
   };
 
-  const closeAIAssistant = () => {
-    setShowAIModal(false);
-    setAiMessage('');
-    setChatMessages([]);
+  const formatHeure = (heureString: string | null) => {
+    if (!heureString) return 'N/A';
+    const date = new Date(heureString);
+    return date.toLocaleTimeString('fr-FR', {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
   };
-
-  const generateFunnyResponse = (userMessage: string): string => {
-    const lowerMessage = userMessage.toLowerCase();
-    
-    // Réponses amusantes prédéfinies
-    const responses = [
-      "Ah, une excellente question ! En tant qu'IA super intelligente, je vous conseille de prendre le bus... enfin, si vous voulez arriver à destination ! 🚌",
-      "D'après mes calculs complexes, la meilleure coopérative est celle qui a des sièges confortables. Révolutionnaire, je sais ! 😄",
-      "En tant qu'assistant IA, je pourrais vous donner une réponse technique... mais je préfère vous dire que vous avez un excellent goût en matière de transport !",
-      "🤔 Hmm... laissez-moi réfléchir... *bruit de processeur*... La réponse est 42 ! Attendez, c'était pour une autre question...",
-      "Je suis désolé, je ne peux pas répondre à ça. Mais saviez-vous que les bus sont comme les avocats ? Ils sont meilleurs quand ils sont pleins ! 🥑",
-      "En analysant votre demande... *scrolling infini*... Je recommande de vérifier les horaires. Astuce de pro ! 😎",
-      "En tant qu'IA, je devrais vous donner une réponse sérieuse, mais aujourd'hui je me sens taquin ! Demandez-moi plutôt une blague sur les bus !",
-      "D'après mes algorithmes avancés, la solution optimale est... d'utiliser l'application Garenet. Quelle surprise ! 😂"
-    ];
-
-    // Réponses contextuelles amusantes
-    if (lowerMessage.includes('bonjour') || lowerMessage.includes('salut') || lowerMessage.includes('coucou')) {
-      return "👋 Salut à toi, humain ! Prêt pour une aventure en bus ? Moi je suis prêt à dire des bêtises !";
-    }
-    
-    if (lowerMessage.includes('heure') || lowerMessage.includes('horaire')) {
-      return "⏰ Les horaires ? Je pourrais vous donner l'heure exacte... si j'avais une montre ! Heureusement, Garenet l'a pour vous !";
-    }
-    
-    if (lowerMessage.includes('prix') || lowerMessage.includes('tarif')) {
-      return "💰 Les prix ? C'est simple : moins cher qu'un taxi, plus confort qu'une marche de 50km ! Détails dans l'application !";
-    }
-    
-    if (lowerMessage.includes('bus') || lowerMessage.includes('car')) {
-      return "🚌 Un bus, c'est comme une boîte de chocolats : on ne sait jamais sur quel siège on va tomber !";
-    }
-    
-    if (lowerMessage.includes('blague') || lowerMessage.includes('drôle') || lowerMessage.includes('rire')) {
-      return "😂 Pourquoi le bus a-t-il été à l'école ? Pour apprendre les arrêts ! ... Désolé, je suis meilleur pour les réservations que pour les blagues !";
-    }
-    
-    if (lowerMessage.includes('merci')) {
-      return "🤖 De rien ! N'oubliez pas : je suis un assistant IA fictif, mais mon aide est 100% réelle (enfin, à 42%) !";
-    }
-
-    // Réponse aléatoire par défaut
-    return responses[Math.floor(Math.random() * responses.length)];
-  };
-
-  const sendAIMessage = () => {
-    if (aiMessage.trim() === '') return;
-
-    // Ajouter le message de l'utilisateur
-    const userMessage = { text: aiMessage, isUser: true };
-    setChatMessages(prev => [...prev, userMessage]);
-    setAiMessage('');
-    setIsAiTyping(true);
-
-    // Simuler un délai de réponse de l'IA
-    setTimeout(() => {
-      const aiResponse = generateFunnyResponse(aiMessage);
-      setChatMessages(prev => [...prev, { text: aiResponse, isUser: false }]);
-      setIsAiTyping(false);
-    }, 1500);
-  };
-
-  const displayCooperatives = searchQuery.trim() !== '' ? filteredCooperatives : cooperatives.slice(0, 5);
 
   return (
     <View style={styles.container}>
@@ -186,26 +146,16 @@ export default function Home() {
               {utilisateur?.prenoms || utilisateur?.nom || 'Voyageur'}
             </Text>
           </View>
-          
-          {/* 🔥 BOUTON ASSISTANT IA */}
-          <View style={styles.headerButtons}>
-            <TouchableOpacity
-              style={styles.aiButton}
-              onPress={openAIAssistant}
-            >
-              <Ionicons name="sparkles" size={22} color={theme.colors.text.inverse} />
-            </TouchableOpacity>
-            
-            <TouchableOpacity
-              style={styles.notificationButton}
-              onPress={() => router.push('/(client)/notification')}
-            >
-              <Ionicons name="notifications-outline" size={28} color={theme.colors.text.inverse} />
-              <View style={styles.notificationBadge}>
-                <Text style={styles.notificationBadgeText}>3</Text>
-              </View>
-            </TouchableOpacity>
-          </View>
+          <TouchableOpacity
+            style={styles.notificationButton}
+            onPress={() => router.push('/(client)/notification')}
+          >
+            <Ionicons name="notifications-outline" size={28} color={theme.colors.text.inverse} />
+            {/* Badge notification */}
+            <View style={styles.notificationBadge}>
+              <Text style={styles.notificationBadgeText}>3</Text>
+            </View>
+          </TouchableOpacity>
         </View>
 
         {/* Barre de recherche */}
@@ -213,7 +163,7 @@ export default function Home() {
           <Ionicons name="search" size={20} color={theme.colors.neutral[400]} style={styles.searchIcon} />
           <TextInput
             style={styles.searchInput}
-            placeholder="Rechercher une coopérative..."
+            placeholder="Rechercher un voyage (ville départ/arrivée)..."
             placeholderTextColor={theme.colors.neutral[400]}
             value={searchQuery}
             onChangeText={setSearchQuery}
@@ -242,58 +192,46 @@ export default function Home() {
           </View>
         ) : (
           <>
-            {/* MODE RECHERCHE */}
-            {searchQuery.trim() !== '' ? (
+            {/* MODE RECHERCHE - RÉSULTATS VOYAGES */}
+            {isSearchMode ? (
               <View style={styles.section}>
                 <Text style={styles.sectionTitle}>
-                  Résultats ({filteredCooperatives.length})
+                  {searching ? 'Recherche en cours...' : `Résultats (${voyages.length})`}
                 </Text>
-                {filteredCooperatives.length === 0 ? (
+                {searching ? (
+                  <View style={styles.loadingContainer}>
+                    <ActivityIndicator size="large" color={theme.colors.primary[500]} />
+                  </View>
+                ) : voyages.length === 0 ? (
                   <View style={styles.emptyContainer}>
                     <Ionicons name="search-outline" size={60} color={theme.colors.neutral[300]} />
-                    <Text style={styles.emptyText}>Aucune coopérative trouvée</Text>
+                    <Text style={styles.emptyText}>Aucun voyage trouvé</Text>
                     <Text style={styles.emptySubtext}>
                       Essayez un autre terme de recherche
                     </Text>
                   </View>
                 ) : (
-                  <View style={styles.cooperativesGrid}>
-                    {filteredCooperatives.map((coop) => (
+                  <View style={styles.voyagesGrid}>
+                    {voyages.map((voyage) => (
                       <TouchableOpacity
-                        key={coop.id}
-                        style={styles.cooperativeCard}
-                        onPress={() => handleCooperativePress(coop.id)}
+                        key={voyage.id}
+                        style={styles.voyageCard}
+                        onPress={() => handleVoyagePress(voyage.id)}
                       >
-                        <View style={styles.cooperativeImageContainer}>
-                          {coop.logo ? (
-                            <Image source={{ uri: coop.logo }} style={styles.cooperativeImage} />
-                          ) : (
-                            <View style={styles.cooperativeImagePlaceholder}>
-                              <Ionicons name="bus" size={32} color={theme.colors.primary[500]} />
-                            </View>
-                          )}
+                        <View style={styles.voyageImagePlaceholder}>
+                          <Ionicons name="bus" size={32} color={theme.colors.primary[500]} />
                         </View>
-                        <View style={styles.cooperativeInfo}>
-                          <Text style={styles.cooperativeName} numberOfLines={2}>
-                            {coop.nom}
+                        <View style={styles.voyageInfo}>
+                          <Text style={styles.voyageTitre}>
+                            {voyage.trajet.station_depart} → {voyage.trajet.station_arrivee}
                           </Text>
-                          <View style={styles.cooperativeFooter}>
-                            <View style={styles.statusBadge}>
-                              <View
-                                style={[
-                                  styles.statusDot,
-                                  {
-                                    backgroundColor:
-                                      coop.statut === 'actif'
-                                        ? theme.colors.semantic.success
-                                        : theme.colors.neutral[400],
-                                  },
-                                ]}
-                              />
-                              <Text style={styles.statusText}>{coop.statut}</Text>
-                            </View>
-                            <Ionicons name="chevron-forward" size={16} color={theme.colors.neutral[400]} />
-                          </View>
+                          <Text style={styles.voyageDetails}>
+                            {formatDate(voyage.date_depart)} • {formatHeure(voyage.heure_depart)}
+                          </Text>
+                          <Text style={styles.voyagePrix}>{voyage.prix.toLocaleString()} Ar</Text>
+                          <Text style={styles.voyageCooperative}>
+                            {voyage.cooperative.nom}
+                          </Text>
                         </View>
                       </TouchableOpacity>
                     ))}
@@ -303,47 +241,25 @@ export default function Home() {
             ) : (
               <>
                 {/* MODE NORMAL - CONTENU ACCUEIL */}
-                <View style={styles.section}>
-                  <View style={styles.quickActionsGrid}>
-                    <TouchableOpacity
-                      style={styles.quickActionCard}
-                      onPress={() => router.push('/(client)/voyages')}
-                    >
-                      <View style={[styles.quickActionIcon, { backgroundColor: theme.colors.primary[50] }]}>
-                        <Ionicons name="search" size={28} color={theme.colors.primary[500]} />
-                      </View>
-                      <Text style={styles.quickActionText}>Rechercher{'\n'}un voyage</Text>
-                    </TouchableOpacity>
 
-                    <TouchableOpacity
-                      style={styles.quickActionCard}
-                      onPress={() => router.push('/(client)/reservations')}
-                    >
-                      <View style={[styles.quickActionIcon, { backgroundColor: theme.colors.secondary[50] }]}>
-                        <Ionicons name="ticket" size={28} color={theme.colors.secondary[500]} />
-                      </View>
-                      <Text style={styles.quickActionText}>Mes{'\n'}réservations</Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                      style={styles.quickActionCard}
-                      onPress={() => router.push('/(client)/historique')}
-                    >
-                      <View style={[styles.quickActionIcon, { backgroundColor: theme.colors.semantic.info + '20' }]}>
-                        <Ionicons name="time" size={28} color={theme.colors.semantic.info} />
-                      </View>
-                      <Text style={styles.quickActionText}>Historique{'\n'}voyages</Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                      style={styles.quickActionCard}
-                      onPress={() => router.push('/(client)/profil')}
-                    >
-                      <View style={[styles.quickActionIcon, { backgroundColor: theme.colors.neutral[100] }]}>
-                        <Ionicons name="person" size={28} color={theme.colors.neutral[600]} />
-                      </View>
-                      <Text style={styles.quickActionText}>Mon{'\n'}profil</Text>
-                    </TouchableOpacity>
+                {/* Section Slogan stylisé */}
+                <View style={styles.sloganSection}>
+                  <View style={styles.sloganCard}>
+                    <View style={styles.sloganIconContainer}>
+                      <Ionicons name="bus" size={50} color={theme.colors.primary[500]} />
+                    </View>
+                    <Text style={styles.sloganTitle}>Avec GARENET</Text>
+                    <Text style={styles.sloganText}>
+                      Vos réservations{' '}
+                      <Text style={styles.sloganHighlight}>simplifiées</Text>
+                      {'\n'}
+                      Vos avis{' '}
+                      <Text style={styles.sloganHighlight}>retenus</Text>
+                    </Text>
+                    <View style={styles.sloganDivider} />
+                    <Text style={styles.sloganSubtext}>
+                      Voyagez en toute confiance avec nos coopératives partenaires
+                    </Text>
                   </View>
                 </View>
 
@@ -361,7 +277,7 @@ export default function Home() {
                     showsHorizontalScrollIndicator={false}
                     contentContainerStyle={styles.horizontalScroll}
                   >
-                    {displayCooperatives.map((coop) => (
+                    {cooperatives.slice(0, 5).map((coop) => (
                       <TouchableOpacity
                         key={coop.id}
                         style={styles.cooperativeCardHorizontal}
@@ -436,19 +352,6 @@ export default function Home() {
                     </View>
                   </View>
                 )}
-
-                {/* Bannière promotionnelle */}
-                <View style={styles.section}>
-                  <View style={styles.promoBanner}>
-                    <Ionicons name="gift" size={40} color={theme.colors.secondary[500]} />
-                    <View style={styles.promoContent}>
-                      <Text style={styles.promoTitle}>Offre spéciale !</Text>
-                      <Text style={styles.promoText}>
-                        Réservez maintenant et bénéficiez de réductions exclusives
-                      </Text>
-                    </View>
-                  </View>
-                </View>
               </>
             )}
           </>
@@ -456,88 +359,6 @@ export default function Home() {
 
         <View style={{ height: 40 }} />
       </ScrollView>
-
-      {/* 🔥 MODAL ASSISTANT IA */}
-      <Modal
-        visible={showAIModal}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={closeAIAssistant}
-      >
-        <KeyboardAvoidingView 
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          style={styles.aiModalContainer}
-        >
-          <View style={styles.aiModalContent}>
-            {/* Header du modal */}
-            <View style={styles.aiModalHeader}>
-              <View style={styles.aiTitleContainer}>
-                <Ionicons name="sparkles" size={24} color={theme.colors.primary[500]} />
-                <Text style={styles.aiModalTitle}>Assistant Garenet</Text>
-              </View>
-              <TouchableOpacity onPress={closeAIAssistant} style={styles.aiCloseButton}>
-                <Ionicons name="close" size={24} color={theme.colors.neutral[500]} />
-              </TouchableOpacity>
-            </View>
-
-            {/* Zone de chat */}
-            <ScrollView 
-              style={styles.aiChatContainer}
-              contentContainerStyle={styles.aiChatContent}
-              ref={ref => {
-                if (ref) {
-                  setTimeout(() => ref.scrollToEnd({ animated: true }), 100);
-                }
-              }}
-            >
-              {chatMessages.map((message, index) => (
-                <View
-                  key={index}
-                  style={[
-                    styles.aiMessageBubble,
-                    message.isUser ? styles.aiUserMessage : styles.aiBotMessage
-                  ]}
-                >
-                  <Text style={message.isUser ? styles.aiUserText : styles.aiBotText}>
-                    {message.text}
-                  </Text>
-                </View>
-              ))}
-              {isAiTyping && (
-                <View style={[styles.aiMessageBubble, styles.aiBotMessage]}>
-                  <Text style={styles.aiBotText}>🤔 L'assistant réfléchit...</Text>
-                </View>
-              )}
-            </ScrollView>
-
-            {/* Input pour envoyer des messages */}
-            <View style={styles.aiInputContainer}>
-              <TextInput
-                style={styles.aiInput}
-                placeholder="Posez-moi une question..."
-                value={aiMessage}
-                onChangeText={setAiMessage}
-                multiline
-                maxLength={200}
-              />
-              <TouchableOpacity 
-                style={[
-                  styles.aiSendButton,
-                  aiMessage.trim() === '' && styles.aiSendButtonDisabled
-                ]}
-                onPress={sendAIMessage}
-                disabled={aiMessage.trim() === '' || isAiTyping}
-              >
-                <Ionicons 
-                  name="send" 
-                  size={20} 
-                  color={aiMessage.trim() === '' ? theme.colors.neutral[400] : theme.colors.text.inverse} 
-                />
-              </TouchableOpacity>
-            </View>
-          </View>
-        </KeyboardAvoidingView>
-      </Modal>
     </View>
   );
 }
@@ -562,113 +383,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: theme.spacing.lg,
   },
-  // 🔥 NOUVEAUX STYLES POUR L'ASSISTANT IA
-  headerButtons: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: theme.spacing.sm,
-  },
-  aiButton: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    padding: theme.spacing.sm,
-    borderRadius: theme.borderRadius.round,
-    marginRight: theme.spacing.xs,
-  },
-  // Modal IA
-  aiModalContainer: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
-  },
-  aiModalContent: {
-    backgroundColor: theme.colors.background.primary,
-    borderTopLeftRadius: theme.borderRadius.xl,
-    borderTopRightRadius: theme.borderRadius.xl,
-    height: '70%',
-    ...theme.shadows.md,
-  },
-  aiModalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: theme.spacing.lg,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.neutral[200],
-  },
-  aiTitleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: theme.spacing.sm,
-  },
-  aiModalTitle: {
-    fontSize: theme.typography.sizes.h3,
-    fontWeight: theme.typography.weights.bold,
-    color: theme.colors.text.primary,
-  },
-  aiCloseButton: {
-    padding: theme.spacing.xs,
-  },
-  aiChatContainer: {
-    flex: 1,
-  },
-  aiChatContent: {
-    padding: theme.spacing.lg,
-    gap: theme.spacing.md,
-  },
-  aiMessageBubble: {
-    maxWidth: '85%',
-    padding: theme.spacing.md,
-    borderRadius: theme.borderRadius.lg,
-    marginBottom: theme.spacing.sm,
-  },
-  aiUserMessage: {
-    alignSelf: 'flex-end',
-    backgroundColor: theme.colors.primary[500],
-    borderBottomRightRadius: theme.borderRadius.sm,
-  },
-  aiBotMessage: {
-    alignSelf: 'flex-start',
-    backgroundColor: theme.colors.neutral[100],
-    borderBottomLeftRadius: theme.borderRadius.sm,
-  },
-  aiUserText: {
-    color: theme.colors.text.inverse,
-    fontSize: theme.typography.sizes.body,
-  },
-  aiBotText: {
-    color: theme.colors.text.primary,
-    fontSize: theme.typography.sizes.body,
-  },
-  aiInputContainer: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    padding: theme.spacing.lg,
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.neutral[200],
-    gap: theme.spacing.sm,
-  },
-  aiInput: {
-    flex: 1,
-    backgroundColor: theme.colors.neutral[100],
-    borderRadius: theme.borderRadius.md,
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.sm,
-    fontSize: theme.typography.sizes.body,
-    color: theme.colors.text.primary,
-    maxHeight: 100,
-  },
-  aiSendButton: {
-    backgroundColor: theme.colors.primary[500],
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  aiSendButtonDisabled: {
-    backgroundColor: theme.colors.neutral[300],
-  },
-  // STYLES EXISTANTS (inchangés)
   greeting: {
     fontSize: theme.typography.sizes.body,
     color: theme.colors.text.light,
@@ -751,34 +465,60 @@ const styles = StyleSheet.create({
     color: theme.colors.primary[500],
     fontWeight: theme.typography.weights.semibold,
   },
-  quickActionsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: theme.spacing.md,
+  // ✨ NOUVEAU : Section Slogan
+  sloganSection: {
+    paddingHorizontal: theme.spacing.xl,
+    marginTop: theme.spacing.xl,
   },
-  quickActionCard: {
-    flex: 1,
-    minWidth: '45%',
-    backgroundColor: theme.colors.background.primary,
-    padding: theme.spacing.lg,
-    borderRadius: theme.borderRadius.md,
+  sloganCard: {
+    backgroundColor: theme.colors.primary[500],
+    padding: theme.spacing.xxxl,
+    borderRadius: theme.borderRadius.lg,
     alignItems: 'center',
-    ...theme.shadows.sm,
+    ...theme.shadows.md,
   },
-  quickActionIcon: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+  sloganIconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: 'rgba(255,255,255,0.2)',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: theme.spacing.md,
+    marginBottom: theme.spacing.lg,
   },
-  quickActionText: {
-    fontSize: theme.typography.sizes.caption,
-    fontWeight: theme.typography.weights.semibold,
-    color: theme.colors.text.primary,
+  sloganTitle: {
+    fontSize: theme.typography.sizes.h1,
+    fontWeight: theme.typography.weights.bold,
+    color: theme.colors.text.inverse,
+    marginBottom: theme.spacing.md,
     textAlign: 'center',
   },
+  sloganText: {
+    fontSize: theme.typography.sizes.h3,
+    color: theme.colors.text.inverse,
+    textAlign: 'center',
+    lineHeight: 32,
+    marginBottom: theme.spacing.lg,
+  },
+  sloganHighlight: {
+    fontWeight: theme.typography.weights.bold,
+    color: theme.colors.secondary[300],
+    textDecorationLine: 'underline',
+  },
+  sloganDivider: {
+    width: 60,
+    height: 3,
+    backgroundColor: theme.colors.secondary[300],
+    borderRadius: 2,
+    marginVertical: theme.spacing.md,
+  },
+  sloganSubtext: {
+    fontSize: theme.typography.sizes.caption,
+    color: theme.colors.text.light,
+    textAlign: 'center',
+    opacity: 0.9,
+  },
+  // FIN Section Slogan
   horizontalScroll: {
     paddingRight: theme.spacing.xl,
     gap: theme.spacing.md,
@@ -831,60 +571,6 @@ const styles = StyleSheet.create({
     color: theme.colors.text.secondary,
     textTransform: 'capitalize',
   },
-  cooperativesGrid: {
-    gap: theme.spacing.md,
-  },
-  cooperativeCard: {
-    flexDirection: 'row',
-    backgroundColor: theme.colors.background.primary,
-    borderRadius: theme.borderRadius.md,
-    padding: theme.spacing.md,
-    ...theme.shadows.sm,
-  },
-  cooperativeImageContainer: {
-    width: 70,
-    height: 70,
-    borderRadius: theme.borderRadius.sm,
-    overflow: 'hidden',
-    marginRight: theme.spacing.md,
-  },
-  cooperativeImage: {
-    width: '100%',
-    height: '100%',
-    resizeMode: 'cover',
-  },
-  cooperativeImagePlaceholder: {
-    width: '100%',
-    height: '100%',
-    backgroundColor: theme.colors.primary[50],
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  cooperativeInfo: {
-    flex: 1,
-    justifyContent: 'space-between',
-  },
-  cooperativeName: {
-    fontSize: theme.typography.sizes.body,
-    fontWeight: theme.typography.weights.semibold,
-    color: theme.colors.text.primary,
-    marginBottom: theme.spacing.sm,
-  },
-  cooperativeFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  statusBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  statusText: {
-    fontSize: theme.typography.sizes.small,
-    color: theme.colors.text.secondary,
-    textTransform: 'capitalize',
-  },
   emptyContainer: {
     alignItems: 'center',
     paddingVertical: theme.spacing.xxxl,
@@ -899,6 +585,52 @@ const styles = StyleSheet.create({
     fontSize: theme.typography.sizes.caption,
     color: theme.colors.text.tertiary,
     marginTop: theme.spacing.xs,
+  },
+  // Styles pour les résultats de recherche (voyages)
+  voyagesGrid: {
+    gap: theme.spacing.md,
+  },
+  voyageCard: {
+    flexDirection: 'row',
+    backgroundColor: theme.colors.background.primary,
+    borderRadius: theme.borderRadius.md,
+    padding: theme.spacing.md,
+    ...theme.shadows.sm,
+  },
+  voyageImagePlaceholder: {
+    width: 60,
+    height: 60,
+    backgroundColor: theme.colors.primary[50],
+    borderRadius: theme.borderRadius.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: theme.spacing.md,
+  },
+  voyageInfo: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  voyageTitre: {
+    fontSize: theme.typography.sizes.body,
+    fontWeight: theme.typography.weights.bold,
+    color: theme.colors.text.primary,
+    marginBottom: theme.spacing.xs,
+  },
+  voyageDetails: {
+    fontSize: theme.typography.sizes.small,
+    color: theme.colors.text.secondary,
+    marginBottom: theme.spacing.xs,
+  },
+  voyagePrix: {
+    fontSize: theme.typography.sizes.body,
+    fontWeight: theme.typography.weights.bold,
+    color: theme.colors.primary[500],
+    marginBottom: theme.spacing.xs,
+  },
+  voyageCooperative: {
+    fontSize: theme.typography.sizes.small,
+    color: theme.colors.secondary[500],
+    fontWeight: theme.typography.weights.semibold,
   },
   avisList: {
     gap: theme.spacing.md,
@@ -945,28 +677,5 @@ const styles = StyleSheet.create({
     fontSize: theme.typography.sizes.small,
     color: theme.colors.primary[500],
     fontWeight: theme.typography.weights.medium,
-  },
-  promoBanner: {
-    flexDirection: 'row',
-    backgroundColor: theme.colors.secondary[50],
-    padding: theme.spacing.lg,
-    borderRadius: theme.borderRadius.md,
-    alignItems: 'center',
-    gap: theme.spacing.md,
-    borderWidth: 1,
-    borderColor: theme.colors.secondary[200],
-  },
-  promoContent: {
-    flex: 1,
-  },
-  promoTitle: {
-    fontSize: theme.typography.sizes.body,
-    fontWeight: theme.typography.weights.bold,
-    color: theme.colors.secondary[700],
-    marginBottom: 4,
-  },
-  promoText: {
-    fontSize: theme.typography.sizes.small,
-    color: theme.colors.secondary[600],
   },
 });

@@ -186,10 +186,60 @@ const getVoyageById = async (req, res, next) => {
   }
 };
 
+const filterVoyagesByCooperative = async (req, res, next) => {
+  try {
+    const { cooperativeId } = req.params;
+    const { date, status } = req.query;
+
+    console.log('🔍 Filtrage voyages:', { cooperativeId, date, status });
+
+    // Construction des filtres
+    const where = {
+      code_cooperative_id: parseInt(cooperativeId),
+    };
+
+    // Filtre par status (défaut: disponible)
+    if (status && status !== 'tous') {
+      where.status = status;
+    }
+
+    // Filtre par date (si fournie)
+    if (date) {
+      const selectedDate = new Date(date);
+      const startOfDay = new Date(selectedDate.setHours(0, 0, 0, 0));
+      const endOfDay = new Date(selectedDate.setHours(23, 59, 59, 999));
+
+      where.date_depart = {
+        gte: startOfDay,
+        lte: endOfDay,
+      };
+    }
+
+    const voyages = await prisma.voyage.findMany({
+      where,
+      include: {
+        trajet: true,
+        voiture: true,
+        chauffeur: true,
+        cooperative: true,
+      },
+      orderBy: { date_depart: 'asc' },
+    });
+
+    console.log(`✅ ${voyages.length} voyage(s) trouvé(s)`);
+
+    res.json(voyages);
+  } catch (error) {
+    console.error('❌ Erreur filterVoyagesByCooperative:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
+  
 export {
   getVoyages,
   getVoyagesByCooperative,
   getPlacesByVoyage,
   searchVoyages,
+  filterVoyagesByCooperative,
   getVoyageById
 };

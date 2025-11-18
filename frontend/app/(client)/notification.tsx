@@ -1,5 +1,5 @@
 // app/(client)/notification.tsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,144 +7,145 @@ import {
   ScrollView,
   TouchableOpacity,
   RefreshControl,
-  SafeAreaView,
+  ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { notificationService, Notification } from '../../services/notificationService';
+import { theme } from '../../constants/theme';
 
-// Types pour les notifications
+// Types pour le mapping
 type NotificationType = 'reservation' | 'promotion' | 'system' | 'alerte';
 
-interface Notification {
-  id: string;
-  titre: string;
-  message: string;
-  type: NotificationType;
-  date: string;
-  lue: boolean;
-  action?: string;
-}
-
-export default function Notification() {
+export default function NotificationPage() {
   const router = useRouter();
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [notifications, setNotifications] = useState<Notification[]>([
-    {
-      id: '1',
-      titre: 'Réservation confirmée',
-      message: 'Votre réservation pour Antananarivo - Toamasina a été confirmée. Numéro de réservation: RES20241215001',
-      type: 'reservation',
-      date: '2024-12-15T10:30:00',
-      lue: false,
-      action: 'Voir détails'
-    },
-    {
-      id: '2',
-      titre: 'Promotion spéciale',
-      message: 'Profitez de -20% sur tous les voyages vers Mahajanga ce week-end !',
-      type: 'promotion',
-      date: '2024-12-14T14:20:00',
-      lue: false,
-      action: 'Découvrir'
-    },
-    {
-      id: '3',
-      titre: 'Alerte départ',
-      message: 'Votre voyage pour Antsirabe part dans 1 heure. Présentez-vous à la gare 30 minutes avant le départ.',
-      type: 'alerte',
-      date: '2024-12-14T09:15:00',
-      lue: true,
-      action: 'Itinéraire'
-    },
-    {
-      id: '4',
-      titre: 'Maintenance système',
-      message: 'Une maintenance est prévue ce soir de 22h à 23h. Le service pourra être temporairement indisponible.',
-      type: 'system',
-      date: '2024-12-13T16:45:00',
-      lue: true
-    },
-    {
-      id: '5',
-      titre: 'Paiement reçu',
-      message: 'Votre paiement de 25.000 Ar a été confirmé. Merci pour votre confiance !',
-      type: 'reservation',
-      date: '2024-12-13T11:20:00',
-      lue: true
-    },
-    {
-      id: '6',
-      titre: 'Nouvelle destination',
-      message: 'Découvrez notre nouvelle liaison Fianarantsoa - Tuléar avec des prix promotionnels !',
-      type: 'promotion',
-      date: '2024-12-12T08:30:00',
-      lue: true,
-      action: 'Explorer'
-    },
-    {
-      id: '7',
-      titre: 'Retard annoncé',
-      message: 'Votre bus pour Toamasina aura 15 minutes de retard en raison des conditions météo.',
-      type: 'alerte',
-      date: '2024-12-11T17:30:00',
-      lue: true
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    loadNotifications();
+  }, []);
+
+  const loadNotifications = async () => {
+    try {
+      setLoading(true);
+      const [notifs, count] = await Promise.all([
+        notificationService.getNotifications(),
+        notificationService.getUnreadCount()
+      ]);
+      setNotifications(notifs);
+      setUnreadCount(count);
+    } catch (error: any) {
+      console.error('Erreur chargement notifications:', error);
+      Alert.alert('Erreur', 'Impossible de charger les notifications');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
     }
-  ]);
+  };
 
   const onRefresh = () => {
     setRefreshing(true);
-    // Simuler un rechargement
-    setTimeout(() => {
-      setRefreshing(false);
-    }, 1000);
+    loadNotifications();
   };
 
-  const marquerCommeLue = (id: string) => {
-    setNotifications(prev => 
-      prev.map(notif => 
-        notif.id === id ? { ...notif, lue: true } : notif
-      )
-    );
-  };
-
-  const marquerToutesCommeLues = () => {
-    setNotifications(prev => 
-      prev.map(notif => ({ ...notif, lue: true }))
-    );
-  };
-
-  const supprimerNotification = (id: string) => {
-    setNotifications(prev => prev.filter(notif => notif.id !== id));
-  };
-
-  const getIconByType = (type: NotificationType) => {
-    switch (type) {
-      case 'reservation':
-        return 'ticket';
-      case 'promotion':
-        return 'pricetag';
-      case 'system':
-        return 'settings';
-      case 'alerte':
-        return 'warning';
-      default:
-        return 'notifications';
+  const marquerCommeLue = async (id: number) => {
+    try {
+      await notificationService.markAsRead(id);
+      
+      // Mettre à jour localement
+      setNotifications(prev =>
+        prev.map(notif =>
+          notif.id === id ? { ...notif, statut: 'lu' } : notif
+        )
+      );
+      
+      // Décrémenter le compteur
+      setUnreadCount(prev => Math.max(0, prev - 1));
+    } catch (error) {
+      console.error('Erreur marquage notification:', error);
     }
   };
 
-  const getColorByType = (type: NotificationType) => {
-    switch (type) {
-      case 'reservation':
-        return '#4CAF50';
-      case 'promotion':
-        return '#FF9800';
-      case 'system':
-        return '#2196F3';
-      case 'alerte':
-        return '#F44336';
-      default:
-        return '#666';
+  const marquerToutesCommeLues = async () => {
+    try {
+      await notificationService.markAllAsRead();
+      
+      // Mettre à jour toutes localement
+      setNotifications(prev =>
+        prev.map(notif => ({ ...notif, statut: 'lu' as const }))
+      );
+      
+      setUnreadCount(0);
+    } catch (error) {
+      console.error('Erreur marquage toutes notifications:', error);
+      Alert.alert('Erreur', 'Impossible de marquer toutes les notifications');
     }
+  };
+
+  const supprimerNotification = async (id: number) => {
+    Alert.alert(
+      'Supprimer',
+      'Voulez-vous vraiment supprimer cette notification ?',
+      [
+        { text: 'Annuler', style: 'cancel' },
+        {
+          text: 'Supprimer',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await notificationService.deleteNotification(id);
+              
+              // Retirer localement
+              const notifToDelete = notifications.find(n => n.id === id);
+              if (notifToDelete && notifToDelete.statut === 'non_lu') {
+                setUnreadCount(prev => Math.max(0, prev - 1));
+              }
+              
+              setNotifications(prev => prev.filter(notif => notif.id !== id));
+            } catch (error) {
+              console.error('Erreur suppression notification:', error);
+              Alert.alert('Erreur', 'Impossible de supprimer la notification');
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  // Mapper le type de notification vers l'icône
+  const getIconByType = (type: string): keyof typeof Ionicons.glyphMap => {
+    const typeMap: Record<string, keyof typeof Ionicons.glyphMap> = {
+      reservation_confirmee: 'ticket',
+      paiement_valide: 'card',
+      voyage_annule: 'close-circle',
+      rappel_voyage: 'time',
+      modification_voyage: 'create',
+      avis_demande: 'star',
+      promotion: 'pricetag',
+      system: 'settings',
+      alerte: 'warning',
+    };
+    return typeMap[type] || 'notifications';
+  };
+
+  // Mapper le type vers la couleur
+  const getColorByType = (type: string): string => {
+    const colorMap: Record<string, string> = {
+      reservation_confirmee: theme.colors.semantic.success,
+      paiement_valide: theme.colors.semantic.success,
+      voyage_annule: theme.colors.semantic.error,
+      rappel_voyage: theme.colors.semantic.warning,
+      modification_voyage: theme.colors.semantic.info,
+      avis_demande: '#FFB800',
+      promotion: theme.colors.secondary[500],
+      system: theme.colors.primary[500],
+      alerte: theme.colors.semantic.error,
+    };
+    return colorMap[type] || theme.colors.neutral[500];
   };
 
   const formatDate = (dateString: string) => {
@@ -155,46 +156,47 @@ export default function Notification() {
     const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
     const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
 
-    if (diffMins < 1) return 'À l\'instant';
+    if (diffMins < 1) return "À l'instant";
     if (diffMins < 60) return `Il y a ${diffMins} min`;
     if (diffHours < 24) return `Il y a ${diffHours} h`;
     if (diffDays === 1) return 'Hier';
     if (diffDays < 7) return `Il y a ${diffDays} j`;
-    
+
     return date.toLocaleDateString('fr-FR', {
       day: 'numeric',
-      month: 'short'
+      month: 'short',
     });
   };
 
-  const notificationsNonLues = notifications.filter(notif => !notif.lue).length;
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={theme.colors.primary[500]} />
+        <Text style={styles.loadingText}>Chargement des notifications...</Text>
+      </View>
+    );
+  }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       {/* En-tête */}
       <View style={styles.header}>
-        <TouchableOpacity 
-          style={styles.backButton}
-          onPress={() => router.back()}
-        >
-          <Ionicons name="arrow-back" size={24} color="#2E7D32" />
+        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+          <Ionicons name="arrow-back" size={24} color={theme.colors.primary[500]} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Notifications</Text>
-        {notificationsNonLues > 0 && (
+        {unreadCount > 0 && (
           <View style={styles.badge}>
-            <Text style={styles.badgeText}>{notificationsNonLues}</Text>
+            <Text style={styles.badgeText}>{unreadCount}</Text>
           </View>
         )}
       </View>
 
       {/* Actions rapides */}
-      {notificationsNonLues > 0 && (
+      {unreadCount > 0 && (
         <View style={styles.actionsContainer}>
-          <TouchableOpacity 
-            style={styles.actionButton}
-            onPress={marquerToutesCommeLues}
-          >
-            <Ionicons name="checkmark-done" size={16} color="#2E7D32" />
+          <TouchableOpacity style={styles.actionButton} onPress={marquerToutesCommeLues}>
+            <Ionicons name="checkmark-done" size={16} color={theme.colors.primary[500]} />
             <Text style={styles.actionText}>Tout marquer comme lu</Text>
           </TouchableOpacity>
         </View>
@@ -204,14 +206,12 @@ export default function Notification() {
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[theme.colors.primary[500]]} />}
         showsVerticalScrollIndicator={false}
       >
         {notifications.length === 0 ? (
           <View style={styles.emptyContainer}>
-            <Ionicons name="notifications-off" size={60} color="#CCCCCC" />
+            <Ionicons name="notifications-off" size={80} color={theme.colors.neutral[300]} />
             <Text style={styles.emptyTitle}>Aucune notification</Text>
             <Text style={styles.emptyText}>
               Vous serez notifié des nouvelles réservations, promotions et alertes
@@ -220,100 +220,118 @@ export default function Notification() {
         ) : (
           <View style={styles.notificationsList}>
             {notifications.map((notification) => (
-              <View 
-                key={notification.id} 
+              <TouchableOpacity
+                key={notification.id}
                 style={[
                   styles.notificationCard,
-                  !notification.lue && styles.notificationNonLue
+                  notification.statut === 'non_lu' && styles.notificationNonLue,
                 ]}
+                onPress={() => {
+                  if (notification.statut === 'non_lu') {
+                    marquerCommeLue(notification.id);
+                  }
+                }}
+                activeOpacity={0.7}
               >
                 {/* Indicateur de non-lu */}
-                {!notification.lue && (
-                  <View style={styles.unreadIndicator} />
-                )}
+                {notification.statut === 'non_lu' && <View style={styles.unreadIndicator} />}
 
                 {/* Icône */}
-                <View 
+                <View
                   style={[
                     styles.iconContainer,
-                    { backgroundColor: `${getColorByType(notification.type)}20` }
+                    { backgroundColor: `${getColorByType(notification.type)}20` },
                   ]}
                 >
-                  <Ionicons 
-                    name={getIconByType(notification.type)} 
-                    size={20} 
-                    color={getColorByType(notification.type)} 
+                  <Ionicons
+                    name={getIconByType(notification.type)}
+                    size={22}
+                    color={getColorByType(notification.type)}
                   />
                 </View>
 
                 {/* Contenu */}
                 <View style={styles.notificationContent}>
                   <View style={styles.notificationHeader}>
-                    <Text style={styles.notificationTitle}>
-                      {notification.titre}
-                    </Text>
-                    <Text style={styles.notificationDate}>
-                      {formatDate(notification.date)}
-                    </Text>
+                    <Text style={styles.notificationTitle}>{notification.type.replace(/_/g, ' ')}</Text>
+                    <Text style={styles.notificationDate}>{formatDate(notification.date_envoi)}</Text>
                   </View>
-                  
-                  <Text style={styles.notificationMessage}>
-                    {notification.message}
-                  </Text>
 
-                  {notification.action && (
-                    <TouchableOpacity 
-                      style={styles.actionButton}
-                      onPress={() => marquerCommeLue(notification.id)}
-                    >
-                      <Text style={styles.actionLink}>
-                        {notification.action}
-                      </Text>
-                    </TouchableOpacity>
-                  )}
+                  <Text style={styles.notificationMessage}>{notification.contenu}</Text>
+
+                  {/* Badge canal */}
+                  <View style={styles.canalBadge}>
+                    <Ionicons
+                      name={
+                        notification.canal === 'email'
+                          ? 'mail'
+                          : notification.canal === 'push'
+                          ? 'notifications'
+                          : 'phone-portrait'
+                      }
+                      size={12}
+                      color={theme.colors.neutral[500]}
+                    />
+                    <Text style={styles.canalText}>{notification.canal}</Text>
+                  </View>
                 </View>
 
                 {/* Bouton suppression */}
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={styles.deleteButton}
-                  onPress={() => supprimerNotification(notification.id)}
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    supprimerNotification(notification.id);
+                  }}
                 >
-                  <Ionicons name="close" size={18} color="#999" />
+                  <Ionicons name="close" size={20} color={theme.colors.neutral[400]} />
                 </TouchableOpacity>
-              </View>
+              </TouchableOpacity>
             ))}
           </View>
         )}
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: theme.colors.background.secondary,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: theme.colors.background.secondary,
+  },
+  loadingText: {
+    marginTop: theme.spacing.md,
+    fontSize: theme.typography.sizes.body,
+    color: theme.colors.text.secondary,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-    backgroundColor: 'white',
+    paddingHorizontal: theme.spacing.xl,
+    paddingTop: 50,
+    paddingBottom: theme.spacing.lg,
+    backgroundColor: theme.colors.background.primary,
     borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
+    borderBottomColor: theme.colors.neutral[200],
   },
   backButton: {
-    marginRight: 15,
+    marginRight: theme.spacing.lg,
   },
   headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#2E7D32',
+    fontSize: theme.typography.sizes.h2,
+    fontWeight: theme.typography.weights.bold,
+    color: theme.colors.primary[500],
     flex: 1,
   },
   badge: {
-    backgroundColor: '#F44336',
+    backgroundColor: theme.colors.semantic.error,
     borderRadius: 12,
     minWidth: 24,
     height: 24,
@@ -322,75 +340,71 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
   },
   badgeText: {
-    color: 'white',
+    color: theme.colors.text.inverse,
     fontSize: 12,
-    fontWeight: 'bold',
+    fontWeight: theme.typography.weights.bold,
   },
   actionsContainer: {
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    backgroundColor: 'white',
+    paddingHorizontal: theme.spacing.xl,
+    paddingVertical: theme.spacing.md,
+    backgroundColor: theme.colors.background.primary,
     borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
+    borderBottomColor: theme.colors.neutral[200],
   },
   actionButton: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: theme.spacing.xs,
   },
   actionText: {
-    color: '#2E7D32',
-    fontSize: 14,
-    fontWeight: '500',
-    marginLeft: 6,
+    color: theme.colors.primary[500],
+    fontSize: theme.typography.sizes.caption,
+    fontWeight: theme.typography.weights.semibold,
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
     flexGrow: 1,
-    paddingBottom: 20,
+    paddingBottom: theme.spacing.xl,
   },
   emptyContainer: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 40,
+    paddingHorizontal: theme.spacing.xxxl,
     paddingVertical: 100,
   },
   emptyTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#666',
-    marginTop: 16,
-    marginBottom: 8,
+    fontSize: theme.typography.sizes.h2,
+    fontWeight: theme.typography.weights.bold,
+    color: theme.colors.text.secondary,
+    marginTop: theme.spacing.lg,
+    marginBottom: theme.spacing.sm,
   },
   emptyText: {
-    fontSize: 14,
-    color: '#999',
+    fontSize: theme.typography.sizes.body,
+    color: theme.colors.text.tertiary,
     textAlign: 'center',
-    lineHeight: 20,
+    lineHeight: 22,
   },
   notificationsList: {
-    padding: 16,
-    gap: 12,
+    padding: theme.spacing.lg,
+    gap: theme.spacing.md,
   },
   notificationCard: {
     flexDirection: 'row',
-    backgroundColor: 'white',
-    borderRadius: 12,
-    padding: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 6,
-    elevation: 2,
+    backgroundColor: theme.colors.background.primary,
+    borderRadius: theme.borderRadius.md,
+    padding: theme.spacing.lg,
+    ...theme.shadows.sm,
     borderWidth: 1,
-    borderColor: '#F0F0F0',
+    borderColor: theme.colors.neutral[200],
     position: 'relative',
   },
   notificationNonLue: {
-    backgroundColor: '#F8FFF8',
-    borderColor: '#E8F5E8',
+    backgroundColor: theme.colors.primary[50],
+    borderColor: theme.colors.primary[200],
   },
   unreadIndicator: {
     position: 'absolute',
@@ -400,15 +414,15 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#4CAF50',
+    backgroundColor: theme.colors.primary[500],
   },
   iconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
+    marginRight: theme.spacing.md,
   },
   notificationContent: {
     flex: 1,
@@ -417,32 +431,43 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 6,
+    marginBottom: theme.spacing.sm,
   },
   notificationTitle: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#333',
+    fontSize: theme.typography.sizes.body,
+    fontWeight: theme.typography.weights.semibold,
+    color: theme.colors.text.primary,
     flex: 1,
-    marginRight: 10,
+    marginRight: theme.spacing.md,
+    textTransform: 'capitalize',
   },
   notificationDate: {
-    fontSize: 12,
-    color: '#999',
+    fontSize: theme.typography.sizes.small,
+    color: theme.colors.text.tertiary,
   },
   notificationMessage: {
-    fontSize: 14,
-    color: '#666',
-    lineHeight: 18,
-    marginBottom: 8,
+    fontSize: theme.typography.sizes.caption,
+    color: theme.colors.text.secondary,
+    lineHeight: 20,
+    marginBottom: theme.spacing.sm,
   },
-  actionLink: {
-    color: '#2E7D32',
-    fontSize: 14,
-    fontWeight: '500',
+  canalBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    alignSelf: 'flex-start',
+    backgroundColor: theme.colors.neutral[100],
+    paddingHorizontal: theme.spacing.sm,
+    paddingVertical: 2,
+    borderRadius: theme.borderRadius.sm,
+  },
+  canalText: {
+    fontSize: theme.typography.sizes.small,
+    color: theme.colors.text.secondary,
+    textTransform: 'uppercase',
   },
   deleteButton: {
-    padding: 4,
-    marginLeft: 8,
+    padding: theme.spacing.xs,
+    marginLeft: theme.spacing.sm,
   },
 });

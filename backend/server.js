@@ -12,6 +12,7 @@ import reservationRoutes from "./routes/reservationRoutes.js";
 import avisRoutes from "./routes/avisRoutes.js";
 import voyageRoutes from "./routes/voyageRoutes.js";
 import cooperativeRoutes from "./routes/cooperativeRoutes.js";
+import notificationRoutes from "./routes/notificationRoutes.js";
 
 // ✅ Configuration pour __dirname en ES6 modules
 const __filename = fileURLToPath(import.meta.url);
@@ -34,6 +35,7 @@ app.use("/api/reservations", reservationRoutes);
 app.use("/api/paiements", paiementRoutes);
 app.use("/api/avis", avisRoutes);
 app.use("/api/cooperatives", cooperativeRoutes);
+app.use("/api/notifications", notificationRoutes);
 
 // ✅ Route de test pour vérifier que le serveur fonctionne
 app.get('/', (req, res) => {

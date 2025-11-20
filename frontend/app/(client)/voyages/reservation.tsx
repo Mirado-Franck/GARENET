@@ -11,6 +11,7 @@ import {
   Modal,
 } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { voyageService, PlacesVoyageResponse, Place } from '../../../services/voyageService';
 import { reservationService } from '../../../services/reservationService';
 import { Toast } from '../../../components/ui/Toast';
@@ -30,10 +31,8 @@ export default function Reservation() {
   const [toastMessage, setToastMessage] = useState('');
   const [toastType, setToastType] = useState<'success' | 'error'>('success');
   
-  // ✅ État pour la modal de confirmation
   const [showConfirmModal, setShowConfirmModal] = useState(false);
 
-  // Calculer le prix total
   const prixTotal = selectedPlaces.length * prixUnitaire;
 
   useEffect(() => {
@@ -73,30 +72,62 @@ export default function Reservation() {
       return;
     }
 
-    // ✅ Afficher la modal stylisée au lieu de Alert
     setShowConfirmModal(true);
   };
 
   const confirmReservation = async () => {
     try {
       setSubmitting(true);
-      await reservationService.createReservation({
+      setShowConfirmModal(false);
+
+      const response = await reservationService.createPendingReservation({
         code_voyage_id: voyageId,
         places: selectedPlaces,
       });
 
-      setToastMessage('Réservation confirmée avec succès !');
+      console.log('✅ Réservation en attente créée:', response);
+
+      const dataForPayment = {
+        reservationId: response.reservation.id,
+        voyageId: voyageId,
+        places: selectedPlaces,
+        montant: prixTotal,
+        code_reservation: response.reservation.code_reservation,
+        voyage: response.reservation.voyage
+      };
+
+      await AsyncStorage.setItem('temp_reservation', JSON.stringify(dataForPayment));
+      console.log('📦 Données stockées dans AsyncStorage');
+
+      setToastMessage('Réservation en attente créée ! Procédez au paiement.');
       setToastType('success');
       setToastVisible(true);
 
       setTimeout(() => {
-        router.replace('/(client)/reservations/listeReservation');
-      }, 2000);
+        router.push({
+          pathname: '/(client)/voyages/paiement',
+          params: {
+            reservationId: response.reservation.id,
+            montant: prixTotal
+          }
+        });
+      }, 1500);
+
     } catch (error: any) {
-      console.error('Erreur réservation:', error);
-      setToastMessage(error.error || 'Erreur lors de la réservation');
+      console.error('❌ Erreur création réservation:', error);
+      
+      if (error.error?.includes('Déjà réservé')) {
+        setToastMessage('Une ou plusieurs places ont été réservées entre temps');
+      } else if (error.error?.includes('Place(s) introuvable')) {
+        setToastMessage('Places sélectionnées invalides');
+      } else {
+        setToastMessage(error.error || 'Erreur lors de la réservation');
+      }
+      
       setToastType('error');
       setToastVisible(true);
+      
+      loadPlaces();
     } finally {
       setSubmitting(false);
     }
@@ -115,20 +146,35 @@ export default function Reservation() {
     return styles.placeTextAvailable;
   };
 
+  // 🔥 FONCTION MODIFIÉE : Même organisation mais avec tri des numéros
   const organizeCarLayout = (places: Place[]) => {
     const chauffeur = places.find(place => place.est_chauffeur);
     const voyageurs = places.filter(place => !place.est_chauffeur);
     
+    // 🔥 TRI DES PLACES PAR NUMÉRO (ordre numérique)
+    const sortedVoyageurs = voyageurs.sort((a, b) => {
+      const numA = parseInt(a.numero);
+      const numB = parseInt(b.numero);
+      
+      if (!isNaN(numA) && !isNaN(numB)) {
+        return numA - numB;
+      }
+      return a.numero.localeCompare(b.numero);
+    });
+    
     const rows = [];
     
+    // Rangée 1 : Conducteur + 2 passagers avant
     const row1 = [];
     if (chauffeur) row1.push(chauffeur);
     
-    const avantPassagers = voyageurs.slice(0, 2);
+    // Ajouter les 2 premiers passagers triés pour la première rangée
+    const avantPassagers = sortedVoyageurs.slice(0, 2);
     row1.push(...avantPassagers);
     rows.push(row1);
     
-    const placesRestantes = voyageurs.slice(2);
+    // Rangées suivantes : 4 places par rangée (triées)
+    const placesRestantes = sortedVoyageurs.slice(2);
     for (let i = 0; i < placesRestantes.length; i += 4) {
       const row = placesRestantes.slice(i, i + 4);
       rows.push(row);
@@ -184,6 +230,7 @@ export default function Reservation() {
           </View>
         </View>
 
+        {/* DISPOSITION ORIGINALE AVEC PLACES TRIÉES */}
         <View style={styles.carContainer}>
           <View style={styles.carHeader}>
             <Text style={styles.carDirection}>⬆️ Avant du véhicule</Text>
@@ -272,7 +319,7 @@ export default function Reservation() {
         </TouchableOpacity>
       </View>
 
-      {/* ✅ Modal de confirmation stylisée */}
+      {/* Modal de confirmation */}
       <Modal
         visible={showConfirmModal}
         transparent
@@ -289,9 +336,13 @@ export default function Reservation() {
             </Text>
             
             <View style={styles.modalPlaces}>
-              <Text style={styles.modalPlacesLabel}>Places :</Text>
+              <Text style={styles.modalPlacesLabel}>Places sélectionnées :</Text>
               <Text style={styles.modalPlacesList}>{selectedPlaces.join(', ')}</Text>
             </View>
+
+            <Text style={styles.modalInfo}>
+              ℹ️ Une réservation sera créée et vous serez redirigé vers la page de paiement
+            </Text>
 
             <View style={styles.modalButtons}>
               <TouchableOpacity
@@ -303,10 +354,7 @@ export default function Reservation() {
               
               <TouchableOpacity
                 style={[styles.modalButton, styles.modalButtonConfirm]}
-                onPress={() => {
-                  setShowConfirmModal(false);
-                  confirmReservation();
-                }}
+                onPress={confirmReservation}
               >
                 <Text style={styles.modalButtonTextConfirm}>Confirmer</Text>
               </TouchableOpacity>
@@ -555,7 +603,7 @@ const styles = StyleSheet.create({
     fontSize: theme.typography.sizes.body,
     fontWeight: theme.typography.weights.bold,
   },
-  // ✅ Styles de la modal
+  // Styles de la modal
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
@@ -598,7 +646,7 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.background.secondary,
     padding: 12,
     borderRadius: theme.borderRadius.sm,
-    marginBottom: 24,
+    marginBottom: 16,
   },
   modalPlacesLabel: {
     fontSize: theme.typography.sizes.small,
@@ -609,6 +657,13 @@ const styles = StyleSheet.create({
     fontSize: theme.typography.sizes.h3,
     fontWeight: theme.typography.weights.bold,
     color: theme.colors.primary[700],
+  },
+  modalInfo: {
+    fontSize: theme.typography.sizes.small,
+    color: theme.colors.text.tertiary,
+    fontStyle: 'italic',
+    marginBottom: 20,
+    textAlign: 'center',
   },
   modalButtons: {
     flexDirection: 'row',

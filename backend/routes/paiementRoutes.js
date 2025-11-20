@@ -1,29 +1,37 @@
-// routes/paiementRoutes.js
 import express from "express";
-import { createPaiement, getPaiements } from "../controllers/paiementController.js";
+import { 
+  processCompletePayment, 
+  createPaiement, 
+  getPaiements 
+} from "../controllers/paiementController.js";
+import { authMiddleware } from "../middlewares/authMiddleware.js";
 
 const router = express.Router();
 
 /**
- * @route   POST /api/paiements
- * @desc    Enregistrer un paiement (complet ou partiel)
- * @access  Private (client ou responsable)
+ * @route   POST /api/paiements/process-complete
+ * @desc    Traiter le paiement d'une réservation existante
+ * @access  Private
  * @body    {
- *   code_reservation_id: number,
- *   montant: number,
- *   mode_paiement: "mobile_money" | "carte" | "espece",
- *   payement_restant?: number  // Optionnel
+ *   reservation_id: number,  // ✅ ID de la réservation
+ *   numero_mvola: string,
+ *   montant: number
  * }
- * @returns { paiement, montant_restant }
  */
-router.post("/", createPaiement);
+router.post("/process-complete", authMiddleware, processCompletePayment);
+
+/**
+ * @route   POST /api/paiements
+ * @desc    Créer un paiement simple
+ * @access  Private
+ */
+router.post("/", authMiddleware, createPaiement);
 
 /**
  * @route   GET /api/paiements
- * @desc    Récupérer tous les paiements du client connecté
+ * @desc    Récupérer les paiements du client
  * @access  Private
- * @returns Liste des paiements avec détails de réservation
  */
-router.get("/", getPaiements);
+router.get("/", authMiddleware, getPaiements);
 
 export default router;

@@ -1,50 +1,50 @@
 import express from "express";
 import {
+  createPendingReservation, // ✅ NOUVEAU
   createReservation,
   getReservations,
   cancelReservation,
   getHistoriqueReservations
 } from "../controllers/reservationController.js";
-import { authMiddleware } from "../middlewares/authMiddleware.js";  // ✅ Import du middleware
+import { authMiddleware } from "../middlewares/authMiddleware.js";
 
 const router = express.Router();
 
 /**
- * @route   POST /api/reservations
- * @desc    Créer une nouvelle réservation avec sélection de places
- * @access  Private (authentification requise)
- * @body    {
- *   code_trajet_id: number,
- *   code_voyage_id: number,
- *   nombre_places: number,
- *   places: string[],           // ex: ["A1", "B3", "C2"]
- *   mode_paiement: string
- * }
- * Note: code_client_id sera récupéré depuis req.user.id (via JWT)
+ * 🆕 NOUVELLE ROUTE
+ * @route   POST /api/reservations/pending
+ * @desc    Créer une réservation "en attente" avant paiement
+ * @access  Private
+ * @body    { code_voyage_id: number, places: string[] }
  */
-router.post("/", authMiddleware, createReservation);  // ✅ Protégé
+router.post("/pending", authMiddleware, createPendingReservation);
+
+/**
+ * @route   POST /api/reservations
+ * @desc    Créer une nouvelle réservation "confirmée" (ancienne route)
+ * @access  Private
+ */
+router.post("/", authMiddleware, createReservation);
 
 /**
  * @route   GET /api/reservations/historique
- * @desc    Récupérer l'historique des réservations terminées du client connecté
- * @access  Private (authentification requise)
+ * @desc    Récupérer l'historique des réservations terminées
+ * @access  Private
  */
+router.get("/historique", authMiddleware, getHistoriqueReservations);
 
-router.get("/historique", authMiddleware, getHistoriqueReservations);  // ✅ AJOUTE cette ligne
 /**
  * @route   PUT /api/reservations/:id/cancel
  * @desc    Annuler une réservation (libère les places)
- * @access  Private (authentification requise)
+ * @access  Private
  */
-router.put("/:id/cancel", authMiddleware, cancelReservation);  // ✅ Protégé
+router.put("/:id/cancel", authMiddleware, cancelReservation);
 
 /**
  * @route   GET /api/reservations
  * @desc    Récupérer toutes les réservations du client connecté
- * @access  Private (authentification requise)
+ * @access  Private
  */
-router.get("/", authMiddleware, getReservations);  // ✅ Protégé
-
-
+router.get("/", authMiddleware, getReservations);
 
 export default router;

@@ -24,6 +24,31 @@ export interface CreateReservationData {
   places: string[]; // ["A1", "B3", "C2"]
 }
 
+// ✅ NOUVELLE INTERFACE pour la réponse de réservation "en attente"
+export interface PendingReservationResponse {
+  success: boolean;
+  message: string;
+  reservation: {
+    id: number;
+    code_reservation: string;
+    statut: string;
+    nombre_places: number;
+    places: string[];
+    montant: number;
+    voyage: {
+      id: number;
+      code: string;
+      date_depart: string;
+      heure_depart: string | null;
+      prix: number;
+      trajet: {
+        depart: string;
+        arrivee: string;
+      };
+    };
+  };
+}
+
 export interface Reservation {
   id: number;
   code_reservation: string;
@@ -48,11 +73,11 @@ export interface Reservation {
     cooperative: {
       nom: string;
     };
-    id?: number;  // ✅ Ajoute aussi l'id du voyage si pas déjà là
+    id?: number;
   };
   paiement: Paiement | null;
   recu: Recu | null;
-  avis_donne?: boolean;  // ✅ AJOUTE CETTE LIGNE
+  avis_donne?: boolean;
 }
 
 export interface Paiement {
@@ -101,7 +126,20 @@ export interface MyReservationsResponse {
 
 export const reservationService = {
   /**
-   * Créer une réservation
+   * 🆕 NOUVELLE FONCTION : Créer une réservation "en attente" avant paiement
+   */
+  createPendingReservation: async (data: CreateReservationData): Promise<PendingReservationResponse> => {
+    try {
+      const response = await api.post('/reservations/pending', data);
+      return response.data;
+    } catch (error: any) {
+      console.error('Erreur lors de la création de la réservation en attente:', error);
+      throw error.response?.data || { error: 'Erreur lors de la création de la réservation' };
+    }
+  },
+
+  /**
+   * Créer une réservation "confirmée" directement (ancienne fonction)
    */
   createReservation: async (data: CreateReservationData): Promise<ReservationResponse> => {
     try {
@@ -138,17 +176,18 @@ export const reservationService = {
       throw error.response?.data || { error: 'Erreur lors de l\'annulation' };
     }
   },
+  
   /**
- * Récupérer l'historique des réservations terminées
- */
-getHistorique: async (): Promise<Reservation[]> => {
-  try {
-    const response = await api.get<MyReservationsResponse>('/reservations/historique');
-    console.log('📋 Historique reçu:', response.data);
-    return response.data.reservations;
-  } catch (error: any) {
-    console.error('Erreur lors de la récupération de l\'historique:', error);
-    throw error.response?.data || { error: 'Erreur lors de la récupération de l\'historique' };
-  }
-},
+   * Récupérer l'historique des réservations terminées
+   */
+  getHistorique: async (): Promise<Reservation[]> => {
+    try {
+      const response = await api.get<MyReservationsResponse>('/reservations/historique');
+      console.log('📋 Historique reçu:', response.data);
+      return response.data.reservations;
+    } catch (error: any) {
+      console.error('Erreur lors de la récupération de l\'historique:', error);
+      throw error.response?.data || { error: 'Erreur lors de la récupération de l\'historique' };
+    }
+  },
 };

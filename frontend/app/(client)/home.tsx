@@ -1,4 +1,3 @@
-// app/(client)/home.tsx
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -18,12 +17,12 @@ import { cooperativeService, Cooperative } from '../../services/cooperativeServi
 import { voyageService, Voyage } from '../../services/voyageService';
 import { avisService } from '../../services/avisService';
 import { theme } from '../../constants/theme';
+import { UPLOADS_URL } from '../../services/api'; // ✅ IMPORT AJOUTÉ
 
 export default function Home() {
   const router = useRouter();
   const { utilisateur } = useAuth();
 
-  // États
   const [cooperatives, setCooperatives] = useState<Cooperative[]>([]);
   const [voyages, setVoyages] = useState<Voyage[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -37,7 +36,6 @@ export default function Home() {
     loadData();
   }, []);
 
-  // ✨ Recherche automatique de voyages
   useEffect(() => {
     if (searchQuery.trim() === '') {
       setIsSearchMode(false);
@@ -50,12 +48,9 @@ export default function Home() {
   const loadData = async () => {
     try {
       setLoading(true);
-
-      // Charger les coopératives
       const coopData = await cooperativeService.getAllCooperatives();
       setCooperatives(coopData);
 
-      // Charger les derniers avis
       try {
         const avisData = await avisService.getLatestAvis(3);
         setLastAvis(avisData.avis || []);
@@ -80,7 +75,6 @@ export default function Home() {
     try {
       setSearching(true);
       setIsSearchMode(true);
-
       const results = await voyageService.searchVoyages(query);
       setVoyages(results);
     } catch (error) {
@@ -151,19 +145,17 @@ export default function Home() {
             onPress={() => router.push('/(client)/notification')}
           >
             <Ionicons name="notifications-outline" size={28} color={theme.colors.text.inverse} />
-            {/* Badge notification */}
             <View style={styles.notificationBadge}>
               <Text style={styles.notificationBadgeText}>3</Text>
             </View>
           </TouchableOpacity>
         </View>
 
-        {/* Barre de recherche */}
         <View style={styles.searchContainer}>
           <Ionicons name="search" size={20} color={theme.colors.neutral[400]} style={styles.searchIcon} />
           <TextInput
             style={styles.searchInput}
-            placeholder="Rechercher un voyage (ville départ/arrivée)..."
+            placeholder="Rechercher un voyage..."
             placeholderTextColor={theme.colors.neutral[400]}
             value={searchQuery}
             onChangeText={setSearchQuery}
@@ -192,7 +184,6 @@ export default function Home() {
           </View>
         ) : (
           <>
-            {/* MODE RECHERCHE - RÉSULTATS VOYAGES */}
             {isSearchMode ? (
               <View style={styles.section}>
                 <Text style={styles.sectionTitle}>
@@ -206,9 +197,6 @@ export default function Home() {
                   <View style={styles.emptyContainer}>
                     <Ionicons name="search-outline" size={60} color={theme.colors.neutral[300]} />
                     <Text style={styles.emptyText}>Aucun voyage trouvé</Text>
-                    <Text style={styles.emptySubtext}>
-                      Essayez un autre terme de recherche
-                    </Text>
                   </View>
                 ) : (
                   <View style={styles.voyagesGrid}>
@@ -240,9 +228,7 @@ export default function Home() {
               </View>
             ) : (
               <>
-                {/* MODE NORMAL - CONTENU ACCUEIL */}
-
-                {/* Section Slogan stylisé */}
+                {/* Slogan Section */}
                 <View style={styles.sloganSection}>
                   <View style={styles.sloganCard}>
                     <View style={styles.sloganIconContainer}>
@@ -255,10 +241,6 @@ export default function Home() {
                       {'\n'}
                       Vos avis{' '}
                       <Text style={styles.sloganHighlight}>retenus</Text>
-                    </Text>
-                    <View style={styles.sloganDivider} />
-                    <Text style={styles.sloganSubtext}>
-                      Voyagez en toute confiance avec nos coopératives partenaires
                     </Text>
                   </View>
                 </View>
@@ -284,8 +266,13 @@ export default function Home() {
                         onPress={() => handleCooperativePress(coop.id)}
                       >
                         <View style={styles.cooperativeImageContainerHorizontal}>
+                          {/* ✅ AFFICHAGE DE L'IMAGE CORRIGÉ */}
                           {coop.logo ? (
-                            <Image source={{ uri: coop.logo }} style={styles.cooperativeImageHorizontal} />
+                            <Image 
+                              source={{ uri: `${UPLOADS_URL}/${coop.logo}` }} 
+                              style={styles.cooperativeImageHorizontal} 
+                              resizeMode="contain" // Pour ne pas couper le logo
+                            />
                           ) : (
                             <View style={styles.cooperativeImagePlaceholderHorizontal}>
                               <Ionicons name="bus" size={40} color={theme.colors.primary[500]} />
@@ -314,7 +301,7 @@ export default function Home() {
                   </ScrollView>
                 </View>
 
-                {/* Section Derniers avis */}
+                {/* Derniers avis (Code existant conservé) */}
                 {lastAvis.length > 0 && (
                   <View style={styles.section}>
                     <Text style={styles.sectionTitle}>Derniers avis</Text>
@@ -356,7 +343,6 @@ export default function Home() {
             )}
           </>
         )}
-
         <View style={{ height: 40 }} />
       </ScrollView>
     </View>
@@ -465,7 +451,6 @@ const styles = StyleSheet.create({
     color: theme.colors.primary[500],
     fontWeight: theme.typography.weights.semibold,
   },
-  // ✨ NOUVEAU : Section Slogan
   sloganSection: {
     paddingHorizontal: theme.spacing.xl,
     marginTop: theme.spacing.xl,
@@ -498,27 +483,12 @@ const styles = StyleSheet.create({
     color: theme.colors.text.inverse,
     textAlign: 'center',
     lineHeight: 32,
-    marginBottom: theme.spacing.lg,
   },
   sloganHighlight: {
     fontWeight: theme.typography.weights.bold,
     color: theme.colors.secondary[300],
     textDecorationLine: 'underline',
   },
-  sloganDivider: {
-    width: 60,
-    height: 3,
-    backgroundColor: theme.colors.secondary[300],
-    borderRadius: 2,
-    marginVertical: theme.spacing.md,
-  },
-  sloganSubtext: {
-    fontSize: theme.typography.sizes.caption,
-    color: theme.colors.text.light,
-    textAlign: 'center',
-    opacity: 0.9,
-  },
-  // FIN Section Slogan
   horizontalScroll: {
     paddingRight: theme.spacing.xl,
     gap: theme.spacing.md,
@@ -536,11 +506,16 @@ const styles = StyleSheet.create({
     borderRadius: theme.borderRadius.sm,
     overflow: 'hidden',
     marginBottom: theme.spacing.sm,
+    // ✅ Fond blanc pour les logos
+    backgroundColor: '#fff', 
+    borderWidth: 1,
+    borderColor: theme.colors.neutral[100],
   },
   cooperativeImageHorizontal: {
     width: '100%',
     height: '100%',
-    resizeMode: 'cover',
+    // ✅ "contain" pour voir tout le logo
+    resizeMode: 'contain', 
   },
   cooperativeImagePlaceholderHorizontal: {
     width: '100%',
@@ -581,12 +556,6 @@ const styles = StyleSheet.create({
     color: theme.colors.text.secondary,
     marginTop: theme.spacing.md,
   },
-  emptySubtext: {
-    fontSize: theme.typography.sizes.caption,
-    color: theme.colors.text.tertiary,
-    marginTop: theme.spacing.xs,
-  },
-  // Styles pour les résultats de recherche (voyages)
   voyagesGrid: {
     gap: theme.spacing.md,
   },

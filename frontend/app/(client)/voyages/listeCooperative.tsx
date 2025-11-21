@@ -14,6 +14,7 @@ import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { cooperativeService, Cooperative } from '../../../services/cooperativeService';
 import { theme } from '../../../constants/theme';
+import { UPLOADS_URL } from '../../../services/api'; // ✅ IMPORT AJOUTÉ
 
 export default function ListeCooperative() {
   const [cooperatives, setCooperatives] = useState<Cooperative[]>([]);
@@ -78,8 +79,13 @@ export default function ListeCooperative() {
       {/* Header avec logo */}
       <View style={styles.cardHeader}>
         <View style={styles.logoContainer}>
+          {/* ✅ AFFICHAGE LOGO CORRIGÉ */}
           {item.logo ? (
-            <Image source={{ uri: item.logo }} style={styles.logo} />
+            <Image 
+              source={{ uri: `${UPLOADS_URL}/${item.logo}` }} 
+              style={styles.logo} 
+              resizeMode="contain" // Pour ne pas couper le logo
+            />
           ) : (
             <View style={styles.logoPlaceholder}>
               <Text style={styles.logoPlaceholderText}>🚌</Text>
@@ -312,12 +318,19 @@ const styles = StyleSheet.create({
   },
   logoContainer: {
     marginRight: theme.spacing.md,
+    // ✅ Fond blanc et bordure pour le logo
+    backgroundColor: '#fff',
+    borderRadius: theme.borderRadius.md,
+    padding: 4,
+    borderWidth: 1,
+    borderColor: theme.colors.neutral[100],
   },
   logo: {
     width: 80,
     height: 80,
     borderRadius: theme.borderRadius.md,
-    resizeMode: 'cover',
+    // ✅ Mode contain pour voir tout le logo
+    resizeMode: 'contain',
   },
   logoPlaceholder: {
     width: 80,

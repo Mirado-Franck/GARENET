@@ -1,4 +1,3 @@
-// app/(client)/voyages/detailCooperative.tsx
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -14,13 +13,14 @@ import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { cooperativeService, CooperativeDetail, MoyenneAvisResponse } from '../../../services/cooperativeService';
 import { theme } from '../../../constants/theme';
+import { UPLOADS_URL } from '../../../services/api'; // ✅ IMPORT AJOUTÉ
 
 export default function DetailCooperative() {
   const params = useLocalSearchParams();
   const cooperativeId = parseInt(params.id as string);
 
   const [cooperative, setCooperative] = useState<CooperativeDetail | null>(null);
-  const [moyenneAvis, setMoyenneAvis] = useState<MoyenneAvisResponse | null>(null); // ✅ État ajouté
+  const [moyenneAvis, setMoyenneAvis] = useState<MoyenneAvisResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -31,7 +31,6 @@ export default function DetailCooperative() {
   const loadCooperative = async () => {
     try {
       setLoading(true);
-      // ✅ Charger les détails ET la moyenne en parallèle
       const [cooperativeData, moyenneData] = await Promise.all([
         cooperativeService.getCooperativeById(cooperativeId),
         cooperativeService.getMoyenneAvis(cooperativeId)
@@ -66,27 +65,23 @@ export default function DetailCooperative() {
     });
   };
 
-  // ✨ Fonction pour afficher les étoiles avec demi-étoiles
   const renderStars = (note: number) => {
     const stars = [];
     const fullStars = Math.floor(note);
     const hasHalfStar = note % 1 >= 0.5;
 
-    // Étoiles pleines
     for (let i = 0; i < fullStars; i++) {
       stars.push(
         <Ionicons key={`full-${i}`} name="star" size={24} color="#FFB800" />
       );
     }
 
-    // Demi-étoile
     if (hasHalfStar) {
       stars.push(
         <Ionicons key="half" name="star-half" size={24} color="#FFB800" />
       );
     }
 
-    // Étoiles vides
     const emptyStars = 5 - Math.ceil(note);
     for (let i = 0; i < emptyStars; i++) {
       stars.push(
@@ -140,8 +135,13 @@ export default function DetailCooperative() {
         <View style={styles.mainCard}>
           {/* Logo */}
           <View style={styles.logoContainer}>
+            {/* ✅ AFFICHAGE LOGO CORRIGÉ */}
             {cooperative.logo ? (
-              <Image source={{ uri: cooperative.logo }} style={styles.logo} />
+              <Image 
+                source={{ uri: `${UPLOADS_URL}/${cooperative.logo}` }} 
+                style={styles.logo} 
+                resizeMode="contain" 
+              />
             ) : (
               <View style={styles.logoPlaceholder}>
                 <Text style={styles.logoPlaceholderText}>🚌</Text>
@@ -153,7 +153,7 @@ export default function DetailCooperative() {
           <Text style={styles.cooperativeName}>{cooperative.nom}</Text>
           <Text style={styles.codeCooperative}>{cooperative.code_cooperative}</Text>
 
-          {/* ✨ Note moyenne - NOUVELLE SECTION */}
+          {/* Note moyenne */}
           {moyenneAvis && moyenneAvis.nombre_avis > 0 && (
             <View style={styles.ratingSection}>
               <View style={styles.starsRow}>
@@ -170,7 +170,6 @@ export default function DetailCooperative() {
             </View>
           )}
 
-          {/* Message si pas d'avis */}
           {moyenneAvis && moyenneAvis.nombre_avis === 0 && (
             <View style={styles.noRatingContainer}>
               <Ionicons name="star-outline" size={24} color={theme.colors.neutral[400]} />
@@ -328,11 +327,9 @@ export default function DetailCooperative() {
           </View>
         )}
 
-        {/* Espace pour éviter que le contenu soit caché par le bouton */}
         <View style={{ height: 100 }} />
       </ScrollView>
 
-      {/* Bouton fixe en bas */}
       <View style={styles.footer}>
         <TouchableOpacity style={styles.voyagesButton} onPress={handleViewVoyages}>
           <Ionicons name="bus" size={20} color="#fff" />
@@ -424,12 +421,19 @@ const styles = StyleSheet.create({
   },
   logoContainer: {
     marginBottom: theme.spacing.md,
+    // ✅ Fond blanc pour le logo
+    backgroundColor: '#fff',
+    borderRadius: theme.borderRadius.lg,
+    padding: 8,
+    borderWidth: 1,
+    borderColor: theme.colors.neutral[100],
   },
   logo: {
     width: 120,
     height: 120,
     borderRadius: theme.borderRadius.lg,
-    resizeMode: 'cover',
+    // ✅ Mode contain
+    resizeMode: 'contain',
   },
   logoPlaceholder: {
     width: 120,
@@ -454,7 +458,6 @@ const styles = StyleSheet.create({
     color: theme.colors.text.secondary,
     marginBottom: theme.spacing.md,
   },
-  // ✨ NOUVEAUX STYLES POUR LA NOTE
   ratingSection: {
     alignItems: 'center',
     marginBottom: theme.spacing.md,
@@ -500,7 +503,6 @@ const styles = StyleSheet.create({
     color: theme.colors.text.secondary,
     fontStyle: 'italic',
   },
-  // FIN NOUVEAUX STYLES
   statusBadge: {
     paddingHorizontal: theme.spacing.lg,
     paddingVertical: theme.spacing.sm,

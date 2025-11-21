@@ -1,4 +1,3 @@
-// app/se-connecter.tsx
 import React, { useState } from 'react';
 import { Toast } from '../components/ui/Toast';
 import {
@@ -8,10 +7,10 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Modal,
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  Alert, // ✅ Alert native maintenue
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -22,12 +21,11 @@ import { theme } from '../constants/theme';
 export default function SeConnecter() {
   const router = useRouter();
   const { login, redirectAfterLogin, setRedirectAfterLogin } = useAuth();
+  
   const [toastVisible, setToastVisible] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [toastType, setToastType] = useState<'success' | 'error' | 'info' | 'warning'>('success');
   
-  
-// ...existing code...
   const [formData, setFormData] = useState({
     email: '',
     mot_de_passe: '',
@@ -60,37 +58,47 @@ export default function SeConnecter() {
     setToastVisible(true);
   };
 
-    const handleConnexion = async () => {
-      if (!validateForm()) return;
+  const handleConnexion = async () => {
+    if (!validateForm()) return;
 
-      setLoading(true);
-      try {
-        console.log('🔄 Début de la connexion...');
-        await login(formData.email, formData.mot_de_passe);
+    setLoading(true);
+    try {
+      await login(formData.email, formData.mot_de_passe);
 
-        console.log('✅ Connexion réussie - Affichage Toast succès');
-        showToast('Connexion réussie !', 'success');
+      showToast('Connexion réussie !', 'success');
 
-        setTimeout(() => {
-          if (redirectAfterLogin) {
-            const path = redirectAfterLogin;
-            setRedirectAfterLogin(null);
-            router.replace(path as any);
-          } else {
-            router.replace('/(client)/home');
-          }
-        }, 1000);
-      } catch (error: any) {
-        console.error('❌ Erreur capturée dans handleConnexion:', error);
-        
-        // ✅ Afficher le Toast d'erreur
-        setToastMessage(error.error || 'Email ou mot de passe invalide');
-        setToastType('error');
-        setToastVisible(true);
-      } finally {
-        setLoading(false);
-      }
-    };
+      setTimeout(() => {
+        if (redirectAfterLogin) {
+          const path = redirectAfterLogin;
+          setRedirectAfterLogin(null);
+          router.replace(path as any);
+        } else {
+          router.replace('/(client)/home');
+        }
+      }, 1000);
+
+    } catch (error: any) {
+      // ✅ Extraction du message d'erreur sans log console
+      const errorMessage = 
+        error.response?.data?.error || 
+        error.message || 
+        error.error || 
+        'Email ou mot de passe invalide';
+
+      // ✅ Affichage de l'Alert native (Popup)
+      Alert.alert(
+        "Échec de connexion",
+        "Email ou mot de passe incorrect. Veuillez réessayer.",
+        [{ text: "OK" }]
+      );
+
+      // Optionnel : Afficher aussi le toast discret en bas
+     // showToast(errorMessage, 'error');
+
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleInscription = () => {
     router.push('/inscription');
@@ -104,111 +112,114 @@ export default function SeConnecter() {
   };
 
   return (
-    <KeyboardAvoidingView 
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={styles.container}
-    >
-      <ScrollView 
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
+    <View style={{ flex: 1 }}>
+      <KeyboardAvoidingView 
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.container}
       >
-        <View style={styles.header}>
-          <TouchableOpacity 
-            style={styles.backButton}
-            onPress={() => router.back()}
-          >
-            <Ionicons name="arrow-back" size={24} color="white" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Connexion</Text>
-        </View>
-
-        <View style={styles.formContainer}>
-          <Text style={styles.title}>Bon retour !</Text>
-          <Text style={styles.subtitle}>
-            {redirectAfterLogin 
-              ? 'Connectez-vous pour continuer votre réservation'
-              : 'Connectez-vous pour accéder à votre compte'
-            }
-          </Text>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Email *</Text>
-            <TextInput
-              style={[styles.input, errors.email && styles.inputError]}
-              placeholder="exemple@email.com"
-              value={formData.email}
-              onChangeText={(text) => updateFormData('email', text)}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              autoComplete="email"
-            />
-            {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
+        <ScrollView 
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View style={styles.header}>
+            <TouchableOpacity 
+              style={styles.backButton}
+              onPress={() => router.back()}
+            >
+              <Ionicons name="arrow-back" size={24} color="white" />
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>Connexion</Text>
           </View>
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Mot de passe *</Text>
-            <View style={styles.passwordContainer}>
+          <View style={styles.formContainer}>
+            <Text style={styles.title}>Bon retour !</Text>
+            <Text style={styles.subtitle}>
+              {redirectAfterLogin 
+                ? 'Connectez-vous pour continuer votre réservation'
+                : 'Connectez-vous pour accéder à votre compte'
+              }
+            </Text>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Email *</Text>
               <TextInput
-                style={[
-                  styles.passwordInput,
-                  errors.mot_de_passe && styles.inputError
-                ]}
-                placeholder="Votre mot de passe"
-                value={formData.mot_de_passe}
-                onChangeText={(text) => updateFormData('mot_de_passe', text)}
-                secureTextEntry={!showPassword}
+                style={[styles.input, errors.email && styles.inputError]}
+                placeholder="exemple@email.com"
+                value={formData.email}
+                onChangeText={(text) => updateFormData('email', text)}
+                keyboardType="email-address"
                 autoCapitalize="none"
+                autoComplete="email"
               />
-              <TouchableOpacity 
-                style={styles.eyeIcon}
-                onPress={() => setShowPassword(!showPassword)}
-              >
-                <Ionicons 
-                  name={showPassword ? "eye-off" : "eye"} 
-                  size={22} 
-                  color={theme.colors.text.secondary}
+              {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Mot de passe *</Text>
+              <View style={styles.passwordContainer}>
+                <TextInput
+                  style={[
+                    styles.passwordInput,
+                    errors.mot_de_passe && styles.inputError
+                  ]}
+                  placeholder="Votre mot de passe"
+                  value={formData.mot_de_passe}
+                  onChangeText={(text) => updateFormData('mot_de_passe', text)}
+                  secureTextEntry={!showPassword}
+                  autoCapitalize="none"
                 />
+                <TouchableOpacity 
+                  style={styles.eyeIcon}
+                  onPress={() => setShowPassword(!showPassword)}
+                >
+                  <Ionicons 
+                    name={showPassword ? "eye-off" : "eye"} 
+                    size={22} 
+                    color={theme.colors.text.secondary}
+                  />
+                </TouchableOpacity>
+              </View>
+              {errors.mot_de_passe && (
+                <Text style={styles.errorText}>{errors.mot_de_passe}</Text>
+              )}
+            </View>
+
+            <TouchableOpacity style={styles.forgotPassword}>
+              <Text style={styles.forgotPasswordText}>Mot de passe oublié ?</Text>
+            </TouchableOpacity>
+
+            <Button
+              title={loading ? 'Connexion en cours...' : 'Se connecter'}
+              onPress={handleConnexion}
+              variant="primary"
+              style={styles.submitButton}
+              disabled={loading}
+            />
+
+            {loading && (
+              <ActivityIndicator size="large" color={theme.colors.primary[500]} style={styles.loader} />
+            )}
+
+            <View style={styles.footer}>
+              <Text style={styles.footerText}>Vous n'avez pas de compte ? </Text>
+              <TouchableOpacity onPress={handleInscription}>
+                <Text style={styles.linkText}>S'inscrire</Text>
               </TouchableOpacity>
             </View>
-            {errors.mot_de_passe && (
-              <Text style={styles.errorText}>{errors.mot_de_passe}</Text>
-            )}
           </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
 
-          <TouchableOpacity style={styles.forgotPassword}>
-            <Text style={styles.forgotPasswordText}>Mot de passe oublié ?</Text>
-          </TouchableOpacity>
-
-          <Button
-            title={loading ? 'Connexion en cours...' : 'Se connecter'}
-            onPress={handleConnexion}
-            variant="primary"
-            style={styles.submitButton}
-            disabled={loading}
-          />
-
-          {loading && (
-            <ActivityIndicator size="large" color={theme.colors.primary[500]} style={styles.loader} />
-          )}
-
-          <View style={styles.footer}>
-            <Text style={styles.footerText}>Vous n'avez pas de compte ? </Text>
-            <TouchableOpacity onPress={handleInscription}>
-              <Text style={styles.linkText}>S'inscrire</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {toastVisible && (
-          <Toast
-            message={toastMessage}
-            type={toastType}
-            duration={3000}
-            onHide={() => setToastVisible(false)}
-          />
-        )}
-      </ScrollView>
-    </KeyboardAvoidingView>
+      {/* Toast hors du ScrollView */}
+      {toastVisible && (
+        <Toast
+          message={toastMessage}
+          type={toastType}
+          duration={3000}
+          onHide={() => setToastVisible(false)}
+        />
+      )}
+    </View>
   );
 }
 
@@ -222,7 +233,7 @@ const styles = StyleSheet.create({
   },
   header: {
     backgroundColor: theme.colors.primary[500],
-    paddingTop: theme.spacing.xxxl+20,
+    paddingTop: theme.spacing.xxxl + 20,
     paddingBottom: theme.spacing.xl,
     paddingHorizontal: theme.spacing.xl,
     flexDirection: 'row',

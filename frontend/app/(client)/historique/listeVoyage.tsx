@@ -1,4 +1,3 @@
-// app/(client)/historique/listeVoyage.tsx
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -13,14 +12,13 @@ import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { reservationService, Reservation } from '../../../services/reservationService';
 import { theme } from '../../../constants/theme';
-import AvisModal from '../../../components/ui/AvisModal'; // ✅ Import ajouté
+import AvisModal from '../../../components/ui/AvisModal';
 
 export default function ListeVoyage() {
   const [voyages, setVoyages] = useState<Reservation[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   
-  // ✅ État pour la modal
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedVoyage, setSelectedVoyage] = useState<{
     voyageId: number;
@@ -53,7 +51,6 @@ export default function ListeVoyage() {
     router.push(`/(client)/historique/detailVoyage?id=${reservationId}`);
   };
 
-  // ✅ Handler modifié pour ouvrir la modal
   const handleDonnerAvis = (reservation: Reservation) => {
     setSelectedVoyage({
       voyageId: reservation.voyage.id || 0,
@@ -62,9 +59,7 @@ export default function ListeVoyage() {
     setModalVisible(true);
   };
 
-  // ✅ Callback après succès de l'avis
   const handleAvisSuccess = () => {
-    // Recharger l'historique pour mettre à jour l'état avis_donne
     loadHistorique();
   };
 
@@ -146,7 +141,7 @@ export default function ListeVoyage() {
           {!item.avis_donne && (
             <TouchableOpacity
               style={styles.avisButton}
-              onPress={() => handleDonnerAvis(item)} // ✅ Passe l'objet complet
+              onPress={() => handleDonnerAvis(item)}
             >
               <Ionicons name="star-outline" size={16} color="#FFB800" />
               <Text style={styles.avisButtonText}>Donner un avis</Text>
@@ -175,12 +170,20 @@ export default function ListeVoyage() {
 
   return (
     <View style={styles.container}>
-      {/* Header */}
+      {/* ✅ Header avec flèche de retour */}
       <View style={styles.header}>
-        <Text style={styles.title}>Historique de mes voyages</Text>
-        <Text style={styles.subtitle}>
-          {voyages.length} {voyages.length > 1 ? 'voyages terminés' : 'voyage terminé'}
-        </Text>
+        <TouchableOpacity 
+          style={styles.backButton}
+          onPress={() => router.back()}
+        >
+          <Ionicons name="arrow-back" size={24} color={theme.colors.text.inverse} />
+        </TouchableOpacity>
+        <View style={styles.headerTextContainer}>
+          <Text style={styles.title}>Historique de mes voyages</Text>
+          <Text style={styles.subtitle}>
+            {voyages.length} {voyages.length > 1 ? 'voyages terminés' : 'voyage terminé'}
+          </Text>
+        </View>
       </View>
 
       {/* Liste */}
@@ -215,7 +218,7 @@ export default function ListeVoyage() {
         />
       )}
 
-      {/* ✅ Modal d'avis */}
+      {/* Modal d'avis */}
       {selectedVoyage && (
         <AvisModal
           visible={modalVisible}
@@ -252,6 +255,14 @@ const styles = StyleSheet.create({
     paddingTop: 60,
     paddingBottom: 30,
     paddingHorizontal: 20,
+    flexDirection: 'row', // ✅ Ajout
+    alignItems: 'center', // ✅ Ajout
+  },
+  backButton: { // ✅ NOUVEAU
+    marginRight: theme.spacing.md,
+  },
+  headerTextContainer: { // ✅ NOUVEAU
+    flex: 1,
   },
   title: {
     fontSize: theme.typography.sizes.h1,

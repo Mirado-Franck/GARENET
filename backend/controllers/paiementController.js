@@ -375,7 +375,12 @@ const getPaiements = async (req, res, next) => {
       include: {
         reservation: {
           include: {
-            voyage: { include: { trajet: true } },
+            voyage: { 
+              include: { 
+                trajet: true,
+                cooperative: true  // ✅ AJOUT : Inclure la coopérative
+              } 
+            },
             places: { include: { place: true } }
           }
         }

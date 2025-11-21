@@ -12,9 +12,11 @@ import { Stack } from 'expo-router';
 export default function RootLayout() {
   return (
     <Stack>
+      <Stack.Screen name="voirHistorique" options={{ headerShown: false }} />
       <Stack.Screen name="listeVoyage" options={{ headerShown: false }} />
       <Stack.Screen name="detailVoyage" options={{ headerShown: false }} />
       <Stack.Screen name="avis" options={{ headerShown: false }} />
+      <Stack.Screen name="historiquePaiement" options={{ headerShown: false }} />
     </Stack>
   );
 }

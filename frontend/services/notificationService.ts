@@ -104,4 +104,5 @@ export const notificationService = {
       throw error.response?.data || { error: 'Erreur lors de la création' };
     }
   },
+
 };

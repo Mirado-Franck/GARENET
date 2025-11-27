@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -10,14 +10,15 @@ import {
   RefreshControl,
   Image,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
 import { cooperativeService, Cooperative } from '../../services/cooperativeService';
 import { voyageService, Voyage } from '../../services/voyageService';
 import { avisService } from '../../services/avisService';
+import { notificationService } from '../../services/notificationService';
 import { theme } from '../../constants/theme';
-import { UPLOADS_URL } from '../../services/api'; // ✅ IMPORT AJOUTÉ
+import { UPLOADS_URL } from '../../services/api';
 
 export default function Home() {
   const router = useRouter();
@@ -31,10 +32,32 @@ export default function Home() {
   const [refreshing, setRefreshing] = useState(false);
   const [lastAvis, setLastAvis] = useState<any[]>([]);
   const [isSearchMode, setIsSearchMode] = useState(false);
+  
+  const [unreadCount, setUnreadCount] = useState(0);
 
+  // ❌ SUPPRIMÉ : useEffect simple qui ne chargeait qu'une fois
+  /*
   useEffect(() => {
     loadData();
   }, []);
+  */
+
+  // ✅ CORRECTION : useFocusEffect pour TOUT recharger (Notifs + Données) à chaque retour
+  useFocusEffect(
+    useCallback(() => {
+      loadNotificationCount();
+      loadData(); // On recharge les avis et coopératives ici !
+    }, [])
+  );
+
+  const loadNotificationCount = async () => {
+    try {
+      const count = await notificationService.getUnreadCount();
+      setUnreadCount(count);
+    } catch (error) {
+      console.log('Erreur chargement compteur notifs');
+    }
+  };
 
   useEffect(() => {
     if (searchQuery.trim() === '') {
@@ -46,13 +69,16 @@ export default function Home() {
   }, [searchQuery]);
 
   const loadData = async () => {
+    // On ne met setLoading(true) que si ce n'est pas un refresh manuel pour éviter le clignotement trop fréquent
+    // Mais pour le premier chargement, on peut gérer un état local si besoin.
     try {
-      setLoading(true);
+      // Charger les coopératives
       const coopData = await cooperativeService.getAllCooperatives();
       setCooperatives(coopData);
 
+      // Charger les derniers avis
       try {
-        const avisData = await avisService.getLatestAvis(3);
+        const avisData = await avisService.getLatestAvis(5); // On en charge 5 pour le scroll horizontal
         setLastAvis(avisData.avis || []);
       } catch (error) {
         console.log('Erreur chargement avis (non bloquant)');
@@ -90,6 +116,7 @@ export default function Home() {
     setSearchQuery('');
     setIsSearchMode(false);
     loadData();
+    loadNotificationCount();
   };
 
   const handleCooperativePress = (cooperativeId: number) => {
@@ -140,14 +167,19 @@ export default function Home() {
               {utilisateur?.prenoms || utilisateur?.nom || 'Voyageur'}
             </Text>
           </View>
+          
           <TouchableOpacity
             style={styles.notificationButton}
             onPress={() => router.push('/(client)/notification')}
           >
             <Ionicons name="notifications-outline" size={28} color={theme.colors.text.inverse} />
-            <View style={styles.notificationBadge}>
-              <Text style={styles.notificationBadgeText}>3</Text>
-            </View>
+            {unreadCount > 0 && (
+              <View style={styles.notificationBadge}>
+                <Text style={styles.notificationBadgeText}>
+                  {unreadCount > 99 ? '99+' : unreadCount}
+                </Text>
+              </View>
+            )}
           </TouchableOpacity>
         </View>
 
@@ -266,12 +298,11 @@ export default function Home() {
                         onPress={() => handleCooperativePress(coop.id)}
                       >
                         <View style={styles.cooperativeImageContainerHorizontal}>
-                          {/* ✅ AFFICHAGE DE L'IMAGE CORRIGÉ */}
                           {coop.logo ? (
                             <Image 
                               source={{ uri: `${UPLOADS_URL}/${coop.logo}` }} 
                               style={styles.cooperativeImageHorizontal} 
-                              resizeMode="contain" // Pour ne pas couper le logo
+                              resizeMode="contain" 
                             />
                           ) : (
                             <View style={styles.cooperativeImagePlaceholderHorizontal}>
@@ -301,26 +332,32 @@ export default function Home() {
                   </ScrollView>
                 </View>
 
-                {/* Derniers avis (Code existant conservé) */}
+                {/* ✅ SECTION AVIS MODIFIÉE : SCROLL HORIZONTAL */}
                 {lastAvis.length > 0 && (
                   <View style={styles.section}>
                     <Text style={styles.sectionTitle}>Derniers avis</Text>
-                    <View style={styles.avisList}>
+                    <ScrollView
+                      horizontal
+                      showsHorizontalScrollIndicator={false}
+                      contentContainerStyle={styles.horizontalScroll} // Réutilisation du style horizontal
+                    >
                       {lastAvis.map((avis, index) => (
-                        <View key={index} style={styles.avisCard}>
+                        <View key={index} style={styles.avisCardHorizontal}>
                           <View style={styles.avisHeader}>
                             <View style={styles.avisUserInfo}>
                               <View style={styles.avisAvatar}>
                                 <Ionicons name="person" size={20} color={theme.colors.primary[500]} />
                               </View>
-                              <View>
-                                <Text style={styles.avisUserName}>{avis.client.nom_complet}</Text>
+                              <View style={{ flex: 1 }}>
+                                <Text style={styles.avisUserName} numberOfLines={1}>
+                                  {avis.client.nom_complet}
+                                </Text>
                                 <View style={styles.avisStars}>
                                   {[...Array(5)].map((_, i) => (
                                     <Ionicons
                                       key={i}
                                       name={i < avis.note ? 'star' : 'star-outline'}
-                                      size={14}
+                                      size={12}
                                       color="#FFB800"
                                     />
                                   ))}
@@ -328,15 +365,23 @@ export default function Home() {
                               </View>
                             </View>
                           </View>
-                          {avis.commentaire && (
-                            <Text style={styles.avisComment} numberOfLines={2}>
-                              {avis.commentaire}
+                          
+                          <View style={styles.avisContent}>
+                            {avis.commentaire && (
+                              <Text style={styles.avisComment} numberOfLines={3}>
+                                "{avis.commentaire}"
+                              </Text>
+                            )}
+                          </View>
+                          
+                          <View style={styles.avisFooter}>
+                            <Text style={styles.avisTrajet} numberOfLines={1}>
+                              {avis.voyage.trajet}
                             </Text>
-                          )}
-                          <Text style={styles.avisTrajet}>{avis.voyage.trajet}</Text>
+                          </View>
                         </View>
                       ))}
-                    </View>
+                    </ScrollView>
                   </View>
                 )}
               </>
@@ -445,6 +490,7 @@ const styles = StyleSheet.create({
     fontSize: theme.typography.sizes.h3,
     fontWeight: theme.typography.weights.bold,
     color: theme.colors.text.primary,
+    marginBottom: theme.spacing.md, // Espace sous le titre
   },
   voirToutText: {
     fontSize: theme.typography.sizes.body,
@@ -506,16 +552,14 @@ const styles = StyleSheet.create({
     borderRadius: theme.borderRadius.sm,
     overflow: 'hidden',
     marginBottom: theme.spacing.sm,
-    // ✅ Fond blanc pour les logos
-    backgroundColor: '#fff', 
+    backgroundColor: '#fff',
     borderWidth: 1,
     borderColor: theme.colors.neutral[100],
   },
   cooperativeImageHorizontal: {
     width: '100%',
     height: '100%',
-    // ✅ "contain" pour voir tout le logo
-    resizeMode: 'contain', 
+    resizeMode: 'contain',
   },
   cooperativeImagePlaceholderHorizontal: {
     width: '100%',
@@ -601,14 +645,14 @@ const styles = StyleSheet.create({
     color: theme.colors.secondary[500],
     fontWeight: theme.typography.weights.semibold,
   },
-  avisList: {
-    gap: theme.spacing.md,
-  },
-  avisCard: {
+  // ✅ NOUVEAUX STYLES POUR AVIS HORIZONTAL
+  avisCardHorizontal: {
+    width: 280, // Largeur fixe pour le scroll horizontal
     backgroundColor: theme.colors.background.primary,
     padding: theme.spacing.lg,
     borderRadius: theme.borderRadius.md,
     ...theme.shadows.sm,
+    justifyContent: 'space-between',
   },
   avisHeader: {
     marginBottom: theme.spacing.sm,
@@ -619,9 +663,9 @@ const styles = StyleSheet.create({
     gap: theme.spacing.sm,
   },
   avisAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: theme.colors.primary[50],
     justifyContent: 'center',
     alignItems: 'center',
@@ -630,17 +674,27 @@ const styles = StyleSheet.create({
     fontSize: theme.typography.sizes.caption,
     fontWeight: theme.typography.weights.semibold,
     color: theme.colors.text.primary,
-    marginBottom: 4,
+    marginBottom: 2,
   },
   avisStars: {
     flexDirection: 'row',
     gap: 2,
   },
+  avisContent: {
+    flex: 1,
+    justifyContent: 'center',
+    marginBottom: theme.spacing.sm,
+  },
   avisComment: {
     fontSize: theme.typography.sizes.caption,
     color: theme.colors.text.secondary,
-    marginBottom: theme.spacing.sm,
-    lineHeight: 20,
+    lineHeight: 18,
+    fontStyle: 'italic',
+  },
+  avisFooter: {
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.neutral[100],
+    paddingTop: 8,
   },
   avisTrajet: {
     fontSize: theme.typography.sizes.small,

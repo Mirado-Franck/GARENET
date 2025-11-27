@@ -1,13 +1,28 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity } from 'react-native';
+import { 
+  View, 
+  Text, 
+  StyleSheet, 
+  FlatList, 
+  ActivityIndicator, 
+  TouchableOpacity, 
+  Alert,
+  Platform 
+} from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import * as Print from 'expo-print';
+import * as Sharing from 'expo-sharing';
+//import * as FileSystem from 'expo-file-system';
+
 import { paiementService, Paiement } from '../../../services/paiementService';
 import { theme } from '../../../constants/theme';
 
 export default function HistoriquePaiement() {
   const [paiements, setPaiements] = useState<Paiement[]>([]);
   const [loading, setLoading] = useState(true);
+  // ✅ Pour gérer le chargement spécifique par item
+  const [generatingId, setGeneratingId] = useState<number | null>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -24,62 +39,174 @@ export default function HistoriquePaiement() {
       setLoading(false);
     }
   };
+  // 🖨️ FONCTION DE GÉNÉRATION DU REÇU (COMPATIBLE EXPO 54+)
+  const handleGenerateReceipt = async (payment: Paiement) => {
+    setGeneratingId(payment.id);
 
-const renderItem = ({ item }: { item: Paiement }) => (
-  <View style={styles.card}>
-    <View style={styles.cardHeader}>
-      <Text style={styles.date}>
-        {new Date(item.date_paiement).toLocaleDateString('fr-FR', {
-          day: 'numeric', month: 'long', year: 'numeric'
-        })}
-      </Text>
-      <View style={[
-        styles.badge,
-        item.status === 'valide' ? styles.badgeSuccess : styles.badgeError
-      ]}>
-        <Text style={[
-          styles.badgeText,
-          item.status === 'valide' ? styles.textSuccess : styles.textError
+    try {
+      const qrData = `RECU-${payment.code_paiement}`;
+      const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${qrData}`;
+      
+      // Template HTML
+      const html = `
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <meta charset="UTF-8">
+            <style>
+              body { font-family: 'Helvetica', sans-serif; padding: 20px; }
+              .invoice-box { border: 2px solid #3b82f6; padding: 20px; border-radius: 10px; }
+              .header { text-align: center; margin-bottom: 20px; }
+              .title { font-size: 24px; font-weight: bold; color: #3b82f6; text-transform: uppercase; }
+              .subtitle { color: #666; font-size: 12px; margin-top: 5px; }
+              .row { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 14px; border-bottom: 1px dashed #eee; padding-bottom: 5px; }
+              .label { font-weight: bold; color: #555; }
+              .value { text-align: right; }
+              .total-row { margin-top: 20px; border-top: 2px solid #333; padding-top: 10px; font-size: 18px; font-weight: bold; display: flex; justify-content: space-between; }
+              .qr-container { text-align: center; margin-top: 30px; }
+              .qr-img { width: 120px; height: 120px; }
+              .footer { margin-top: 30px; text-align: center; font-size: 10px; color: #999; }
+            </style>
+          </head>
+          <body>
+            <div class="invoice-box">
+              <div class="header">
+                <div class="title">Reçu de Paiement</div>
+                <div class="subtitle">Réf: ${payment.code_paiement}</div>
+              </div>
+              
+              <div class="row">
+                <span class="label">Date</span>
+                <span class="value">${new Date(payment.date_paiement).toLocaleDateString('fr-FR')}</span>
+              </div>
+              <div class="row">
+                <span class="label">Mode</span>
+                <span class="value">${payment.mode_paiement}</span>
+              </div>
+              <div class="row">
+                <span class="label">Coopérative</span>
+                <span class="value">${payment.reservation.voyage.cooperative.nom}</span>
+              </div>
+              <div class="row">
+                <span class="label">Trajet</span>
+                <span class="value">${payment.reservation.voyage.trajet.station_depart} ➝ ${payment.reservation.voyage.trajet.station_arrivee}</span>
+              </div>
+
+              <div class="total-row">
+                <span>TOTAL PAYÉ</span>
+                <span style="color: #3b82f6;">${payment.montant.toLocaleString()} Ar</span>
+              </div>
+
+              <div class="qr-container">
+                <img src="${qrUrl}" class="qr-img" />
+                <p style="font-size: 10px; margin-top: 5px;">Preuve de paiement GarNet</p>
+              </div>
+
+              <div class="footer">
+                Merci pour votre confiance.
+              </div>
+            </div>
+          </body>
+        </html>
+      `;
+
+      // 1. Génération du PDF
+      // On n'a pas besoin de déplacer le fichier, on partage directement celui généré
+      const { uri } = await Print.printToFileAsync({ html });
+      console.log('📄 PDF généré:', uri);
+
+      // 2. Partage direct
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(uri, {
+          UTI: '.pdf',
+          mimeType: 'application/pdf',
+          dialogTitle: `Reçu de paiement ${payment.code_paiement}`
+        });
+      } else {
+        Alert.alert("Erreur", "Le partage n'est pas supporté sur cet appareil");
+      }
+
+    } catch (error) {
+      console.error('❌ Erreur génération reçu:', error);
+      Alert.alert('Erreur', 'Impossible de générer le reçu.');
+    } finally {
+      setGeneratingId(null);
+    }
+  };
+
+  const renderItem = ({ item }: { item: Paiement }) => (
+    <View style={styles.card}>
+      <View style={styles.cardHeader}>
+        <Text style={styles.date}>
+          {new Date(item.date_paiement).toLocaleDateString('fr-FR', {
+            day: 'numeric', month: 'long', year: 'numeric'
+          })}
+        </Text>
+        <View style={[
+          styles.badge,
+          item.status === 'valide' ? styles.badgeSuccess : styles.badgeError
         ]}>
-          {item.status.toUpperCase()}
-        </Text>
-      </View>
-    </View>
-
-    <View style={styles.amountContainer}>
-      <Text style={styles.amountLabel}>Montant</Text>
-      <Text style={styles.amountValue}>{item.montant.toLocaleString()} Ar</Text>
-    </View>
-
-    <View style={styles.divider} />
-
-    <View style={styles.detailsContainer}>
-      <View style={styles.detailRow}>
-        <Text style={styles.detailLabel}>Mode :</Text>
-        <Text style={styles.detailValue}>{item.mode_paiement}</Text>
-      </View>
-      <View style={styles.detailRow}>
-        <Text style={styles.detailLabel}>Réf :</Text>
-        <Text style={styles.detailValue}>{item.code_paiement}</Text>
-      </View>
-    </View>
-
-    {/* ✅ Protection contre les données manquantes */}
-    {item.reservation?.voyage && (
-      <View style={styles.tripInfo}>
-        <Text style={styles.tripLabel}>Pour le voyage :</Text>
-        <Text style={styles.tripRoute}>
-          {item.reservation.voyage.trajet?.station_depart || 'N/A'} ➝ {item.reservation.voyage.trajet?.station_arrivee || 'N/A'}
-        </Text>
-        {item.reservation.voyage.cooperative?.nom && (
-          <Text style={styles.tripCoop}>
-            {item.reservation.voyage.cooperative.nom}
+          <Text style={[
+            styles.badgeText,
+            item.status === 'valide' ? styles.textSuccess : styles.textError
+          ]}>
+            {item.status.toUpperCase()}
           </Text>
-        )}
+        </View>
       </View>
-    )}
-  </View>
-);
+
+      <View style={styles.amountContainer}>
+        <Text style={styles.amountLabel}>Montant</Text>
+        <Text style={styles.amountValue}>{item.montant.toLocaleString()} Ar</Text>
+      </View>
+
+      <View style={styles.divider} />
+
+      <View style={styles.detailsContainer}>
+        <View style={styles.detailRow}>
+          <Text style={styles.detailLabel}>Mode :</Text>
+          <Text style={styles.detailValue}>{item.mode_paiement}</Text>
+        </View>
+        <View style={styles.detailRow}>
+          <Text style={styles.detailLabel}>Réf :</Text>
+          <Text style={styles.detailValue}>{item.code_paiement}</Text>
+        </View>
+      </View>
+
+      {/* Protection contre les données manquantes */}
+      {item.reservation?.voyage && (
+        <View style={styles.tripInfo}>
+          <Text style={styles.tripLabel}>Pour le voyage :</Text>
+          <Text style={styles.tripRoute}>
+            {item.reservation.voyage.trajet?.station_depart || 'N/A'} ➝ {item.reservation.voyage.trajet?.station_arrivee || 'N/A'}
+          </Text>
+          {item.reservation.voyage.cooperative?.nom && (
+            <Text style={styles.tripCoop}>
+              {item.reservation.voyage.cooperative.nom}
+            </Text>
+          )}
+        </View>
+      )}
+
+      {/* ✅ BOUTON TÉLÉCHARGER REÇU */}
+      <View style={styles.actionsContainer}>
+        <TouchableOpacity 
+          style={styles.receiptButton}
+          onPress={() => handleGenerateReceipt(item)}
+          disabled={generatingId === item.id}
+        >
+          {generatingId === item.id ? (
+            <ActivityIndicator size="small" color={theme.colors.primary[500]} />
+          ) : (
+            <>
+              <Ionicons name="document-text-outline" size={18} color={theme.colors.primary[500]} />
+              <Text style={styles.receiptButtonText}>Télécharger le Reçu</Text>
+            </>
+          )}
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
 
   if (loading) {
     return (
@@ -92,7 +219,7 @@ const renderItem = ({ item }: { item: Paiement }) => (
 
   return (
     <View style={styles.container}>
-      {/* ✅ Header avec flèche de retour */}
+      {/* Header avec flèche de retour */}
       <View style={styles.header}>
         <TouchableOpacity 
           style={styles.backButton}
@@ -149,13 +276,13 @@ const styles = StyleSheet.create({
     paddingTop: 60,
     paddingBottom: 30,
     paddingHorizontal: 20,
-    flexDirection: 'row', // ✅ Ajout
-    alignItems: 'center', // ✅ Ajout
+    flexDirection: 'row',
+    alignItems: 'center',
   },
-  backButton: { // ✅ NOUVEAU
+  backButton: {
     marginRight: theme.spacing.md,
   },
-  headerTextContainer: { // ✅ NOUVEAU
+  headerTextContainer: {
     flex: 1,
   },
   title: {
@@ -216,7 +343,6 @@ const styles = StyleSheet.create({
   textError: { 
     color: theme.colors.semantic.error 
   },
-  
   amountContainer: {
     marginBottom: theme.spacing.sm,
   },
@@ -270,6 +396,29 @@ const styles = StyleSheet.create({
     fontSize: theme.typography.sizes.small,
     color: theme.colors.text.secondary,
     marginTop: 2,
+  },
+  // ✅ Nouveaux styles pour le bouton
+  actionsContainer: {
+    marginTop: theme.spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.neutral[200],
+    paddingTop: theme.spacing.md,
+  },
+  receiptButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    borderRadius: theme.borderRadius.sm,
+    borderWidth: 1,
+    borderColor: theme.colors.primary[200],
+    backgroundColor: theme.colors.primary[50],
+    gap: 8,
+  },
+  receiptButtonText: {
+    fontSize: theme.typography.sizes.body,
+    fontWeight: theme.typography.weights.semibold,
+    color: theme.colors.primary[500],
   },
   emptyContainer: {
     flex: 1,

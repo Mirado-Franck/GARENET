@@ -5,7 +5,7 @@ import { Platform } from 'react-native';
 
 // ✅ Configuration de l'URL de base (Racine du serveur)
 const SERVER_URL = Platform.OS === 'android'
-    ? 'http://192.168.1.232:3000' // Ton IP
+    ? 'http://192.168.224.170:3000'
     : 'http://localhost:3000';
 
 // ✅ Export des URLs pour l'API et les Images

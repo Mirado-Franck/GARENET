@@ -6,7 +6,7 @@ import {
   markAsRead,
   markAllAsRead,
   deleteNotification,
-  createNotification
+  createNotification, countUnread
 } from '../controllers/notificationController.js';
 import { authMiddleware } from '../middlewares/authMiddleware.js';
 
@@ -19,6 +19,8 @@ const router = express.Router();
  */
 router.get('/', authMiddleware, getNotificationsByUser);
 
+// ✅ Route pour compter les non lues (à mettre au début)
+router.get('/unread-count', authMiddleware, countUnread);
 /**
  * @route   GET /api/notifications/unread-count
  * @desc    Compter les notifications non lues

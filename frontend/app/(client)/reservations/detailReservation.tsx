@@ -29,7 +29,7 @@ export default function DetailReservation() {
   const [toastMessage, setToastMessage] = useState('');
   const [toastType, setToastType] = useState<'success' | 'error'>('success');
 
-  // ✅ Modal de confirmation annulation
+  // Modal de confirmation annulation
   const [showCancelModal, setShowCancelModal] = useState(false);
 
   useEffect(() => {
@@ -81,7 +81,11 @@ export default function DetailReservation() {
     if (!reservation) return;
     
     const prixTotal = reservation.nombre_places * reservation.voyage.prix;
+    // Générateur de QR Code API
+    const qrData = `GARNET-${reservation.code_reservation}`;
+    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${qrData}`;
     
+    // 🎨 TEMPLATE HTML TICKET COMPACT
     const htmlContent = `
       <!DOCTYPE html>
       <html>
@@ -89,245 +93,234 @@ export default function DetailReservation() {
           <meta charset="UTF-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
           <style>
-            * { margin: 0; padding: 0; box-sizing: border-box; }
+            @page { size: auto; margin: 0mm; }
             body {
-              font-family: 'Arial', sans-serif;
-              padding: 40px;
-              background: #f5f5f5;
+              font-family: 'Helvetica', 'Arial', sans-serif;
+              background: #fff;
+              padding: 20px;
+              display: flex;
+              justify-content: center;
             }
-            .receipt {
-              max-width: 800px;
-              margin: 0 auto;
-              background: white;
-              padding: 40px;
-              border-radius: 12px;
-              box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            .ticket {
+              width: 350px; /* Format compact */
+              border: 2px dashed #333;
+              padding: 20px;
+              border-radius: 10px;
+              background: #fff;
             }
             .header {
               text-align: center;
-              border-bottom: 3px solid #007AFF;
-              padding-bottom: 20px;
-              margin-bottom: 30px;
-            }
-            .header h1 {
-              color: #007AFF;
-              font-size: 32px;
-              margin-bottom: 10px;
-            }
-            .header p {
-              color: #666;
-              font-size: 14px;
-            }
-            .section {
-              margin: 25px 0;
-              padding: 20px;
-              background: #f9f9f9;
-              border-radius: 8px;
-            }
-            .section-title {
-              color: #007AFF;
-              font-size: 18px;
-              font-weight: bold;
               margin-bottom: 15px;
-              border-bottom: 2px solid #007AFF;
-              padding-bottom: 8px;
+              border-bottom: 2px solid #000;
+              padding-bottom: 10px;
             }
-            .info-row {
+            .coop-name {
+              font-size: 24px;
+              font-weight: 900;
+              text-transform: uppercase;
+              margin-bottom: 5px;
+              color: #000;
+            }
+            .sub-header {
               display: flex;
               justify-content: space-between;
-              padding: 10px 0;
-              border-bottom: 1px solid #e0e0e0;
-            }
-            .info-row:last-child {
-              border-bottom: none;
-            }
-            .label {
-              color: #666;
-              font-weight: 600;
-            }
-            .value {
-              color: #333;
-              font-weight: bold;
-            }
-            .trajet-container {
-              text-align: center;
-              font-size: 20px;
-              color: #333;
-              margin: 20px 0;
-            }
-            .places-container {
-              display: flex;
-              flex-wrap: wrap;
-              gap: 10px;
+              align-items: center;
               margin-top: 10px;
             }
-            .place-chip {
-              background: #007AFF;
-              color: white;
-              padding: 8px 16px;
-              border-radius: 20px;
+            .brand {
+              font-weight: bold;
+              color: #007AFF;
+              font-size: 18px;
+            }
+            .ticket-title {
+              font-size: 12px;
+              text-transform: uppercase;
+              letter-spacing: 1px;
+              font-weight: bold;
+              color: #555;
+            }
+            .row {
+              display: flex;
+              justify-content: space-between;
+              margin-bottom: 8px;
+              font-size: 14px;
+            }
+            .label { color: #666; font-size: 12px; }
+            .value { font-weight: bold; color: #000; text-align: right; }
+            .divider {
+              border-top: 1px dashed #ccc;
+              margin: 15px 0;
+            }
+            .route-box {
+              background: #f0f0f0;
+              padding: 10px;
+              border-radius: 5px;
+              text-align: center;
+              margin: 10px 0;
+            }
+            .route-stations {
+              font-size: 16px;
               font-weight: bold;
             }
-            .total {
-              background: #007AFF;
-              color: white;
-              padding: 20px;
-              border-radius: 8px;
-              text-align: center;
-              font-size: 24px;
+            .route-arrow { color: #007AFF; }
+            .seats-box {
+              display: flex;
+              flex-wrap: wrap;
+              gap: 5px;
+              justify-content: flex-end;
+            }
+            .seat-badge {
+              background: #000;
+              color: #fff;
+              padding: 2px 8px;
+              border-radius: 4px;
+              font-size: 12px;
+            }
+            .total-box {
+              border-top: 2px solid #000;
+              border-bottom: 2px solid #000;
+              padding: 10px 0;
+              margin: 15px 0;
+              display: flex;
+              justify-content: space-between;
+              font-size: 18px;
               font-weight: bold;
-              margin-top: 20px;
             }
             .footer {
               text-align: center;
-              margin-top: 40px;
-              padding-top: 20px;
-              border-top: 2px solid #e0e0e0;
-              color: #999;
-              font-size: 12px;
+              font-size: 10px;
+              color: #888;
+              margin-top: 20px;
             }
-            @media print {
-              body { background: white; padding: 0; }
-              .receipt { box-shadow: none; }
+            .qr-container {
+              text-align: center;
+              margin-top: 15px;
+            }
+            .qr-img {
+              width: 100px;
+              height: 100px;
             }
           </style>
         </head>
         <body>
-          <div class="receipt">
+          <div class="ticket">
+            
+            <!-- Header: Nom Coopérative en haut -->
             <div class="header">
-              <h1>🚌 GARENET</h1>
-              <p>Reçu de Réservation</p>
-            </div>
-
-            <div class="section">
-              <div class="section-title">Informations de réservation</div>
-              <div class="info-row">
-                <span class="label">Code de réservation</span>
-                <span class="value">${reservation.code_reservation}</span>
-              </div>
-              <div class="info-row">
-                <span class="label">Date de réservation</span>
-                <span class="value">${formatDate(reservation.date_reservation)}</span>
-              </div>
-              <div class="info-row">
-                <span class="label">Statut</span>
-                <span class="value">${getStatutLabel(reservation.statut)}</span>
+              <div class="coop-name">${reservation.voyage.cooperative.nom}</div>
+              <div class="sub-header">
+                <span class="brand">GarNet</span>
+                <span class="ticket-title">Ticket Réservation</span>
               </div>
             </div>
 
-            <div class="section">
-              <div class="section-title">Trajet</div>
-              <div class="trajet-container">
-                ${reservation.voyage.trajet.depart}
-                <br/>
-                ⬇️ ${reservation.voyage.trajet.distance} km
-                <br/>
-                ${reservation.voyage.trajet.arrivee}
+            <!-- Infos Réservation -->
+            <div class="row">
+              <span class="label">Référence</span>
+              <span class="value">${reservation.code_reservation}</span>
+            </div>
+            <div class="row">
+              <span class="label">Date Résa.</span>
+              <span class="value">${formatDate(reservation.date_reservation)}</span>
+            </div>
+
+            <div class="divider"></div>
+
+            <!-- Trajet -->
+            <div class="route-box">
+              <div class="route-stations">
+                ${reservation.voyage.trajet.depart} <span class="route-arrow">➔</span> ${reservation.voyage.trajet.arrivee}
               </div>
             </div>
 
-            <div class="section">
-              <div class="section-title">Détails du voyage</div>
-              <div class="info-row">
-                <span class="label">Date de départ</span>
-                <span class="value">${formatDate(reservation.voyage.date_depart)}</span>
-              </div>
-              <div class="info-row">
-                <span class="label">Heure de départ</span>
-                <span class="value">${formatHeure(reservation.voyage.heure_depart)}</span>
-              </div>
-              <div class="info-row">
-                <span class="label">Coopérative</span>
-                <span class="value">${reservation.voyage.cooperative.nom}</span>
-              </div>
-              <div class="info-row">
-                <span class="label">Véhicule</span>
-                <span class="value">${reservation.voyage.voiture.modele} - ${reservation.voyage.voiture.immatriculation}</span>
+            <!-- Détails Voyage -->
+            <div class="row">
+              <span class="label">Départ le</span>
+              <span class="value">${formatDate(reservation.voyage.date_depart)}</span>
+            </div>
+            <div class="row">
+              <span class="label">Heure</span>
+              <span class="value">${formatHeure(reservation.voyage.heure_depart)}</span>
+            </div>
+            <div class="row">
+              <span class="label">Véhicule</span>
+              <span class="value">${reservation.voyage.voiture.immatriculation}</span>
+            </div>
+
+            <div class="divider"></div>
+
+            <!-- Places -->
+            <div class="row">
+              <span class="label">Places (${reservation.nombre_places})</span>
+              <div class="seats-box">
+                ${reservation.places.map(p => `<span class="seat-badge">${p}</span>`).join('')}
               </div>
             </div>
 
-            <div class="section">
-              <div class="section-title">Places réservées</div>
-              <div class="places-container">
-                ${reservation.places.map(place => `<span class="place-chip">${place}</span>`).join('')}
-              </div>
-              <div class="info-row" style="margin-top: 20px;">
-                <span class="label">Nombre de places</span>
-                <span class="value">${reservation.nombre_places}</span>
-              </div>
+            <!-- Total -->
+            <div class="total-box">
+              <span>TOTAL</span>
+              <span>${prixTotal.toLocaleString()} Ar</span>
             </div>
 
-            <div class="section">
-              <div class="section-title">Tarification</div>
-              <div class="info-row">
-                <span class="label">Prix unitaire</span>
-                <span class="value">${reservation.voyage.prix.toLocaleString()} Ar</span>
-              </div>
-              <div class="info-row">
-                <span class="label">Nombre de places</span>
-                <span class="value">× ${reservation.nombre_places}</span>
-              </div>
-            </div>
-
-            <div class="total">
-              TOTAL : ${prixTotal.toLocaleString()} Ar
+            <!-- QR Code -->
+            <div class="qr-container">
+              <img src="${qrUrl}" class="qr-img" />
             </div>
 
             <div class="footer">
-              <p>Merci d'avoir choisi GARENET pour votre voyage</p>
-              <p>Pour toute question, contactez-nous</p>
+              Merci de voyager avec nous.<br>
+              Présentez ce ticket à l'embarquement.
             </div>
+
           </div>
         </body>
       </html>
     `;
 
     try {
-if (Platform.OS === 'web') {
-  // ✅ Méthode iframe (plus fiable pour l'impression)
-  const iframe = document.createElement('iframe');
-  iframe.style.position = 'fixed';
-  iframe.style.right = '0';
-  iframe.style.bottom = '0';
-  iframe.style.width = '0';
-  iframe.style.height = '0';
-  iframe.style.border = 'none';
-  document.body.appendChild(iframe);
-  
-  const iframeDoc = iframe.contentWindow?.document;
-  if (iframeDoc) {
-    iframeDoc.open();
-    iframeDoc.write(htmlContent);
-    iframeDoc.close();
-    
-    // Attendre que le contenu soit chargé puis imprimer
-    setTimeout(() => {
-      iframe.contentWindow?.focus();
-      iframe.contentWindow?.print();
-      
-      // Nettoyer l'iframe après impression
-      setTimeout(() => {
-        document.body.removeChild(iframe);
-      }, 1000);
-    }, 500);
-  }
-  
-  return;
-}else {
-        // ✅ Version Mobile : Utiliser expo-print
-        const { uri } = await Print.printToFileAsync({ html: htmlContent });
+      if (Platform.OS === 'web') {
+        const iframe = document.createElement('iframe');
+        iframe.style.position = 'fixed';
+        iframe.style.right = '0';
+        iframe.style.bottom = '0';
+        iframe.style.width = '0';
+        iframe.style.height = '0';
+        iframe.style.border = 'none';
+        document.body.appendChild(iframe);
         
+        const iframeDoc = iframe.contentWindow?.document;
+        if (iframeDoc) {
+          iframeDoc.open();
+          iframeDoc.write(htmlContent);
+          iframeDoc.close();
+          
+          setTimeout(() => {
+            iframe.contentWindow?.focus();
+            iframe.contentWindow?.print();
+            setTimeout(() => {
+              document.body.removeChild(iframe);
+            }, 1000);
+          }, 500);
+        }
+        return;
+      } else {
+        const { uri } = await Print.printToFileAsync({ html: htmlContent });
         if (await Sharing.isAvailableAsync()) {
-          await Sharing.shareAsync(uri);
+          await Sharing.shareAsync(uri, {
+            UTI: '.pdf',
+            mimeType: 'application/pdf',
+            dialogTitle: `Ticket_${reservation.code_reservation}`
+          });
         }
         
-        setToastMessage('Reçu généré avec succès');
+        setToastMessage('Ticket généré avec succès');
         setToastType('success');
         setToastVisible(true);
       }
     } catch (error) {
       console.error('Erreur impression:', error);
-      setToastMessage('Erreur lors de la génération du reçu');
+      setToastMessage('Erreur lors de la génération du ticket');
       setToastType('error');
       setToastVisible(true);
     }
@@ -366,9 +359,8 @@ if (Platform.OS === 'web') {
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('fr-FR', {
-      weekday: 'long',
       day: '2-digit',
-      month: 'long',
+      month: 'short',
       year: 'numeric',
     });
   };
@@ -407,7 +399,7 @@ if (Platform.OS === 'web') {
 
   return (
     <View style={styles.container}>
-      {/* ✅ Header fixe (ne scroll pas) */}
+      {/* Header fixe */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.headerBackButton} onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={24} color={theme.colors.text.inverse} />
@@ -416,7 +408,7 @@ if (Platform.OS === 'web') {
         <View style={{ width: 24 }} />
       </View>
 
-      {/* ✅ Contenu scrollable */}
+      {/* Contenu scrollable */}
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         <View style={styles.content}>
           {/* Code et Statut */}
@@ -535,16 +527,15 @@ if (Platform.OS === 'web') {
             </View>
           </View>
 
-          {/* Espace pour éviter que le contenu soit caché par le footer */}
           <View style={{ height: 120 }} />
         </View>
       </ScrollView>
 
-      {/* ✅ Boutons fixes en bas */}
+      {/* Footer fixe */}
       <View style={styles.footer}>
         <TouchableOpacity style={styles.printButton} onPress={handlePrint}>
           <Ionicons name="print-outline" size={20} color={theme.colors.primary[500]} />
-          <Text style={styles.printButtonText}>Imprimer le reçu</Text>
+          <Text style={styles.printButtonText}>Télécharger le Ticket</Text>
         </TouchableOpacity>
 
         {reservation.statut === 'confirmee' && (
@@ -555,7 +546,7 @@ if (Platform.OS === 'web') {
         )}
       </View>
 
-      {/* ✅ Modal de confirmation annulation */}
+      {/* Modal Annulation */}
       <Modal
         visible={showCancelModal}
         transparent
@@ -577,7 +568,6 @@ if (Platform.OS === 'web') {
               ⚠️ Cette action est irréversible
             </Text>
 
-            {/* Fenetre de confirmation */}
             <View style={styles.modalButtons}>
               <TouchableOpacity
                 style={[styles.modalButton, styles.modalButtonCancel]}

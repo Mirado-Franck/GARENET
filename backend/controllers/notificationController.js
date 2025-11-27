@@ -200,12 +200,30 @@ const createNotification = async (req, res, next) => {
     res.status(500).json({ error: error.message });
   }
 };
+// Compter les notifications non lues
+const countUnread = async (req, res) => {
+  try {
+    const userId = req.user.id;
 
+    const count = await prisma.notification.count({
+      where: {
+        ref_utilisateur_id: userId,
+        statut: 'non_lu' // Assure-toi que c'est bien 'non_lu' dans ta BDD
+      }
+    });
+
+    res.json({ count });
+  } catch (error) {
+    console.error('Erreur comptage notifications:', error);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+};
 export {
   getNotificationsByUser,
   getUnreadCount,
   markAsRead,
   markAllAsRead,
   deleteNotification,
-  createNotification
+  createNotification, 
+  countUnread
 };

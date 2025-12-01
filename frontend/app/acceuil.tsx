@@ -122,8 +122,8 @@ export default function Acceuil() {
     <SafeAreaView style={styles.container}>
       {/* Section En-tête - FIXE */}
       <View style={styles.header}>
-        <Text style={styles.logo}>🌱 GARENET</Text>
-        <Text style={styles.title}>Bienvenue sur Garenet</Text>
+        <Text style={styles.logo}>🌱 GarNET</Text>
+        <Text style={styles.title}>Bienvenue sur GarNET</Text>
         <Text style={styles.subtitle}>
           Réservez vos voyages en toute simplicité
         </Text>

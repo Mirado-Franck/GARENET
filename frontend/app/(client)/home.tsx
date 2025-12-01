@@ -266,7 +266,7 @@ export default function Home() {
                     <View style={styles.sloganIconContainer}>
                       <Ionicons name="bus" size={50} color={theme.colors.primary[500]} />
                     </View>
-                    <Text style={styles.sloganTitle}>Avec GARENET</Text>
+                    <Text style={styles.sloganTitle}>Avec GarNET</Text>
                     <Text style={styles.sloganText}>
                       Vos réservations{' '}
                       <Text style={styles.sloganHighlight}>simplifiées</Text>

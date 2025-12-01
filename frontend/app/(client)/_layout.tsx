@@ -1,45 +1,14 @@
 // frontend/app/(client)/_layout.tsx
+import React from 'react';
 import { LogBox } from 'react-native';
 import { Tabs } from 'expo-router';
-import { Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { theme } from '../../constants/theme';
 
 // Supprimer le warning spécifique
 LogBox.ignoreLogs([
   'Image: style.resizeMode is deprecated. Please use props.resizeMode.',
 ]);
-
-const TabIcon = ({
-  emoji,
-  color,
-  focused,
-}: {
-  emoji: string;
-  color: string;
-  focused: boolean;
-}) => (
-  <View style={{ alignItems: 'center', justifyContent: 'center' }}>
-    <Text
-      style={{
-        fontSize: 20,
-        color,
-      }}
-    >
-      {emoji}
-    </Text>
-    {focused && (
-      <View
-        style={{
-          width: 4,
-          height: 4,
-          borderRadius: 2,
-          backgroundColor: color,
-          marginTop: 4,
-        }}
-      />
-    )}
-  </View>
-);
 
 export default function ClientLayout() {
   return (
@@ -48,13 +17,30 @@ export default function ClientLayout() {
         headerShown: false,
         tabBarStyle: {
           backgroundColor: theme.colors.background.primary,
-          borderTopColor: theme.colors.neutral[300],
+          borderTopWidth: 1,
+          borderTopColor: theme.colors.neutral[200],
           height: 60,
-          paddingBottom: theme.spacing.xs,
-          paddingTop: theme.spacing.xs,
+          paddingBottom: 8,
+          paddingTop: 8,
+          elevation: 8,
+          shadowColor: '#000',
+          shadowOpacity: 0.1,
         },
+        
+        // 👇 C'EST ICI QUE ÇA SE JOUE 👇
+        
+        // 🔵 QUAND C'EST SÉLECTIONNÉ (FOCUS) : BLEU
         tabBarActiveTintColor: theme.colors.primary[500],
-        tabBarInactiveTintColor: theme.colors.text.secondary,
+        
+        // ⚫ QUAND CE N'EST PAS SÉLECTIONNÉ : NOIR
+        tabBarInactiveTintColor: '#000000', 
+
+        // Style du texte
+        tabBarLabelStyle: {
+          fontSize: 12,
+          fontWeight: '500',
+          marginTop: -4,
+        },
       }}
     >
       {/* 🏠 Accueil */}
@@ -63,18 +49,26 @@ export default function ClientLayout() {
         options={{
           title: 'Accueil',
           tabBarIcon: ({ color, focused }) => (
-            <TabIcon emoji="🏠" color={color} focused={focused} />
+            <Ionicons 
+              name={focused ? 'home' : 'home-outline'} 
+              size={24} 
+              color={color} 
+            />
           ),
         }}
       />
 
-      {/* 🚌 Voyages */}
+      {/* 🏢 Agences */}
       <Tabs.Screen
         name="voyages"
         options={{
-          title: 'Voyages',
+          title: 'Agences',
           tabBarIcon: ({ color, focused }) => (
-            <TabIcon emoji="🚌" color={color} focused={focused} />
+            <Ionicons 
+              name={focused ? 'business' : 'business-outline'} 
+              size={24} 
+              color={color} 
+            />
           ),
         }}
       />
@@ -85,18 +79,26 @@ export default function ClientLayout() {
         options={{
           title: 'Réservations',
           tabBarIcon: ({ color, focused }) => (
-            <TabIcon emoji="🎫" color={color} focused={focused} />
+            <Ionicons 
+              name={focused ? 'ticket' : 'ticket-outline'} 
+              size={24} 
+              color={color} 
+            />
           ),
         }}
       />
 
-      {/* 📊 Historique */}
+      {/* ⏱️ Historique */}
       <Tabs.Screen
         name="historique"
         options={{
           title: 'Historique',
           tabBarIcon: ({ color, focused }) => (
-            <TabIcon emoji="📊" color={color} focused={focused} />
+            <Ionicons 
+              name={focused ? 'time' : 'time-outline'} 
+              size={24} 
+              color={color} 
+            />
           ),
         }}
       />
@@ -107,116 +109,36 @@ export default function ClientLayout() {
         options={{
           title: 'Profil',
           tabBarIcon: ({ color, focused }) => (
-            <TabIcon emoji="👤" color={color} focused={focused} />
+            <Ionicons 
+              name={focused ? 'person' : 'person-outline'} 
+              size={24} 
+              color={color} 
+            />
           ),
         }}
       />
 
-      {/* 🚨 PAGES QUI NE DOIVENT PAS APPARAÎTRE DANS LA NAVBAR */}
+      {/* 🚫 PAGES MASQUÉES */}
+      <Tabs.Screen name="notification" options={{ href: null }} />
+      <Tabs.Screen name="index" options={{ href: null }} />
       
-      {/* Notification - Exclue de la navbar */}
-      <Tabs.Screen
-        name="notification"
-        options={{
-          href: null, // 👈 CECI EXCLUT LA PAGE DE LA NAVBAR
-        }}
-      />
+      {/* Sous-dossiers masqués */}
+      <Tabs.Screen name="voyages/detailCooperative" options={{ href: null }} />
+      <Tabs.Screen name="voyages/detailVoyage" options={{ href: null }} />
+      <Tabs.Screen name="voyages/listeCooperative" options={{ href: null }} />
+      <Tabs.Screen name="voyages/paiement" options={{ href: null }} />
+      <Tabs.Screen name="voyages/reservation" options={{ href: null }} />
+      <Tabs.Screen name="voyages/voyagePropose" options={{ href: null }} />
 
-      {/* Index - Exclue de la navbar */}
-      <Tabs.Screen
-        name="index"
-        options={{
-          href: null, // 👈 CECI EXCLUT LA PAGE DE LA NAVBAR
-        }}
-      />
+      <Tabs.Screen name="reservations/detailReservation" options={{ href: null }} />
+      <Tabs.Screen name="reservations/listeReservation" options={{ href: null }} />
 
-      {/* 🔧 TOUTES LES AUTRES PAGES DANS LES SOUS-DOSSIERS DOIVENT ÊTRE EXCLUES */}
-      
-      {/* Pages dans voyages/ */}
-      <Tabs.Screen
-        name="voyages/detailCooperative"
-        options={{
-          href: null,
-        }}
-      />
-      <Tabs.Screen
-        name="voyages/detailVoyage"
-        options={{
-          href: null,
-        }}
-      />
-      <Tabs.Screen
-        name="voyages/listeCooperative"
-        options={{
-          href: null,
-        }}
-      />
-      <Tabs.Screen
-        name="voyages/paiement"
-        options={{
-          href: null,
-        }}
-      />
-      <Tabs.Screen
-        name="voyages/reservation"
-        options={{
-          href: null,
-        }}
-      />
-      <Tabs.Screen
-        name="voyages/voyagePropose"
-        options={{
-          href: null,
-        }}
-      />
+      <Tabs.Screen name="historique/avis" options={{ href: null }} />
+      <Tabs.Screen name="historique/detailVoyage" options={{ href: null }} />
+      <Tabs.Screen name="historique/listeVoyage" options={{ href: null }} />
 
-      {/* Pages dans reservations/ */}
-      <Tabs.Screen
-        name="reservations/detailReservation"
-        options={{
-          href: null,
-        }}
-      />
-      <Tabs.Screen
-        name="reservations/listeReservation"
-        options={{
-          href: null,
-        }}
-      />
-
-      {/* Pages dans historique/ */}
-      <Tabs.Screen
-        name="historique/avis"
-        options={{
-          href: null,
-        }}
-      />
-      <Tabs.Screen
-        name="historique/detailVoyage"
-        options={{
-          href: null,
-        }}
-      />
-      <Tabs.Screen
-        name="historique/listeVoyage"
-        options={{
-          href: null,
-        }}
-      />
-
-      {/* Pages dans profil/ */}
-      <Tabs.Screen
-        name="profil/modifierProfile"
-        options={{
-          href: null,
-        }}
-      />
-      <Tabs.Screen
-        name="profil/profile"
-        options={{
-          href: null,
-        }}
-      />
+      <Tabs.Screen name="profil/modifierProfile" options={{ href: null }} />
+      <Tabs.Screen name="profil/profile" options={{ href: null }} />
     </Tabs>
   );
 }

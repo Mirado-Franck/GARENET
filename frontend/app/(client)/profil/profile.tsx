@@ -143,6 +143,26 @@ export default function Profile() {
             <Ionicons name="chevron-forward" size={20} color={theme.colors.neutral[400]} />
           </TouchableOpacity>
 
+          {/* 👇 NOUVEAU : Bouton Thème */}
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => router.push('/(client)/profil/theme-selector')}
+          >
+            <View style={styles.menuItemLeft}>
+              <View style={[styles.iconContainer, { backgroundColor: '#8B5CF6' + '20' }]}>
+                <Ionicons name="color-palette-outline" size={22} color="#8B5CF6" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.menuItemText}>Thème de l'application</Text>
+                <Text style={styles.menuItemSubtext}>Personnalisez votre interface</Text>
+              </View>
+            </View>
+            <View style={styles.themePreview}>
+              <View style={[styles.themeColorDot, { backgroundColor: theme.colors.primary[500] }]} />
+              <Ionicons name="chevron-forward" size={20} color={theme.colors.neutral[400]} />
+            </View>
+          </TouchableOpacity>
+
           {/* À propos de l'app */}
           <TouchableOpacity
             style={styles.menuItem}
@@ -412,6 +432,25 @@ const styles = StyleSheet.create({
     fontWeight: theme.typography.weights.medium,
     color: theme.colors.text.primary,
     flex: 1,
+  },
+  // 👇 NOUVEAUX STYLES pour le bouton Thème
+  menuItemSubtext: {
+    fontSize: theme.typography.sizes.small,
+    color: theme.colors.text.tertiary,
+    marginTop: 2,
+  },
+  themePreview: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.sm,
+  },
+  themeColorDot: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: theme.colors.background.primary,
+    ...theme.shadows.sm,
   },
   logoutItem: {
     borderWidth: 1,

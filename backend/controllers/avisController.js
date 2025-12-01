@@ -1,7 +1,11 @@
+// controllers/avisController.js
 import { PrismaClient } from "../generated/prisma/index.js";
 
 const prisma = new PrismaClient();
 
+// ==========================================
+// CRÉER UN AVIS (EXISTANT - NE PAS TOUCHER)
+// ==========================================
 const createAvis = async (req, res, next) => {
   try {
     const { code_voyage_id, note, commentaire } = req.body;
@@ -87,7 +91,9 @@ const createAvis = async (req, res, next) => {
   }
 };
 
-// === RÉCUPÉRER LES AVIS D'UN VOYAGE (ACTIFS SEULEMENT) ===
+// ==========================================
+// RÉCUPÉRER LES AVIS D'UN VOYAGE (EXISTANT - NE PAS TOUCHER)
+// ==========================================
 const getAvisByVoyage = async (req, res, next) => {
   try {
     const { voyageId } = req.params;
@@ -129,7 +135,9 @@ const getAvisByVoyage = async (req, res, next) => {
   }
 };
 
-// === LISTE DES AVIS LES PLUS RÉCENTS (GLOBAL) ===
+// ==========================================
+// LISTE DES AVIS LES PLUS RÉCENTS (EXISTANT - NE PAS TOUCHER)
+// ==========================================
 const getLatestAvis = async (req, res, next) => {
   try {
     const limit = parseInt(req.query.limit) || 10; // ?limit=5
@@ -196,4 +204,110 @@ const getLatestAvis = async (req, res, next) => {
   }
 };
 
-export { createAvis, getAvisByVoyage, getLatestAvis };
+// ==========================================
+// 👇 NOUVELLE FONCTION : AVIS PAR COOPÉRATIVE (AJOUT)
+// ==========================================
+const getAvisByCooperative = async (req, res, next) => {
+  try {
+    const { cooperativeId } = req.params;
+    const limit = parseInt(req.query.limit) || 50;
+
+    const avis = await prisma.avis.findMany({
+      where: {
+        deleted_at: null,
+        voyage: {
+          code_cooperative_id: parseInt(cooperativeId)
+        }
+      },
+      include: {
+        client: {
+          select: {
+            utilisateur: {
+              select: {
+                nom: true,
+                prenoms: true,
+                photo_identite: true
+              }
+            }
+          }
+        },
+        voyage: {
+          select: {
+            id: true,
+            code_voyage: true,
+            date_depart: true,
+            trajet: {
+              select: {
+                station_depart: true,
+                station_arrivee: true
+              }
+            }
+          }
+        }
+      },
+      orderBy: {
+        date_avis: "desc"
+      },
+      take: limit
+    });
+
+    // Calculer la moyenne
+    const moyenne = avis.length > 0
+      ? (avis.reduce((sum, a) => sum + a.note, 0) / avis.length)
+      : 0;
+
+    // Calculer la répartition des notes
+    const distribution = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
+    avis.forEach(a => {
+      const note = Math.round(a.note);
+      if (note >= 1 && note <= 5) {
+        distribution[note]++;
+      }
+    });
+
+    // Formater la réponse
+    const formattedAvis = avis.map(a => ({
+      id: a.id,
+      ref_avis: a.ref_avis,
+      note: a.note,
+      commentaire: a.commentaire,
+      date_creation: a.date_avis,
+      client: {
+        nom: a.client?.utilisateur?.nom || 'Utilisateur',
+        prenom: a.client?.utilisateur?.prenoms || '',
+        photo: a.client?.utilisateur?.photo_identite || null
+      },
+      voyage: a.voyage ? {
+        id: a.voyage.id,
+        code: a.voyage.code_voyage,
+        date: a.voyage.date_depart,
+        trajet: a.voyage.trajet 
+          ? `${a.voyage.trajet.station_depart} → ${a.voyage.trajet.station_arrivee}`
+          : null
+      } : null
+    }));
+
+    res.json({
+      avis: formattedAvis,
+      count: avis.length,
+      moyenne: parseFloat(moyenne.toFixed(2)),
+      distribution
+    });
+  } catch (error) {
+    console.error("Erreur getAvisByCooperative:", error);
+    res.status(500).json({ 
+      error: "Erreur lors de la récupération des avis de la coopérative",
+      details: error.message 
+    });
+  }
+};
+
+// ==========================================
+// EXPORT (TOUT EXPORTER)
+// ==========================================
+export { 
+  createAvis, 
+  getAvisByVoyage, 
+  getLatestAvis,
+  getAvisByCooperative  // 👈 AJOUT DE LA NOUVELLE FONCTION
+};

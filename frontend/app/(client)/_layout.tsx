@@ -1,9 +1,9 @@
-// frontend/app/(client)/_layout.tsx
+// app/(client)/_layout.tsx
 import React from 'react';
-import { LogBox } from 'react-native';
+import { LogBox, StyleSheet } from 'react-native';
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { theme } from '../../constants/theme';
+import { useTheme } from '../../contexts/ThemeContext';
 
 // Supprimer le warning spécifique
 LogBox.ignoreLogs([
@@ -11,10 +11,12 @@ LogBox.ignoreLogs([
 ]);
 
 export default function ClientLayout() {
-  return (
-    <Tabs
-      screenOptions={{
-        headerShown: false,
+  const { theme } = useTheme(); // 👈 thème dynamique
+
+  // Styles de la TabBar basés sur le thème
+  const styles = React.useMemo(
+    () =>
+      StyleSheet.create({
         tabBarStyle: {
           backgroundColor: theme.colors.background.primary,
           borderTopWidth: 1,
@@ -25,22 +27,29 @@ export default function ClientLayout() {
           elevation: 8,
           shadowColor: '#000',
           shadowOpacity: 0.1,
+          shadowOffset: { width: 0, height: -2 },
+          shadowRadius: 4,
         },
-        
-        // 👇 C'EST ICI QUE ÇA SE JOUE 👇
-        
-        // 🔵 QUAND C'EST SÉLECTIONNÉ (FOCUS) : BLEU
-        tabBarActiveTintColor: theme.colors.primary[500],
-        
-        // ⚫ QUAND CE N'EST PAS SÉLECTIONNÉ : NOIR
-        tabBarInactiveTintColor: '#000000', 
-
-        // Style du texte
-        tabBarLabelStyle: {
+        tabBarLabel: {
           fontSize: 12,
           fontWeight: '500',
           marginTop: -4,
         },
+      }),
+    [theme]
+  );
+
+  return (
+    <Tabs
+      screenOptions={{
+        headerShown: false,
+        tabBarStyle: styles.tabBarStyle,
+
+        // Couleurs dynamiques
+        tabBarActiveTintColor: theme.colors.primary[500], // sélectionné = couleur primaire du thème
+        tabBarInactiveTintColor: '#000000',              // non sélectionné = noir comme tu voulais
+
+        tabBarLabelStyle: styles.tabBarLabel,
       }}
     >
       {/* 🏠 Accueil */}
@@ -49,10 +58,10 @@ export default function ClientLayout() {
         options={{
           title: 'Accueil',
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons 
-              name={focused ? 'home' : 'home-outline'} 
-              size={24} 
-              color={color} 
+            <Ionicons
+              name={focused ? 'home' : 'home-outline'}
+              size={24}
+              color={color}
             />
           ),
         }}
@@ -64,10 +73,10 @@ export default function ClientLayout() {
         options={{
           title: 'Agences',
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons 
-              name={focused ? 'business' : 'business-outline'} 
-              size={24} 
-              color={color} 
+            <Ionicons
+              name={focused ? 'business' : 'business-outline'}
+              size={24}
+              color={color}
             />
           ),
         }}
@@ -79,10 +88,10 @@ export default function ClientLayout() {
         options={{
           title: 'Réservations',
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons 
-              name={focused ? 'ticket' : 'ticket-outline'} 
-              size={24} 
-              color={color} 
+            <Ionicons
+              name={focused ? 'ticket' : 'ticket-outline'}
+              size={24}
+              color={color}
             />
           ),
         }}
@@ -94,10 +103,10 @@ export default function ClientLayout() {
         options={{
           title: 'Historique',
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons 
-              name={focused ? 'time' : 'time-outline'} 
-              size={24} 
-              color={color} 
+            <Ionicons
+              name={focused ? 'time' : 'time-outline'}
+              size={24}
+              color={color}
             />
           ),
         }}
@@ -109,10 +118,10 @@ export default function ClientLayout() {
         options={{
           title: 'Profil',
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons 
-              name={focused ? 'person' : 'person-outline'} 
-              size={24} 
-              color={color} 
+            <Ionicons
+              name={focused ? 'person' : 'person-outline'}
+              size={24}
+              color={color}
             />
           ),
         }}
@@ -121,7 +130,7 @@ export default function ClientLayout() {
       {/* 🚫 PAGES MASQUÉES */}
       <Tabs.Screen name="notification" options={{ href: null }} />
       <Tabs.Screen name="index" options={{ href: null }} />
-      
+
       {/* Sous-dossiers masqués */}
       <Tabs.Screen name="voyages/detailCooperative" options={{ href: null }} />
       <Tabs.Screen name="voyages/detailVoyage" options={{ href: null }} />

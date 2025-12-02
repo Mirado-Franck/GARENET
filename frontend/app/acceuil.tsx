@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../contexts/AuthContext';
+import { useTheme } from '../contexts/ThemeContext';
 import {
   View,
   Text,
@@ -11,16 +12,17 @@ import {
   ActivityIndicator,
   RefreshControl,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import Button from '../components/ui/Button';
 import SearchBar from '../components/ui/SearchBar';
 import { voyageService, Voyage } from '../services/voyageService';
-import { theme } from '../constants/theme'; // 👈 IMPORT DU THÈME
 
 export default function Acceuil() {
+  const { theme } = useTheme(); // 👈 Hook dynamique
   const router = useRouter();
   const { isConnecte, setRedirectAfterLogin } = useAuth();
-  // États
+  
   const [voyages, setVoyages] = useState<Voyage[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -39,7 +41,6 @@ export default function Acceuil() {
       setIsSearchMode(false);
       const data = await voyageService.getAllVoyages();
       
-      // Filtrer les voyages recommandés depuis la ville actuelle
       const voyagesRecommandes = data.filter(v => 
         v.trajet.station_depart.toLowerCase() === villeActuelle.toLowerCase()
       );
@@ -87,7 +88,6 @@ export default function Acceuil() {
 
   const handleSeConnecter = () => {
     setRedirectAfterLogin(null);
-    console.log('🔑 Connexion manuelle depuis accueil → Redirection home');
     router.push('/se-connecter');
   };
 
@@ -118,22 +118,226 @@ export default function Acceuil() {
     });
   };
 
+  // Styles dynamiques
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: theme.colors.background.secondary,
+    },
+    header: {
+      alignItems: 'center',
+      paddingVertical: theme.spacing.xxxl,
+      paddingHorizontal: theme.spacing.xl,
+      backgroundColor: theme.colors.primary[500],
+      borderBottomLeftRadius: theme.borderRadius.xl,
+      borderBottomRightRadius: theme.borderRadius.xl,
+    },
+    logo: {
+      fontSize: 28,
+      fontWeight: theme.typography.weights.bold,
+      color: theme.colors.text.inverse,
+      marginBottom: theme.spacing.sm,
+    },
+    title: {
+      fontSize: theme.typography.sizes.h2,
+      fontWeight: theme.typography.weights.bold,
+      color: theme.colors.text.inverse,
+      textAlign: 'center',
+      marginBottom: theme.spacing.sm,
+    },
+    subtitle: {
+      fontSize: theme.typography.sizes.caption,
+      color: theme.colors.text.light,
+      textAlign: 'center',
+    },
+    section: {
+      padding: theme.spacing.xl,
+      marginTop: 0,
+    },
+    sectionTitle: {
+      fontSize: theme.typography.sizes.h3,
+      fontWeight: theme.typography.weights.bold,
+      color: theme.colors.primary[500],
+      marginBottom: theme.spacing.lg,
+    },
+    localisationCard: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: theme.colors.background.primary,
+      padding: theme.spacing.lg,
+      borderRadius: theme.borderRadius.md,
+      ...theme.shadows.sm,
+    },
+    localisationIcon: {
+      fontSize: 24,
+      marginRight: theme.spacing.md,
+    },
+    localisationText: {
+      flex: 1,
+    },
+    villeActuelle: {
+      fontSize: theme.typography.sizes.body,
+      fontWeight: theme.typography.weights.bold,
+      color: theme.colors.primary[500],
+      marginBottom: theme.spacing.xs,
+    },
+    localisationSubtitle: {
+      fontSize: theme.typography.sizes.small,
+      color: theme.colors.text.secondary,
+    },
+    searchSection: {
+      paddingHorizontal: theme.spacing.xl,
+      marginBottom: 0,
+      paddingTop: 0,
+    },
+    searchBar: {
+      marginVertical: 0,
+    },
+    voyagesSection: {
+      flex: 1,
+      padding: theme.spacing.xl,
+      marginTop: 0,
+    },
+    scrollContainer: {
+      flex: 1,
+    },
+    scrollContent: {
+      flexGrow: 1,
+      paddingBottom: theme.spacing.md,
+    },
+    loadingContainer: {
+      alignItems: 'center',
+      paddingVertical: theme.spacing.xxl,
+    },
+    loadingText: {
+      marginTop: theme.spacing.md,
+      fontSize: theme.typography.sizes.caption,
+      color: theme.colors.text.secondary,
+    },
+    errorContainer: {
+      alignItems: 'center',
+      paddingVertical: theme.spacing.xxl,
+    },
+    errorText: {
+      fontSize: theme.typography.sizes.caption,
+      color: theme.colors.semantic.error,
+      textAlign: 'center',
+      marginBottom: theme.spacing.md,
+    },
+    retryButton: {
+      backgroundColor: theme.colors.primary[500],
+      paddingHorizontal: theme.spacing.xl,
+      paddingVertical: theme.spacing.md,
+      borderRadius: theme.borderRadius.sm,
+    },
+    retryText: {
+      color: theme.colors.text.inverse,
+      fontSize: theme.typography.sizes.caption,
+      fontWeight: theme.typography.weights.semibold,
+    },
+    emptyContainer: {
+      alignItems: 'center',
+      paddingVertical: theme.spacing.xxl,
+    },
+    emptyText: {
+      fontSize: theme.typography.sizes.caption,
+      color: theme.colors.text.tertiary,
+      textAlign: 'center',
+    },
+    voyagesContainer: {
+      gap: theme.spacing.md,
+    },
+    voyageCard: {
+      flexDirection: 'row',
+      backgroundColor: theme.colors.background.primary,
+      borderRadius: theme.borderRadius.md,
+      padding: theme.spacing.md,
+      ...theme.shadows.sm,
+      marginBottom: theme.spacing.sm,
+    },
+    voyageImagePlaceholder: {
+      width: 50,
+      height: 50,
+      backgroundColor: theme.colors.neutral[100],
+      borderRadius: theme.borderRadius.sm,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginRight: theme.spacing.md,
+    },
+    placeholderText: {
+      fontSize: 20,
+    },
+    voyageInfo: {
+      flex: 1,
+      justifyContent: 'center',
+    },
+    voyageTitre: {
+      fontSize: theme.typography.sizes.caption,
+      fontWeight: theme.typography.weights.bold,
+      color: theme.colors.text.primary,
+      marginBottom: theme.spacing.xs,
+    },
+    voyageDetails: {
+      fontSize: theme.typography.sizes.small,
+      color: theme.colors.text.secondary,
+      marginBottom: theme.spacing.xs,
+    },
+    voyagePrix: {
+      fontSize: theme.typography.sizes.caption,
+      fontWeight: theme.typography.weights.bold,
+      color: theme.colors.primary[500],
+      marginBottom: theme.spacing.xs,
+    },
+    voyageCooperative: {
+      fontSize: theme.typography.sizes.small,
+      color: theme.colors.secondary[500],
+      fontWeight: theme.typography.weights.semibold,
+      marginBottom: 2,
+    },
+    voyageCapacite: {
+      fontSize: theme.typography.sizes.small,
+      color: theme.colors.text.tertiary,
+    },
+    actionsSection: {
+      padding: theme.spacing.xl,
+      gap: theme.spacing.md,
+      marginTop: 0,
+      paddingTop: theme.spacing.md,
+    },
+    actionButton: {
+      marginHorizontal: 0,
+    },
+    footer: {
+      alignItems: 'center',
+      paddingVertical: theme.spacing.lg,
+      paddingHorizontal: theme.spacing.xl,
+      borderTopWidth: 1,
+      borderTopColor: theme.colors.neutral[300],
+      marginTop: 0,
+    },
+    footerText: {
+      fontSize: theme.typography.sizes.small,
+      color: theme.colors.text.secondary,
+      fontStyle: 'italic',
+      textAlign: 'center',
+    },
+  });
+
   return (
     <SafeAreaView style={styles.container}>
-      {/* Section En-tête - FIXE */}
       <View style={styles.header}>
-        <Text style={styles.logo}>🌱 GarNET</Text>
+        <Ionicons name="leaf" size={28} color="#fff" />
+        <Text style={styles.logo}>GarNET</Text>
         <Text style={styles.title}>Bienvenue sur GarNET</Text>
         <Text style={styles.subtitle}>
           Réservez vos voyages en toute simplicité
         </Text>
       </View>
 
-      {/* Section Localisation - FIXE */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Votre localisation</Text>
         <View style={styles.localisationCard}>
-          <Text style={styles.localisationIcon}>📍</Text>
+          <Ionicons name="location" size={24} color={theme.colors.primary[500]} style={{ marginRight: theme.spacing.md }} />
           <View style={styles.localisationText}>
             <Text style={styles.villeActuelle}>{villeActuelle}</Text>
             <Text style={styles.localisationSubtitle}>
@@ -143,7 +347,6 @@ export default function Acceuil() {
         </View>
       </View>
 
-      {/* Barre de recherche - FIXE */}
       <View style={styles.searchSection}>
         <SearchBar
           placeholder="Rechercher par ville (départ ou arrivée)..."
@@ -153,7 +356,6 @@ export default function Acceuil() {
         />
       </View>
 
-      {/* Section Voyages - SCROLLABLE */}
       <View style={styles.voyagesSection}>
         <Text style={styles.sectionTitle}>
           {isSearchMode 
@@ -166,7 +368,11 @@ export default function Acceuil() {
           style={styles.scrollContainer}
           contentContainerStyle={styles.scrollContent}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+            <RefreshControl 
+              refreshing={refreshing} 
+              onRefresh={onRefresh}
+              colors={[theme.colors.primary[500]]}
+            />
           }
           showsVerticalScrollIndicator={true}
         >
@@ -179,6 +385,7 @@ export default function Acceuil() {
             </View>
           ) : error ? (
             <View style={styles.errorContainer}>
+              <Ionicons name="alert-circle-outline" size={48} color={theme.colors.semantic.error} />
               <Text style={styles.errorText}>{error}</Text>
               <TouchableOpacity style={styles.retryButton} onPress={loadVoyages}>
                 <Text style={styles.retryText}>Réessayer</Text>
@@ -186,6 +393,7 @@ export default function Acceuil() {
             </View>
           ) : voyages.length === 0 ? (
             <View style={styles.emptyContainer}>
+              <Ionicons name="bus-outline" size={48} color={theme.colors.neutral[300]} />
               <Text style={styles.emptyText}>
                 {isSearchMode 
                   ? 'Aucun voyage trouvé pour cette recherche'
@@ -202,7 +410,7 @@ export default function Acceuil() {
                   onPress={() => handleVoyagePress(voyage.id)}
                 >
                   <View style={styles.voyageImagePlaceholder}>
-                    <Text style={styles.placeholderText}>🚌</Text>
+                    <Ionicons name="bus" size={24} color={theme.colors.primary[500]} />
                   </View>
                   <View style={styles.voyageInfo}>
                     <Text style={styles.voyageTitre}>
@@ -226,7 +434,6 @@ export default function Acceuil() {
         </ScrollView>
       </View>
 
-      {/* Section Boutons d'action - FIXE */}
       <View style={styles.actionsSection}>
         <Button
           title="Se connecter"
@@ -242,214 +449,9 @@ export default function Acceuil() {
         />
       </View>
 
-      {/* Footer - FIXE */}
       <View style={styles.footer}>
         <Text style={styles.footerText}>Explorez le monde avec nous</Text>
       </View>
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background.secondary,
-  },
-  header: {
-    alignItems: 'center',
-    paddingVertical: theme.spacing.xxxl,
-    paddingHorizontal: theme.spacing.xl,
-    backgroundColor: theme.colors.primary[500],
-    borderBottomLeftRadius: theme.borderRadius.xl,
-    borderBottomRightRadius: theme.borderRadius.xl,
-  },
-  logo: {
-    fontSize: 28,
-    fontWeight: theme.typography.weights.bold,
-    color: theme.colors.text.inverse,
-    marginBottom: theme.spacing.sm,
-  },
-  title: {
-    fontSize: theme.typography.sizes.h2,
-    fontWeight: theme.typography.weights.bold,
-    color: theme.colors.text.inverse,
-    textAlign: 'center',
-    marginBottom: theme.spacing.sm,
-  },
-  subtitle: {
-    fontSize: theme.typography.sizes.caption,
-    color: theme.colors.text.light,
-    textAlign: 'center',
-  },
-  section: {
-    padding: theme.spacing.xl,
-    marginTop: 0,
-  },
-  sectionTitle: {
-    fontSize: theme.typography.sizes.h3,
-    fontWeight: theme.typography.weights.bold,
-    color: theme.colors.primary[500],
-    marginBottom: theme.spacing.lg,
-  },
-  localisationCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: theme.colors.background.primary,
-    padding: theme.spacing.lg,
-    borderRadius: theme.borderRadius.md,
-    ...theme.shadows.sm,
-  },
-  localisationIcon: {
-    fontSize: 24,
-    marginRight: theme.spacing.md,
-  },
-  localisationText: {
-    flex: 1,
-  },
-  villeActuelle: {
-    fontSize: theme.typography.sizes.body,
-    fontWeight: theme.typography.weights.bold,
-    color: theme.colors.primary[500],
-    marginBottom: theme.spacing.xs,
-  },
-  localisationSubtitle: {
-    fontSize: theme.typography.sizes.small,
-    color: theme.colors.text.secondary,
-  },
-  searchSection: {
-    paddingHorizontal: theme.spacing.xl,
-    marginBottom: 0,
-    paddingTop: 0,
-  },
-  searchBar: {
-    marginVertical: 0,
-  },
-  voyagesSection: {
-    flex: 1,
-    padding: theme.spacing.xl,
-    marginTop: 0,
-  },
-  scrollContainer: {
-    flex: 1,
-  },
-  scrollContent: {
-    flexGrow: 1,
-    paddingBottom: theme.spacing.md,
-  },
-  loadingContainer: {
-    alignItems: 'center',
-    paddingVertical: theme.spacing.xxl,
-  },
-  loadingText: {
-    marginTop: theme.spacing.md,
-    fontSize: theme.typography.sizes.caption,
-    color: theme.colors.text.secondary,
-  },
-  errorContainer: {
-    alignItems: 'center',
-    paddingVertical: theme.spacing.xxl,
-  },
-  errorText: {
-    fontSize: theme.typography.sizes.caption,
-    color: theme.colors.semantic.error,
-    textAlign: 'center',
-    marginBottom: theme.spacing.md,
-  },
-  retryButton: {
-    backgroundColor: theme.colors.primary[500],
-    paddingHorizontal: theme.spacing.xl,
-    paddingVertical: theme.spacing.md,
-    borderRadius: theme.borderRadius.sm,
-  },
-  retryText: {
-    color: theme.colors.text.inverse,
-    fontSize: theme.typography.sizes.caption,
-    fontWeight: theme.typography.weights.semibold,
-  },
-  emptyContainer: {
-    alignItems: 'center',
-    paddingVertical: theme.spacing.xxl,
-  },
-  emptyText: {
-    fontSize: theme.typography.sizes.caption,
-    color: theme.colors.text.tertiary,
-    textAlign: 'center',
-  },
-  voyagesContainer: {
-    gap: theme.spacing.md,
-  },
-  voyageCard: {
-    flexDirection: 'row',
-    backgroundColor: theme.colors.background.primary,
-    borderRadius: theme.borderRadius.md,
-    padding: theme.spacing.md,
-    ...theme.shadows.sm,
-    marginBottom: theme.spacing.sm,
-  },
-  voyageImagePlaceholder: {
-    width: 50,
-    height: 50,
-    backgroundColor: theme.colors.neutral[100],
-    borderRadius: theme.borderRadius.sm,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: theme.spacing.md,
-  },
-  placeholderText: {
-    fontSize: 20,
-  },
-  voyageInfo: {
-    flex: 1,
-    justifyContent: 'center',
-  },
-  voyageTitre: {
-    fontSize: theme.typography.sizes.caption,
-    fontWeight: theme.typography.weights.bold,
-    color: theme.colors.text.primary,
-    marginBottom: theme.spacing.xs,
-  },
-  voyageDetails: {
-    fontSize: theme.typography.sizes.small,
-    color: theme.colors.text.secondary,
-    marginBottom: theme.spacing.xs,
-  },
-  voyagePrix: {
-    fontSize: theme.typography.sizes.caption,
-    fontWeight: theme.typography.weights.bold,
-    color: theme.colors.primary[500],
-    marginBottom: theme.spacing.xs,
-  },
-  voyageCooperative: {
-    fontSize: theme.typography.sizes.small,
-    color: theme.colors.secondary[500],
-    fontWeight: theme.typography.weights.semibold,
-    marginBottom: 2,
-  },
-  voyageCapacite: {
-    fontSize: theme.typography.sizes.small,
-    color: theme.colors.text.tertiary,
-  },
-  actionsSection: {
-    padding: theme.spacing.xl,
-    gap: theme.spacing.md,
-    marginTop: 0,
-    paddingTop: theme.spacing.md,
-  },
-  actionButton: {
-    marginHorizontal: 0,
-  },
-  footer: {
-    alignItems: 'center',
-    paddingVertical: theme.spacing.lg,
-    paddingHorizontal: theme.spacing.xl,
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.neutral[300],
-    marginTop: 0,
-  },
-  footerText: {
-    fontSize: theme.typography.sizes.small,
-    color: theme.colors.text.secondary,
-    fontStyle: 'italic',
-    textAlign: 'center',
-  },
-});

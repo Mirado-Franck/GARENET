@@ -12,12 +12,13 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../../contexts/AuthContext';
+import { useTheme } from '../../../contexts/ThemeContext';
 import { router } from 'expo-router';
-import { theme } from '../../../constants/theme';
 import { utilisateurService } from '../../../services/utilisateurService';
 
 export default function Profile() {
   const { utilisateur, logout, isLoading, refreshUtilisateur } = useAuth();
+  const { theme } = useTheme(); // 👈 Utilisation du thème dynamique
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [currentUser, setCurrentUser] = useState(utilisateur);
@@ -40,19 +41,23 @@ export default function Profile() {
 
   if (isLoading) {
     return (
-      <View style={styles.loadingContainer}>
-        <Text style={styles.loadingText}>Chargement du profil...</Text>
+      <View style={[styles.loadingContainer, { backgroundColor: theme.colors.background.secondary }]}>
+        <Text style={[styles.loadingText, { color: theme.colors.text.secondary }]}>
+          Chargement du profil...
+        </Text>
       </View>
     );
   }
 
   if (!currentUser) {
     return (
-      <View style={styles.errorContainer}>
+      <View style={[styles.errorContainer, { backgroundColor: theme.colors.background.secondary }]}>
         <Ionicons name="person-circle-outline" size={80} color={theme.colors.neutral[300]} />
-        <Text style={styles.errorText}>Vous n'êtes pas connecté</Text>
+        <Text style={[styles.errorText, { color: theme.colors.text.secondary }]}>
+          Vous n'êtes pas connecté
+        </Text>
         <TouchableOpacity
-          style={styles.loginButton}
+          style={[styles.loginButton, { backgroundColor: theme.colors.primary[500] }]}
           onPress={() => router.push('/se-connecter')}
         >
           <Text style={styles.loginButtonText}>Se connecter</Text>
@@ -84,18 +89,18 @@ export default function Profile() {
   return (
     <>
       <ScrollView
-        style={styles.container}
+        style={[styles.container, { backgroundColor: theme.colors.background.secondary }]}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[theme.colors.primary[500]]} />
         }
       >
         {/* Header avec photo */}
-        <View style={styles.header}>
+        <View style={[styles.header, { backgroundColor: theme.colors.primary[500] }]}>
           <View style={styles.photoContainer}>
             {photoUrl ? (
               <Image source={{ uri: photoUrl }} style={styles.photo} />
             ) : (
-              <View style={styles.photoPlaceholder}>
+              <View style={[styles.photoPlaceholder, { backgroundColor: theme.colors.background.primary }]}>
                 <Ionicons name="person" size={60} color={theme.colors.neutral[400]} />
               </View>
             )}
@@ -113,13 +118,15 @@ export default function Profile() {
 
         {/* Informations rapides */}
         <View style={styles.quickInfoSection}>
-          <View style={styles.quickInfoCard}>
+          <View style={[styles.quickInfoCard, { backgroundColor: theme.colors.background.primary }]}>
             <Ionicons name="call" size={20} color={theme.colors.primary[500]} />
-            <Text style={styles.quickInfoText}>{currentUser.telephone}</Text>
+            <Text style={[styles.quickInfoText, { color: theme.colors.text.secondary }]}>
+              {currentUser.telephone}
+            </Text>
           </View>
-          <View style={styles.quickInfoCard}>
+          <View style={[styles.quickInfoCard, { backgroundColor: theme.colors.background.primary }]}>
             <Ionicons name="calendar" size={20} color={theme.colors.primary[500]} />
-            <Text style={styles.quickInfoText}>
+            <Text style={[styles.quickInfoText, { color: theme.colors.text.secondary }]}>
               Membre depuis {new Date(currentUser.date_creation_compte).getFullYear()}
             </Text>
           </View>
@@ -127,25 +134,29 @@ export default function Profile() {
 
         {/* Menu principal */}
         <View style={styles.menuSection}>
-          <Text style={styles.sectionTitle}>Mon compte</Text>
+          <Text style={[styles.sectionTitle, { color: theme.colors.text.secondary }]}>
+            Mon compte
+          </Text>
 
           {/* Modifier le profil */}
           <TouchableOpacity
-            style={styles.menuItem}
+            style={[styles.menuItem, { backgroundColor: theme.colors.background.primary }]}
             onPress={() => router.push('/(client)/profil/modifierProfile')}
           >
             <View style={styles.menuItemLeft}>
               <View style={[styles.iconContainer, { backgroundColor: theme.colors.primary[50] }]}>
                 <Ionicons name="create-outline" size={22} color={theme.colors.primary[500]} />
               </View>
-              <Text style={styles.menuItemText}>Modifier le profil</Text>
+              <Text style={[styles.menuItemText, { color: theme.colors.text.primary }]}>
+                Modifier le profil
+              </Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color={theme.colors.neutral[400]} />
           </TouchableOpacity>
 
-          {/* 👇 NOUVEAU : Bouton Thème */}
+          {/* Thème */}
           <TouchableOpacity
-            style={styles.menuItem}
+            style={[styles.menuItem, { backgroundColor: theme.colors.background.primary }]}
             onPress={() => router.push('/(client)/profil/theme-selector')}
           >
             <View style={styles.menuItemLeft}>
@@ -153,8 +164,12 @@ export default function Profile() {
                 <Ionicons name="color-palette-outline" size={22} color="#8B5CF6" />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={styles.menuItemText}>Thème de l'application</Text>
-                <Text style={styles.menuItemSubtext}>Personnalisez votre interface</Text>
+                <Text style={[styles.menuItemText, { color: theme.colors.text.primary }]}>
+                  Thème de l'application
+                </Text>
+                <Text style={[styles.menuItemSubtext, { color: theme.colors.text.tertiary }]}>
+                  Personnalisez votre interface
+                </Text>
               </View>
             </View>
             <View style={styles.themePreview}>
@@ -165,42 +180,48 @@ export default function Profile() {
 
           {/* À propos de l'app */}
           <TouchableOpacity
-            style={styles.menuItem}
+            style={[styles.menuItem, { backgroundColor: theme.colors.background.primary }]}
             onPress={() => router.push('/(client)/profil/about')}
           >
             <View style={styles.menuItemLeft}>
               <View style={[styles.iconContainer, { backgroundColor: theme.colors.semantic.info + '20' }]}>
                 <Ionicons name="information-circle-outline" size={22} color={theme.colors.semantic.info} />
               </View>
-              <Text style={styles.menuItemText}>À propos de l'app</Text>
+              <Text style={[styles.menuItemText, { color: theme.colors.text.primary }]}>
+                À propos de l'app
+              </Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color={theme.colors.neutral[400]} />
           </TouchableOpacity>
 
           {/* Politique et Confidentialité */}
           <TouchableOpacity
-            style={styles.menuItem}
+            style={[styles.menuItem, { backgroundColor: theme.colors.background.primary }]}
             onPress={() => router.push('/(client)/profil/privacy')}
           >
             <View style={styles.menuItemLeft}>
               <View style={[styles.iconContainer, { backgroundColor: theme.colors.neutral[100] }]}>
                 <Ionicons name="shield-checkmark-outline" size={22} color={theme.colors.neutral[600]} />
               </View>
-              <Text style={styles.menuItemText}>Politique et Confidentialité</Text>
+              <Text style={[styles.menuItemText, { color: theme.colors.text.primary }]}>
+                Politique et Confidentialité
+              </Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color={theme.colors.neutral[400]} />
           </TouchableOpacity>
 
           {/* Aide & Contact */}
           <TouchableOpacity
-            style={styles.menuItem}
+            style={[styles.menuItem, { backgroundColor: theme.colors.background.primary }]}
             onPress={() => router.push('/(client)/profil/help')}
           >
             <View style={styles.menuItemLeft}>
               <View style={[styles.iconContainer, { backgroundColor: theme.colors.secondary[50] }]}>
                 <Ionicons name="help-circle-outline" size={22} color={theme.colors.secondary[500]} />
               </View>
-              <Text style={styles.menuItemText}>Aide & Contact</Text>
+              <Text style={[styles.menuItemText, { color: theme.colors.text.primary }]}>
+                Aide & Contact
+              </Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color={theme.colors.neutral[400]} />
           </TouchableOpacity>
@@ -209,14 +230,23 @@ export default function Profile() {
         {/* Déconnexion */}
         <View style={styles.menuSection}>
           <TouchableOpacity
-            style={[styles.menuItem, styles.logoutItem]}
+            style={[
+              styles.menuItem,
+              styles.logoutItem,
+              { 
+                backgroundColor: theme.colors.background.primary,
+                borderColor: theme.colors.semantic.error + '40'
+              }
+            ]}
             onPress={handleLogoutPress}
           >
             <View style={styles.menuItemLeft}>
               <View style={[styles.iconContainer, { backgroundColor: theme.colors.semantic.error + '20' }]}>
                 <Ionicons name="log-out-outline" size={22} color={theme.colors.semantic.error} />
               </View>
-              <Text style={[styles.menuItemText, styles.logoutText]}>Se déconnecter</Text>
+              <Text style={[styles.menuItemText, { color: theme.colors.semantic.error }]}>
+                Se déconnecter
+              </Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color={theme.colors.semantic.error} />
           </TouchableOpacity>
@@ -224,7 +254,9 @@ export default function Profile() {
 
         {/* Version */}
         <View style={styles.versionContainer}>
-          <Text style={styles.versionText}>GARENET v1.0.0</Text>
+          <Text style={[styles.versionText, { color: theme.colors.text.tertiary }]}>
+            GARENET v1.0.0
+          </Text>
         </View>
 
         <View style={{ height: 40 }} />
@@ -238,31 +270,42 @@ export default function Profile() {
         onRequestClose={cancelLogout}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContainer}>
-            <View style={styles.modalHeader}>
-              <View style={styles.modalIconContainer}>
+          <View style={[styles.modalContainer, { backgroundColor: theme.colors.background.primary }]}>
+            <View style={[styles.modalHeader, { borderBottomColor: theme.colors.neutral[200] }]}>
+              <View style={[styles.modalIconContainer, { backgroundColor: theme.colors.semantic.error + '20' }]}>
                 <Ionicons name="log-out-outline" size={40} color={theme.colors.semantic.error} />
               </View>
-              <Text style={styles.modalTitle}>Déconnexion</Text>
+              <Text style={[styles.modalTitle, { color: theme.colors.text.primary }]}>
+                Déconnexion
+              </Text>
             </View>
 
             <View style={styles.modalBody}>
-              <Text style={styles.modalMessage}>
+              <Text style={[styles.modalMessage, { color: theme.colors.text.secondary }]}>
                 Voulez-vous vraiment vous déconnecter de votre compte ?
               </Text>
             </View>
 
             <View style={styles.modalFooter}>
               <TouchableOpacity
-                style={[styles.modalButton, styles.cancelButton]}
+                style={[
+                  styles.modalButton,
+                  styles.cancelButton,
+                  { 
+                    backgroundColor: theme.colors.neutral[100],
+                    borderColor: theme.colors.neutral[300]
+                  }
+                ]}
                 onPress={cancelLogout}
                 activeOpacity={0.7}
               >
-                <Text style={styles.cancelButtonText}>Annuler</Text>
+                <Text style={[styles.cancelButtonText, { color: theme.colors.text.secondary }]}>
+                  Annuler
+                </Text>
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={[styles.modalButton, styles.confirmButton]}
+                style={[styles.modalButton, { backgroundColor: theme.colors.semantic.error }]}
                 onPress={confirmLogout}
                 activeOpacity={0.7}
               >
@@ -279,50 +322,43 @@ export default function Profile() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background.secondary,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: theme.colors.background.secondary,
   },
   loadingText: {
-    marginTop: theme.spacing.md,
-    fontSize: theme.typography.sizes.body,
-    color: theme.colors.text.secondary,
+    marginTop: 12,
+    fontSize: 16,
   },
   errorContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: theme.spacing.xl,
-    backgroundColor: theme.colors.background.secondary,
+    padding: 20,
   },
   errorText: {
-    fontSize: theme.typography.sizes.h3,
-    color: theme.colors.text.secondary,
-    marginVertical: theme.spacing.lg,
+    fontSize: 18,
+    marginVertical: 15,
     textAlign: 'center',
   },
   loginButton: {
-    backgroundColor: theme.colors.primary[500],
-    paddingHorizontal: theme.spacing.xl,
-    paddingVertical: theme.spacing.md,
-    borderRadius: theme.borderRadius.md,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 12,
   },
   loginButtonText: {
-    color: theme.colors.text.inverse,
-    fontSize: theme.typography.sizes.body,
-    fontWeight: theme.typography.weights.bold,
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
   header: {
-    backgroundColor: theme.colors.primary[500],
     paddingTop: 60,
     paddingBottom: 40,
     alignItems: 'center',
-    borderBottomLeftRadius: theme.borderRadius.xl,
-    borderBottomRightRadius: theme.borderRadius.xl,
+    borderBottomLeftRadius: 25,
+    borderBottomRightRadius: 25,
   },
   photoContainer: {
     width: 120,
@@ -330,9 +366,8 @@ const styles = StyleSheet.create({
     borderRadius: 60,
     overflow: 'hidden',
     borderWidth: 4,
-    borderColor: theme.colors.background.primary,
-    marginBottom: theme.spacing.md,
-    ...theme.shadows.md,
+    borderColor: '#fff',
+    marginBottom: 12,
   },
   photo: {
     width: '100%',
@@ -342,203 +377,194 @@ const styles = StyleSheet.create({
   photoPlaceholder: {
     width: '100%',
     height: '100%',
-    backgroundColor: theme.colors.background.primary,
     justifyContent: 'center',
     alignItems: 'center',
   },
   userName: {
-    fontSize: theme.typography.sizes.h1,
-    fontWeight: theme.typography.weights.bold,
-    color: theme.colors.text.inverse,
-    marginBottom: theme.spacing.xs,
+    fontSize: 26,
+    fontWeight: 'bold',
+    color: '#fff',
+    marginBottom: 4,
   },
   userEmail: {
-    fontSize: theme.typography.sizes.body,
-    color: theme.colors.text.inverse,
+    fontSize: 16,
+    color: '#fff',
     opacity: 0.9,
-    marginBottom: theme.spacing.md,
+    marginBottom: 12,
   },
   roleBadge: {
     backgroundColor: 'rgba(255,255,255,0.2)',
-    paddingHorizontal: theme.spacing.lg,
-    paddingVertical: theme.spacing.xs,
-    borderRadius: theme.borderRadius.full,
+    paddingHorizontal: 15,
+    paddingVertical: 4,
+    borderRadius: 50,
   },
   roleText: {
-    fontSize: theme.typography.sizes.caption,
-    fontWeight: theme.typography.weights.semibold,
-    color: theme.colors.text.inverse,
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#fff',
     textTransform: 'uppercase',
   },
   quickInfoSection: {
     flexDirection: 'row',
-    paddingHorizontal: theme.spacing.lg,
+    paddingHorizontal: 15,
     marginTop: -20,
-    gap: theme.spacing.md,
+    gap: 12,
   },
   quickInfoCard: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: theme.spacing.sm,
-    backgroundColor: theme.colors.background.primary,
-    padding: theme.spacing.md,
-    borderRadius: theme.borderRadius.md,
-    ...theme.shadows.sm,
+    gap: 8,
+    padding: 12,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   quickInfoText: {
     flex: 1,
-    fontSize: theme.typography.sizes.small,
-    color: theme.colors.text.secondary,
-    fontWeight: theme.typography.weights.medium,
+    fontSize: 12,
+    fontWeight: '500',
   },
   menuSection: {
-    marginTop: theme.spacing.xl,
-    paddingHorizontal: theme.spacing.lg,
+    marginTop: 20,
+    paddingHorizontal: 15,
   },
   sectionTitle: {
-    fontSize: theme.typography.sizes.caption,
-    fontWeight: theme.typography.weights.bold,
-    color: theme.colors.text.secondary,
+    fontSize: 14,
+    fontWeight: 'bold',
     textTransform: 'uppercase',
-    marginBottom: theme.spacing.md,
-    marginLeft: theme.spacing.xs,
+    marginBottom: 12,
+    marginLeft: 4,
   },
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: theme.colors.background.primary,
-    padding: theme.spacing.lg,
-    borderRadius: theme.borderRadius.md,
-    marginBottom: theme.spacing.sm,
-    ...theme.shadows.sm,
+    padding: 15,
+    borderRadius: 12,
+    marginBottom: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   menuItemLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: theme.spacing.md,
+    gap: 12,
     flex: 1,
   },
   iconContainer: {
     width: 44,
     height: 44,
-    borderRadius: theme.borderRadius.md,
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
   },
   menuItemText: {
-    fontSize: theme.typography.sizes.body,
-    fontWeight: theme.typography.weights.medium,
-    color: theme.colors.text.primary,
+    fontSize: 16,
+    fontWeight: '500',
     flex: 1,
   },
-  // 👇 NOUVEAUX STYLES pour le bouton Thème
   menuItemSubtext: {
-    fontSize: theme.typography.sizes.small,
-    color: theme.colors.text.tertiary,
+    fontSize: 12,
     marginTop: 2,
   },
   themePreview: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: theme.spacing.sm,
+    gap: 8,
   },
   themeColorDot: {
     width: 24,
     height: 24,
     borderRadius: 12,
     borderWidth: 2,
-    borderColor: theme.colors.background.primary,
-    ...theme.shadows.sm,
+    borderColor: '#fff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   logoutItem: {
     borderWidth: 1,
-    borderColor: theme.colors.semantic.error + '40',
-  },
-  logoutText: {
-    color: theme.colors.semantic.error,
   },
   versionContainer: {
     alignItems: 'center',
-    paddingVertical: theme.spacing.xl,
+    paddingVertical: 20,
   },
   versionText: {
-    fontSize: theme.typography.sizes.small,
-    color: theme.colors.text.tertiary,
+    fontSize: 12,
   },
-  // Styles Modal
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: theme.spacing.xl,
+    padding: 20,
   },
   modalContainer: {
-    backgroundColor: theme.colors.background.primary,
-    borderRadius: theme.borderRadius.lg,
+    borderRadius: 22,
     width: '100%',
     maxWidth: 400,
-    ...theme.shadows.md,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 5,
   },
   modalHeader: {
     alignItems: 'center',
-    padding: theme.spacing.xl,
+    padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.neutral[200],
   },
   modalIconContainer: {
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: theme.colors.semantic.error + '20',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: theme.spacing.md,
+    marginBottom: 12,
   },
   modalTitle: {
-    fontSize: theme.typography.sizes.h2,
-    fontWeight: theme.typography.weights.bold,
-    color: theme.colors.text.primary,
+    fontSize: 20,
+    fontWeight: 'bold',
   },
   modalBody: {
-    padding: theme.spacing.xl,
+    padding: 20,
   },
   modalMessage: {
-    fontSize: theme.typography.sizes.body,
-    color: theme.colors.text.secondary,
+    fontSize: 16,
     textAlign: 'center',
     lineHeight: 24,
   },
   modalFooter: {
     flexDirection: 'row',
-    padding: theme.spacing.lg,
-    gap: theme.spacing.md,
+    padding: 15,
+    gap: 12,
   },
   modalButton: {
     flex: 1,
-    paddingVertical: theme.spacing.md,
-    borderRadius: theme.borderRadius.md,
+    paddingVertical: 12,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },
   cancelButton: {
-    backgroundColor: theme.colors.neutral[100],
     borderWidth: 1,
-    borderColor: theme.colors.neutral[300],
-  },
-  confirmButton: {
-    backgroundColor: theme.colors.semantic.error,
   },
   cancelButtonText: {
-    fontSize: theme.typography.sizes.body,
-    fontWeight: theme.typography.weights.semibold,
-    color: theme.colors.text.secondary,
+    fontSize: 16,
+    fontWeight: '600',
   },
   confirmButtonText: {
-    fontSize: theme.typography.sizes.body,
-    fontWeight: theme.typography.weights.semibold,
-    color: theme.colors.text.inverse,
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#fff',
   },
 });

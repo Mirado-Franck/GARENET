@@ -14,10 +14,9 @@ import {
   Pressable,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { theme } from '../../constants/theme';
+import { useTheme } from '../../contexts/ThemeContext';
 import { avisService } from '../../services/avisService';
-import { Toast} from './Toast';
-
+import { Toast } from './Toast';
 
 interface AvisModalProps {
   visible: boolean;
@@ -34,12 +33,12 @@ export default function AvisModal({
   trajetInfo,
   onSuccess,
 }: AvisModalProps) {
+  const { theme } = useTheme(); // 👈 Hook dynamique
   const [note, setNote] = useState(0);
   const [commentaire, setCommentaire] = useState('');
   const [loading, setLoading] = useState(false);
   const [hoveredStar, setHoveredStar] = useState(0);
   
-  // ✅ Toast state simplifié
   const [toastConfig, setToastConfig] = useState<{
     message: string;
     type: 'success' | 'error' | 'info' | 'warning';
@@ -51,7 +50,6 @@ export default function AvisModal({
   };
 
   const handleSubmit = async () => {
-    // Validation
     if (note === 0) {
       showToast('Veuillez sélectionner une note', 'error');
       return;
@@ -63,7 +61,6 @@ export default function AvisModal({
       
       showToast('Merci pour votre avis ! 🎉', 'success');
       
-      // Réinitialiser le formulaire
       setTimeout(() => {
         setNote(0);
         setCommentaire('');
@@ -81,7 +78,7 @@ export default function AvisModal({
   const handleClose = () => {
     setNote(0);
     setCommentaire('');
-    setToastConfig(null); // ✅ Nettoyer le toast
+    setToastConfig(null);
     onClose();
   };
 
@@ -110,6 +107,133 @@ export default function AvisModal({
     );
   };
 
+  // 👇 Styles déplacés dans le composant
+  const styles = StyleSheet.create({
+    overlay: {
+      flex: 1,
+      justifyContent: 'flex-end',
+    },
+    backdrop: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    },
+    modalContainer: {
+      backgroundColor: theme.colors.background.primary,
+      borderTopLeftRadius: theme.borderRadius.xl,
+      borderTopRightRadius: theme.borderRadius.xl,
+      paddingHorizontal: theme.spacing.xl,
+      paddingTop: theme.spacing.xl,
+      paddingBottom: Platform.OS === 'ios' ? 40 : theme.spacing.xl,
+      maxHeight: '90%',
+      ...theme.shadows.md,
+    },
+    header: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: theme.spacing.lg,
+    },
+    title: {
+      fontSize: theme.typography.sizes.h2,
+      fontWeight: theme.typography.weights.bold,
+      color: theme.colors.text.primary,
+    },
+    closeButton: {
+      padding: theme.spacing.xs,
+    },
+    trajetBadge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: theme.colors.primary[50],
+      paddingVertical: theme.spacing.sm,
+      paddingHorizontal: theme.spacing.md,
+      borderRadius: theme.borderRadius.md,
+      marginBottom: theme.spacing.lg,
+      gap: theme.spacing.sm,
+    },
+    trajetText: {
+      fontSize: theme.typography.sizes.caption,
+      color: theme.colors.primary[700],
+      fontWeight: theme.typography.weights.medium,
+    },
+    section: {
+      marginBottom: theme.spacing.xl,
+    },
+    label: {
+      fontSize: theme.typography.sizes.body,
+      fontWeight: theme.typography.weights.semibold,
+      color: theme.colors.text.primary,
+      marginBottom: theme.spacing.md,
+    },
+    starsContainer: {
+      flexDirection: 'row',
+      justifyContent: 'center',
+      gap: theme.spacing.sm,
+      marginVertical: theme.spacing.md,
+    },
+    starButton: {
+      padding: theme.spacing.xs,
+    },
+    noteText: {
+      textAlign: 'center',
+      fontSize: theme.typography.sizes.body,
+      color: theme.colors.secondary[600],
+      fontWeight: theme.typography.weights.medium,
+      marginTop: theme.spacing.sm,
+    },
+    textarea: {
+      borderWidth: 1,
+      borderColor: theme.colors.neutral[200],
+      borderRadius: theme.borderRadius.md,
+      padding: theme.spacing.md,
+      fontSize: theme.typography.sizes.body,
+      color: theme.colors.text.primary,
+      minHeight: 120,
+      backgroundColor: theme.colors.background.secondary,
+    },
+    charCount: {
+      textAlign: 'right',
+      fontSize: theme.typography.sizes.small,
+      color: theme.colors.neutral[400],
+      marginTop: theme.spacing.xs,
+    },
+    actions: {
+      flexDirection: 'row',
+      gap: theme.spacing.md,
+      marginTop: theme.spacing.lg,
+    },
+    button: {
+      flex: 1,
+      paddingVertical: theme.spacing.lg,
+      borderRadius: theme.borderRadius.md,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    buttonCancel: {
+      backgroundColor: theme.colors.background.secondary,
+      borderWidth: 1,
+      borderColor: theme.colors.neutral[300],
+    },
+    buttonCancelText: {
+      fontSize: theme.typography.sizes.body,
+      fontWeight: theme.typography.weights.semibold,
+      color: theme.colors.neutral[600],
+    },
+    buttonSubmit: {
+      backgroundColor: theme.colors.primary[500],
+      ...theme.shadows.sm,
+    },
+    buttonSubmitText: {
+      fontSize: theme.typography.sizes.body,
+      fontWeight: theme.typography.weights.bold,
+      color: theme.colors.text.inverse,
+    },
+    buttonDisabled: {
+      backgroundColor: theme.colors.neutral[300],
+      opacity: 0.6,
+    },
+  });
+
   return (
     <>
       <Modal
@@ -125,7 +249,6 @@ export default function AvisModal({
           <Pressable style={styles.backdrop} onPress={handleClose} />
           
           <View style={styles.modalContainer}>
-            {/* Header */}
             <View style={styles.header}>
               <Text style={styles.title}>Donnez votre avis</Text>
               <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
@@ -134,7 +257,6 @@ export default function AvisModal({
             </View>
 
             <ScrollView showsVerticalScrollIndicator={false}>
-              {/* Trajet info */}
               {trajetInfo && (
                 <View style={styles.trajetBadge}>
                   <Ionicons name="bus" size={16} color={theme.colors.primary[500]} />
@@ -142,7 +264,6 @@ export default function AvisModal({
                 </View>
               )}
 
-              {/* Étoiles */}
               <View style={styles.section}>
                 <Text style={styles.label}>Note *</Text>
                 {renderStars()}
@@ -157,7 +278,6 @@ export default function AvisModal({
                 )}
               </View>
 
-              {/* Commentaire */}
               <View style={styles.section}>
                 <Text style={styles.label}>Votre commentaire (optionnel)</Text>
                 <TextInput
@@ -175,7 +295,6 @@ export default function AvisModal({
                 <Text style={styles.charCount}>{commentaire.length}/500</Text>
               </View>
 
-              {/* Boutons */}
               <View style={styles.actions}>
                 <TouchableOpacity
                   style={[styles.button, styles.buttonCancel]}
@@ -204,7 +323,6 @@ export default function AvisModal({
             </ScrollView>
           </View>
 
-          {/* ✅ Toast affiché conditionnellement */}
           {toastConfig && (
             <Toast
               message={toastConfig.message}
@@ -217,129 +335,3 @@ export default function AvisModal({
     </>
   );
 }
-
-const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    justifyContent: 'flex-end',
-  },
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-  },
-  modalContainer: {
-    backgroundColor: theme.colors.background.primary,
-    borderTopLeftRadius: theme.borderRadius.xl,
-    borderTopRightRadius: theme.borderRadius.xl,
-    paddingHorizontal: theme.spacing.xl,
-    paddingTop: theme.spacing.xl,
-    paddingBottom: Platform.OS === 'ios' ? 40 : theme.spacing.xl,
-    maxHeight: '90%',
-    ...theme.shadows.md,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: theme.spacing.lg,
-  },
-  title: {
-    fontSize: theme.typography.sizes.h2,
-    fontWeight: theme.typography.weights.bold,
-    color: theme.colors.text.primary,
-  },
-  closeButton: {
-    padding: theme.spacing.xs,
-  },
-  trajetBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: theme.colors.primary[50],
-    paddingVertical: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.md,
-    borderRadius: theme.borderRadius.md,
-    marginBottom: theme.spacing.lg,
-    gap: theme.spacing.sm,
-  },
-  trajetText: {
-    fontSize: theme.typography.sizes.caption,
-    color: theme.colors.primary[700],
-    fontWeight: theme.typography.weights.medium,
-  },
-  section: {
-    marginBottom: theme.spacing.xl,
-  },
-  label: {
-    fontSize: theme.typography.sizes.body,
-    fontWeight: theme.typography.weights.semibold,
-    color: theme.colors.text.primary,
-    marginBottom: theme.spacing.md,
-  },
-  starsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: theme.spacing.sm,
-    marginVertical: theme.spacing.md,
-  },
-  starButton: {
-    padding: theme.spacing.xs,
-  },
-  noteText: {
-    textAlign: 'center',
-    fontSize: theme.typography.sizes.body,
-    color: theme.colors.secondary[600],
-    fontWeight: theme.typography.weights.medium,
-    marginTop: theme.spacing.sm,
-  },
-  textarea: {
-    borderWidth: 1,
-    borderColor: theme.colors.neutral[200],
-    borderRadius: theme.borderRadius.md,
-    padding: theme.spacing.md,
-    fontSize: theme.typography.sizes.body,
-    color: theme.colors.text.primary,
-    minHeight: 120,
-    backgroundColor: theme.colors.background.secondary,
-  },
-  charCount: {
-    textAlign: 'right',
-    fontSize: theme.typography.sizes.small,
-    color: theme.colors.neutral[400],
-    marginTop: theme.spacing.xs,
-  },
-  actions: {
-    flexDirection: 'row',
-    gap: theme.spacing.md,
-    marginTop: theme.spacing.lg,
-  },
-  button: {
-    flex: 1,
-    paddingVertical: theme.spacing.lg,
-    borderRadius: theme.borderRadius.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  buttonCancel: {
-    backgroundColor: theme.colors.background.secondary,
-    borderWidth: 1,
-    borderColor: theme.colors.neutral[300],
-  },
-  buttonCancelText: {
-    fontSize: theme.typography.sizes.body,
-    fontWeight: theme.typography.weights.semibold,
-    color: theme.colors.neutral[600],
-  },
-  buttonSubmit: {
-    backgroundColor: theme.colors.primary[500],
-    ...theme.shadows.sm,
-  },
-  buttonSubmitText: {
-    fontSize: theme.typography.sizes.body,
-    fontWeight: theme.typography.weights.bold,
-    color: theme.colors.text.inverse,
-  },
-  buttonDisabled: {
-    backgroundColor: theme.colors.neutral[300],
-    opacity: 0.6,
-  },
-});

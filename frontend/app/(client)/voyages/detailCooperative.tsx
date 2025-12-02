@@ -15,8 +15,8 @@ import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { cooperativeService, CooperativeDetail, MoyenneAvisResponse } from '../../../services/cooperativeService';
 import { avisService, AvisFormatted, AvisCooperativeResponse } from '../../../services/avisService';
-import { theme } from '../../../constants/theme';
 import { UPLOADS_URL } from '../../../services/api';
+import { useTheme } from '../../../contexts/ThemeContext';
 
 const { width } = Dimensions.get('window');
 
@@ -24,14 +24,51 @@ const { width } = Dimensions.get('window');
 // COMPOSANT : Barre de progression pour la répartition des notes
 // ============================================================
 const RatingBar = ({ stars, count, total }: { stars: number; count: number; total: number }) => {
+  const { theme } = useTheme();
   const percentage = total > 0 ? (count / total) * 100 : 0;
-  
+
+  const styles = React.useMemo(
+    () =>
+      StyleSheet.create({
+        container: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          marginBottom: 6,
+        },
+        starLabel: {
+          fontSize: 11,
+          color: theme.colors.text.secondary,
+          width: 12,
+          marginRight: 2,
+        },
+        progressBackground: {
+          flex: 1,
+          height: 8,
+          backgroundColor: theme.colors.neutral[200],
+          borderRadius: 4,
+          marginHorizontal: 8,
+        },
+        progressFill: {
+          height: 8,
+          backgroundColor: '#FFB800',
+          borderRadius: 4,
+        },
+        countLabel: {
+          fontSize: 11,
+          color: theme.colors.text.secondary,
+          width: 25,
+          textAlign: 'right',
+        },
+      }),
+    [theme]
+  );
+
   return (
-    <View style={styles.ratingBarContainer}>
+    <View style={styles.container}>
       <Text style={styles.starLabel}>{stars}</Text>
       <Ionicons name="star" size={10} color="#FFB800" />
-      <View style={styles.progressBarBackground}>
-        <View style={[styles.progressBarFill, { width: `${percentage}%` }]} />
+      <View style={styles.progressBackground}>
+        <View style={[styles.progressFill, { width: `${percentage}%` }]} />
       </View>
       <Text style={styles.countLabel}>{count}</Text>
     </View>
@@ -42,6 +79,96 @@ const RatingBar = ({ stars, count, total }: { stars: number; count: number; tota
 // COMPOSANT : Carte d'avis individuelle
 // ============================================================
 const ReviewCard = ({ avis }: { avis: AvisFormatted }) => {
+  const { theme } = useTheme();
+
+  const styles = React.useMemo(
+    () =>
+      StyleSheet.create({
+        card: {
+          width: 280,
+          backgroundColor: theme.colors.background.primary,
+          padding: 15,
+          borderRadius: 16,
+          marginRight: 12,
+          borderWidth: 1,
+          borderColor: theme.colors.neutral[100],
+          ...theme.shadows.sm,
+        },
+        header: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          marginBottom: 10,
+        },
+        avatar: {
+          width: 40,
+          height: 40,
+          borderRadius: 20,
+          justifyContent: 'center',
+          alignItems: 'center',
+          marginRight: 12,
+        },
+        avatarText: {
+          color: '#fff',
+          fontSize: 16,
+          fontWeight: 'bold',
+        },
+        reviewerInfo: {
+          flex: 1,
+        },
+        reviewerName: {
+          fontSize: 14,
+          fontWeight: '600',
+          color: theme.colors.text.primary,
+        },
+        reviewDate: {
+          fontSize: 11,
+          color: theme.colors.text.tertiary,
+          marginTop: 2,
+        },
+        starsRow: {
+          flexDirection: 'row',
+          marginBottom: 10,
+          gap: 2,
+        },
+        comment: {
+          fontSize: 13,
+          color: theme.colors.text.secondary,
+          lineHeight: 20,
+          fontStyle: 'italic',
+        },
+        verifiedBadge: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          marginTop: 10,
+          gap: 4,
+          backgroundColor: theme.colors.semantic.success + '10',
+          paddingHorizontal: 8,
+          paddingVertical: 4,
+          borderRadius: 12,
+          alignSelf: 'flex-start',
+        },
+        verifiedText: {
+          fontSize: 11,
+          color: theme.colors.semantic.success,
+          fontWeight: '500',
+        },
+      }),
+    [theme]
+  );
+
+  const getAvatarColor = (name: string): string => {
+    const colors = [
+      theme.colors.primary[500],
+      theme.colors.secondary[500],
+      '#8B5CF6',
+      '#EC4899',
+      '#10B981',
+      '#F59E0B',
+    ];
+    const index = name.length % colors.length;
+    return colors[index];
+  };
+
   const getInitial = () => {
     if (avis.client?.prenom) return avis.client.prenom.charAt(0).toUpperCase();
     if (avis.client?.nom) return avis.client.nom.charAt(0).toUpperCase();
@@ -55,10 +182,10 @@ const ReviewCard = ({ avis }: { avis: AvisFormatted }) => {
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
     if (diffDays === 0) return "Aujourd'hui";
-    if (diffDays === 1) return "Hier";
+    if (diffDays === 1) return 'Hier';
     if (diffDays < 7) return `Il y a ${diffDays} jours`;
     if (diffDays < 30) return `Il y a ${Math.floor(diffDays / 7)} semaines`;
-    
+
     return date.toLocaleDateString('fr-FR', {
       day: '2-digit',
       month: 'short',
@@ -67,10 +194,9 @@ const ReviewCard = ({ avis }: { avis: AvisFormatted }) => {
   };
 
   return (
-    <View style={styles.reviewCard}>
-      {/* Header de l'avis */}
-      <View style={styles.reviewHeader}>
-        <View style={[styles.avatarPlaceholder, { backgroundColor: getAvatarColor(avis.client?.nom || '') }]}>
+    <View style={styles.card}>
+      <View style={styles.header}>
+        <View style={[styles.avatar, { backgroundColor: getAvatarColor(avis.client?.nom || '') }]}>
           <Text style={styles.avatarText}>{getInitial()}</Text>
         </View>
         <View style={styles.reviewerInfo}>
@@ -81,7 +207,6 @@ const ReviewCard = ({ avis }: { avis: AvisFormatted }) => {
         </View>
       </View>
 
-      {/* Étoiles */}
       <View style={styles.starsRow}>
         {[1, 2, 3, 4, 5].map((i) => (
           <Ionicons
@@ -93,14 +218,12 @@ const ReviewCard = ({ avis }: { avis: AvisFormatted }) => {
         ))}
       </View>
 
-      {/* Commentaire */}
       {avis.commentaire && (
-        <Text style={styles.reviewComment} numberOfLines={4}>
+        <Text style={styles.comment} numberOfLines={4}>
           "{avis.commentaire}"
         </Text>
       )}
 
-      {/* Badge voyage vérifié */}
       {avis.voyage && (
         <View style={styles.verifiedBadge}>
           <Ionicons name="checkmark-circle" size={12} color={theme.colors.semantic.success} />
@@ -111,28 +234,14 @@ const ReviewCard = ({ avis }: { avis: AvisFormatted }) => {
   );
 };
 
-// Fonction pour générer une couleur d'avatar basée sur le nom
-const getAvatarColor = (name: string): string => {
-  const colors = [
-    theme.colors.primary[500],
-    theme.colors.secondary[500],
-    '#8B5CF6',
-    '#EC4899',
-    '#10B981',
-    '#F59E0B',
-  ];
-  const index = name.length % colors.length;
-  return colors[index];
-};
-
 // ============================================================
 // COMPOSANT PRINCIPAL
 // ============================================================
 export default function DetailCooperative() {
   const params = useLocalSearchParams();
   const cooperativeId = parseInt(params.id as string);
+  const { theme } = useTheme();
 
-  // États
   const [cooperative, setCooperative] = useState<CooperativeDetail | null>(null);
   const [moyenneAvis, setMoyenneAvis] = useState<MoyenneAvisResponse | null>(null);
   const [avisList, setAvisList] = useState<AvisFormatted[]>([]);
@@ -142,6 +251,524 @@ export default function DetailCooperative() {
   const [showAllVehicles, setShowAllVehicles] = useState(false);
   const [showAllTrips, setShowAllTrips] = useState(false);
 
+  const styles = React.useMemo(
+    () =>
+      StyleSheet.create({
+        container: {
+          flex: 1,
+          backgroundColor: theme.colors.background.secondary,
+        },
+        centerContainer: {
+          flex: 1,
+          justifyContent: 'center',
+          alignItems: 'center',
+          padding: 20,
+        },
+        loadingText: {
+          marginTop: 15,
+          color: theme.colors.text.secondary,
+        },
+        errorText: {
+          fontSize: 18,
+          color: theme.colors.semantic.error,
+          marginTop: 15,
+          marginBottom: 20,
+        },
+        retryButton: {
+          backgroundColor: theme.colors.primary[500],
+          paddingHorizontal: 30,
+          paddingVertical: 12,
+          borderRadius: 25,
+        },
+        retryButtonText: {
+          color: '#fff',
+          fontWeight: 'bold',
+        },
+        header: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          paddingTop: 50,
+          paddingBottom: 15,
+          paddingHorizontal: 20,
+          backgroundColor: theme.colors.primary[500],
+        },
+        backButton: {
+          width: 40,
+          height: 40,
+          borderRadius: 20,
+          backgroundColor: 'rgba(255,255,255,0.2)',
+          justifyContent: 'center',
+          alignItems: 'center',
+        },
+        headerTitle: {
+          color: '#fff',
+          fontSize: 18,
+          fontWeight: 'bold',
+        },
+        shareButton: {
+          width: 40,
+          height: 40,
+          borderRadius: 20,
+          backgroundColor: 'rgba(255,255,255,0.2)',
+          justifyContent: 'center',
+          alignItems: 'center',
+        },
+        scrollView: {
+          flex: 1,
+        },
+
+        // Profile Section
+        profileSection: {
+          alignItems: 'center',
+          paddingVertical: 25,
+          paddingHorizontal: 20,
+          backgroundColor: theme.colors.background.primary,
+          borderBottomLeftRadius: 30,
+          borderBottomRightRadius: 30,
+          marginBottom: 15,
+          ...theme.shadows.md,
+        },
+        logoWrapper: {
+          width: 90,
+          height: 90,
+          borderRadius: 20,
+          backgroundColor: '#fff',
+          justifyContent: 'center',
+          alignItems: 'center',
+          marginBottom: 15,
+          borderWidth: 1,
+          borderColor: theme.colors.neutral[200],
+          ...theme.shadows.sm,
+        },
+        logo: {
+          width: 70,
+          height: 70,
+          borderRadius: 15,
+        },
+        logoPlaceholder: {
+          width: 70,
+          height: 70,
+          borderRadius: 15,
+          backgroundColor: theme.colors.primary[50],
+          justifyContent: 'center',
+          alignItems: 'center',
+        },
+        coopName: {
+          fontSize: 24,
+          fontWeight: 'bold',
+          color: theme.colors.text.primary,
+          textAlign: 'center',
+          marginBottom: 5,
+        },
+        coopCode: {
+          fontSize: 14,
+          color: theme.colors.text.secondary,
+          marginBottom: 15,
+        },
+        badgesRow: {
+          flexDirection: 'row',
+          flexWrap: 'wrap',
+          gap: 10,
+          justifyContent: 'center',
+        },
+        statusBadge: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          paddingHorizontal: 12,
+          paddingVertical: 6,
+          borderRadius: 20,
+          gap: 5,
+        },
+        statusText: {
+          fontSize: 12,
+          fontWeight: '600',
+        },
+        ratingBadge: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          backgroundColor: '#FFF9E6',
+          paddingHorizontal: 12,
+          paddingVertical: 6,
+          borderRadius: 20,
+          gap: 4,
+        },
+        ratingBadgeText: {
+          fontSize: 14,
+          fontWeight: 'bold',
+          color: '#333',
+        },
+        ratingCountBadge: {
+          fontSize: 12,
+          color: theme.colors.text.secondary,
+        },
+        yearBadge: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          backgroundColor: theme.colors.neutral[100],
+          paddingHorizontal: 12,
+          paddingVertical: 6,
+          borderRadius: 20,
+          gap: 5,
+        },
+        yearText: {
+          fontSize: 12,
+          color: theme.colors.text.secondary,
+          fontWeight: '500',
+        },
+
+        // Section Card
+        sectionCard: {
+          backgroundColor: theme.colors.background.primary,
+          marginHorizontal: 20,
+          marginBottom: 15,
+          padding: 20,
+          borderRadius: 16,
+          ...theme.shadows.sm,
+        },
+        sectionTitle: {
+          fontSize: 16,
+          fontWeight: 'bold',
+          color: theme.colors.text.primary,
+        },
+        sectionHeader: {
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginHorizontal: 20,
+          marginBottom: 10,
+        },
+        sectionHeaderRow: {
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: 15,
+        },
+        seeAllText: {
+          fontSize: 14,
+          color: theme.colors.primary[500],
+          fontWeight: '600',
+        },
+
+        // Statistics
+        statsContainer: {
+          flexDirection: 'row',
+          marginBottom: 20,
+        },
+        bigRatingBox: {
+          flex: 1,
+          alignItems: 'center',
+          justifyContent: 'center',
+          paddingRight: 15,
+          borderRightWidth: 1,
+          borderRightColor: theme.colors.neutral[200],
+        },
+        bigRatingText: {
+          fontSize: 48,
+          fontWeight: 'bold',
+          color: theme.colors.text.primary,
+        },
+        bigStarsRow: {
+          flexDirection: 'row',
+          marginTop: 5,
+          gap: 2,
+        },
+        totalReviewsText: {
+          color: theme.colors.text.secondary,
+          fontSize: 12,
+          marginTop: 8,
+        },
+        distributionBox: {
+          flex: 1.5,
+          paddingLeft: 15,
+          justifyContent: 'center',
+        },
+
+        // Criteria
+        criteriaSection: {
+          borderTopWidth: 1,
+          borderTopColor: theme.colors.neutral[200],
+          paddingTop: 15,
+        },
+        criteriaTitle: {
+          fontSize: 14,
+          fontWeight: '600',
+          color: theme.colors.text.secondary,
+          marginBottom: 12,
+        },
+        criteriaItem: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          marginBottom: 10,
+        },
+        criteriaLabelRow: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          width: 110,
+          gap: 6,
+        },
+        criteriaLabel: {
+          fontSize: 13,
+          color: theme.colors.text.secondary,
+        },
+        criteriaBarBG: {
+          flex: 1,
+          height: 8,
+          backgroundColor: theme.colors.neutral[200],
+          borderRadius: 4,
+          marginHorizontal: 10,
+        },
+        criteriaBarFill: {
+          height: 8,
+          backgroundColor: theme.colors.primary[400],
+          borderRadius: 4,
+        },
+        criteriaScore: {
+          fontSize: 13,
+          fontWeight: 'bold',
+          color: theme.colors.text.primary,
+          width: 30,
+          textAlign: 'right',
+        },
+
+        // No Reviews
+        noReviewsContainer: {
+          alignItems: 'center',
+          paddingVertical: 30,
+        },
+        noReviewsTitle: {
+          fontSize: 16,
+          fontWeight: '600',
+          color: theme.colors.text.primary,
+          marginTop: 15,
+        },
+        noReviewsText: {
+          fontSize: 13,
+          color: theme.colors.text.secondary,
+          textAlign: 'center',
+          marginTop: 5,
+          paddingHorizontal: 20,
+        },
+
+        // Reviews Scroll
+        reviewsScrollContent: {
+          paddingLeft: 20,
+          paddingRight: 10,
+          paddingBottom: 15,
+        },
+
+        // Info Rows
+        infoRow: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          marginBottom: 15,
+        },
+        infoIconBox: {
+          width: 40,
+          height: 40,
+          borderRadius: 10,
+          backgroundColor: theme.colors.primary[50],
+          justifyContent: 'center',
+          alignItems: 'center',
+          marginRight: 12,
+        },
+        infoContent: {
+          flex: 1,
+        },
+        infoLabel: {
+          fontSize: 12,
+          color: theme.colors.text.secondary,
+          marginBottom: 3,
+        },
+        infoValue: {
+          fontSize: 15,
+          fontWeight: '500',
+          color: theme.colors.text.primary,
+        },
+
+        // Station
+        stationCard: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          backgroundColor: theme.colors.background.secondary,
+          padding: 12,
+          borderRadius: 12,
+          marginBottom: 10,
+        },
+        stationIconBox: {
+          width: 40,
+          height: 40,
+          borderRadius: 10,
+          backgroundColor: theme.colors.primary[50],
+          justifyContent: 'center',
+          alignItems: 'center',
+          marginRight: 12,
+        },
+        stationInfo: {
+          flex: 1,
+        },
+        stationName: {
+          fontSize: 14,
+          fontWeight: '600',
+          color: theme.colors.text.primary,
+        },
+        stationLocation: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          marginTop: 4,
+          gap: 4,
+        },
+        stationLocationText: {
+          fontSize: 12,
+          color: theme.colors.text.tertiary,
+        },
+
+        // Vehicle
+        vehicleCard: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          backgroundColor: theme.colors.background.secondary,
+          padding: 12,
+          borderRadius: 12,
+          marginBottom: 10,
+        },
+        vehicleIconBox: {
+          width: 44,
+          height: 44,
+          borderRadius: 12,
+          backgroundColor: theme.colors.primary[50],
+          justifyContent: 'center',
+          alignItems: 'center',
+          marginRight: 12,
+        },
+        vehicleInfo: {
+          flex: 1,
+        },
+        vehicleName: {
+          fontSize: 14,
+          fontWeight: '600',
+          color: theme.colors.text.primary,
+        },
+        vehicleDetailsRow: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          marginTop: 4,
+        },
+        vehicleImmat: {
+          fontSize: 12,
+          color: theme.colors.text.secondary,
+        },
+        vehicleSeparator: {
+          fontSize: 12,
+          color: theme.colors.text.tertiary,
+          marginHorizontal: 6,
+        },
+        vehicleCapacity: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 4,
+        },
+        vehicleCapacityText: {
+          fontSize: 12,
+          color: theme.colors.text.secondary,
+        },
+        vehicleStatus: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          paddingHorizontal: 10,
+          paddingVertical: 6,
+          borderRadius: 12,
+          gap: 6,
+        },
+        vehicleStatusDot: {
+          width: 6,
+          height: 6,
+          borderRadius: 3,
+        },
+
+        // Trip card
+        tripCard: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          backgroundColor: theme.colors.background.secondary,
+          padding: 12,
+          borderRadius: 12,
+          marginBottom: 10,
+        },
+        tripIconBox: {
+          width: 40,
+          height: 40,
+          borderRadius: 10,
+          backgroundColor: theme.colors.secondary[500],
+          justifyContent: 'center',
+          alignItems: 'center',
+          marginRight: 12,
+        },
+        tripInfo: {
+          flex: 1,
+        },
+        tripRoute: {
+          fontSize: 14,
+          fontWeight: '600',
+          color: theme.colors.text.primary,
+        },
+        tripDetailsRow: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          marginTop: 4,
+          gap: 4,
+        },
+        tripDate: {
+          fontSize: 12,
+          color: theme.colors.text.secondary,
+        },
+        tripPriceContainer: {
+          flexDirection: 'row',
+          alignItems: 'baseline',
+        },
+        tripPrice: {
+          fontSize: 16,
+          fontWeight: 'bold',
+          color: theme.colors.primary[500],
+        },
+        tripCurrency: {
+          fontSize: 12,
+          color: theme.colors.primary[500],
+          marginLeft: 2,
+        },
+
+        // Footer
+        footer: {
+          position: 'absolute',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          backgroundColor: theme.colors.background.primary,
+          paddingHorizontal: 20,
+          paddingVertical: 15,
+          paddingBottom: 25,
+          borderTopWidth: 1,
+          borderTopColor: theme.colors.neutral[200],
+          ...theme.shadows.md,
+        },
+        ctaButton: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: theme.colors.primary[500],
+          paddingVertical: 15,
+          borderRadius: 12,
+          gap: 10,
+        },
+        ctaText: {
+          color: '#fff',
+          fontSize: 16,
+          fontWeight: 'bold',
+        },
+      }),
+    [theme]
+  );
+
   useEffect(() => {
     loadData();
   }, []);
@@ -149,26 +776,16 @@ export default function DetailCooperative() {
   const loadData = async () => {
     try {
       setLoading(true);
-
-      // Charger toutes les données en parallèle
       const [coopData, moyData, avisResponse] = await Promise.all([
         cooperativeService.getCooperativeById(cooperativeId),
         cooperativeService.getMoyenneAvis(cooperativeId),
-        avisService.getAvisByCooperative(cooperativeId, 20), // Limite à 20 avis
+        avisService.getAvisByCooperative(cooperativeId, 20),
       ]);
 
       setCooperative(coopData);
       setMoyenneAvis(moyData);
       setAvisList(avisResponse.avis);
       setAvisStats(avisResponse);
-      
-      console.log('📊 Données chargées:', {
-        cooperative: coopData.nom,
-        totalAvis: avisResponse.count,
-        moyenne: avisResponse.moyenne,
-        distribution: avisResponse.distribution
-      });
-      
     } catch (error) {
       console.error('Erreur chargement:', error);
     } finally {
@@ -187,17 +804,14 @@ export default function DetailCooperative() {
   };
 
   const handleViewAllReviews = () => {
-    // Navigation vers une page liste complète des avis (à créer si besoin)
     router.push(`/(client)/voyages/listeAvis?cooperativeId=${cooperativeId}`);
   };
 
   const handleCall = (phoneNumber: string) => {
-    // Logique pour appeler
     console.log('Appeler:', phoneNumber);
   };
 
   const handleEmail = (email: string) => {
-    // Logique pour envoyer un email
     console.log('Email:', email);
   };
 
@@ -211,7 +825,6 @@ export default function DetailCooperative() {
     });
   };
 
-  // ============ LOADING STATE ============
   if (loading) {
     return (
       <View style={styles.centerContainer}>
@@ -221,7 +834,6 @@ export default function DetailCooperative() {
     );
   }
 
-  // ============ ERROR STATE ============
   if (!cooperative) {
     return (
       <View style={styles.centerContainer}>
@@ -238,7 +850,6 @@ export default function DetailCooperative() {
   const moyenneNote = avisStats?.moyenne || 0;
   const distribution = avisStats?.distribution || { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
 
-  // Calcul des critères (mock pour l'instant, à remplacer par de vraies données)
   const criteres = {
     ponctualite: { note: 4.4, percentage: 88 },
     confort: { note: 4.1, percentage: 82 },
@@ -247,7 +858,7 @@ export default function DetailCooperative() {
 
   return (
     <View style={styles.container}>
-      {/* ==================== HEADER ==================== */}
+      {/* HEADER */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={24} color="#fff" />
@@ -269,9 +880,8 @@ export default function DetailCooperative() {
           />
         }
       >
-        {/* ==================== PROFIL COOPÉRATIVE ==================== */}
+        {/* PROFIL */}
         <View style={styles.profileSection}>
-          {/* Logo */}
           <View style={styles.logoWrapper}>
             {cooperative.logo ? (
               <Image
@@ -286,11 +896,9 @@ export default function DetailCooperative() {
             )}
           </View>
 
-          {/* Nom et code */}
           <Text style={styles.coopName}>{cooperative.nom}</Text>
           <Text style={styles.coopCode}>{cooperative.code_cooperative}</Text>
 
-          {/* Badges */}
           <View style={styles.badgesRow}>
             <View
               style={[
@@ -342,7 +950,7 @@ export default function DetailCooperative() {
           </View>
         </View>
 
-        {/* ==================== STATISTIQUES & AVIS ==================== */}
+        {/* STATISTIQUES & AVIS */}
         <View style={styles.sectionCard}>
           <View style={styles.sectionHeaderRow}>
             <Text style={styles.sectionTitle}>📊 Statistiques des avis</Text>
@@ -356,7 +964,6 @@ export default function DetailCooperative() {
           {totalAvis > 0 ? (
             <>
               <View style={styles.statsContainer}>
-                {/* GAUCHE : Note Globale */}
                 <View style={styles.bigRatingBox}>
                   <Text style={styles.bigRatingText}>{moyenneNote.toFixed(1)}</Text>
                   <View style={styles.bigStarsRow}>
@@ -374,7 +981,6 @@ export default function DetailCooperative() {
                   </Text>
                 </View>
 
-                {/* DROITE : Barres de répartition */}
                 <View style={styles.distributionBox}>
                   <RatingBar stars={5} count={distribution[5]} total={totalAvis} />
                   <RatingBar stars={4} count={distribution[4]} total={totalAvis} />
@@ -384,10 +990,9 @@ export default function DetailCooperative() {
                 </View>
               </View>
 
-              {/* CRITÈRES SPÉCIFIQUES */}
               <View style={styles.criteriaSection}>
                 <Text style={styles.criteriaTitle}>Critères détaillés</Text>
-                
+                {/* Critères mock */}
                 <View style={styles.criteriaItem}>
                   <View style={styles.criteriaLabelRow}>
                     <Ionicons name="time-outline" size={16} color={theme.colors.primary[500]} />
@@ -433,7 +1038,7 @@ export default function DetailCooperative() {
           )}
         </View>
 
-        {/* ==================== DERNIERS COMMENTAIRES ==================== */}
+        {/* DERNIERS COMMENTAIRES */}
         {avisList.length > 0 && (
           <>
             <View style={styles.sectionHeader}>
@@ -455,7 +1060,7 @@ export default function DetailCooperative() {
           </>
         )}
 
-        {/* ==================== INFORMATIONS DE CONTACT ==================== */}
+        {/* CONTACT */}
         <View style={styles.sectionCard}>
           <Text style={styles.sectionTitle}>📍 Informations de contact</Text>
 
@@ -502,7 +1107,7 @@ export default function DetailCooperative() {
           )}
         </View>
 
-        {/* ==================== STATIONS ==================== */}
+        {/* STATIONS */}
         {cooperative.stations && cooperative.stations.length > 0 && (
           <View style={styles.sectionCard}>
             <Text style={styles.sectionTitle}>🏢 Stations ({cooperative.stations.length})</Text>
@@ -526,7 +1131,7 @@ export default function DetailCooperative() {
           </View>
         )}
 
-        {/* ==================== VÉHICULES ==================== */}
+        {/* VÉHICULES */}
         {cooperative.voitures && cooperative.voitures.length > 0 && (
           <View style={styles.sectionCard}>
             <View style={styles.sectionHeaderRow}>
@@ -598,7 +1203,7 @@ export default function DetailCooperative() {
           </View>
         )}
 
-        {/* ==================== PROCHAINS VOYAGES ==================== */}
+        {/* PROCHAINS VOYAGES */}
         {cooperative.prochains_voyages && cooperative.prochains_voyages.length > 0 && (
           <View style={styles.sectionCard}>
             <View style={styles.sectionHeaderRow}>
@@ -644,11 +1249,9 @@ export default function DetailCooperative() {
           </View>
         )}
 
-        {/* Espace pour le footer */}
         <View style={{ height: 100 }} />
       </ScrollView>
 
-      {/* ==================== FOOTER FIXE ==================== */}
       <View style={styles.footer}>
         <TouchableOpacity style={styles.ctaButton} onPress={handleViewVoyages}>
           <Ionicons name="calendar-outline" size={20} color="#fff" />
@@ -658,624 +1261,3 @@ export default function DetailCooperative() {
     </View>
   );
 }
-
-// ============================================================
-// STYLES
-// ============================================================
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background.secondary,
-  },
-  centerContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  loadingText: {
-    marginTop: 15,
-    color: theme.colors.text.secondary,
-  },
-  errorText: {
-    fontSize: 18,
-    color: theme.colors.semantic.error,
-    marginTop: 15,
-    marginBottom: 20,
-  },
-  retryButton: {
-    backgroundColor: theme.colors.primary[500],
-    paddingHorizontal: 30,
-    paddingVertical: 12,
-    borderRadius: 25,
-  },
-  retryButtonText: {
-    color: '#fff',
-    fontWeight: 'bold',
-  },
-
-  // Header
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingTop: 50,
-    paddingBottom: 15,
-    paddingHorizontal: 20,
-    backgroundColor: theme.colors.primary[500],
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  headerTitle: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  shareButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-
-  scrollView: {
-    flex: 1,
-  },
-
-  // Profile Section
-  profileSection: {
-    alignItems: 'center',
-    paddingVertical: 25,
-    paddingHorizontal: 20,
-    backgroundColor: '#fff',
-    borderBottomLeftRadius: 30,
-    borderBottomRightRadius: 30,
-    marginBottom: 15,
-    ...theme.shadows.md,
-  },
-  logoWrapper: {
-    width: 90,
-    height: 90,
-    borderRadius: 20,
-    backgroundColor: '#fff',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 15,
-    borderWidth: 1,
-    borderColor: theme.colors.neutral[200],
-    ...theme.shadows.sm,
-  },
-  logo: {
-    width: 70,
-    height: 70,
-    borderRadius: 15,
-  },
-  logoPlaceholder: {
-    width: 70,
-    height: 70,
-    borderRadius: 15,
-    backgroundColor: theme.colors.primary[50],
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  coopName: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: theme.colors.text.primary,
-    textAlign: 'center',
-    marginBottom: 5,
-  },
-  coopCode: {
-    fontSize: 14,
-    color: theme.colors.text.secondary,
-    marginBottom: 15,
-  },
-  badgesRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-    justifyContent: 'center',
-  },
-  statusBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-    gap: 5,
-  },
-  statusText: {
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  ratingBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFF9E6',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-    gap: 4,
-  },
-  ratingBadgeText: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  ratingCountBadge: {
-    fontSize: 12,
-    color: theme.colors.text.secondary,
-  },
-  yearBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: theme.colors.neutral[100],
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-    gap: 5,
-  },
-  yearText: {
-    fontSize: 12,
-    color: theme.colors.text.secondary,
-    fontWeight: '500',
-  },
-
-  // Section Card
-  sectionCard: {
-    backgroundColor: '#fff',
-    marginHorizontal: 20,
-    marginBottom: 15,
-    padding: 20,
-    borderRadius: 16,
-    ...theme.shadows.sm,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: theme.colors.text.primary,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginHorizontal: 20,
-    marginBottom: 10,
-  },
-  sectionHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 15,
-  },
-  seeAllText: {
-    fontSize: 14,
-    color: theme.colors.primary[500],
-    fontWeight: '600',
-  },
-
-  // Statistics
-  statsContainer: {
-    flexDirection: 'row',
-    marginBottom: 20,
-  },
-  bigRatingBox: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingRight: 15,
-    borderRightWidth: 1,
-    borderRightColor: theme.colors.neutral[200],
-  },
-  bigRatingText: {
-    fontSize: 48,
-    fontWeight: 'bold',
-    color: theme.colors.text.primary,
-  },
-  bigStarsRow: {
-    flexDirection: 'row',
-    marginTop: 5,
-    gap: 2,
-  },
-  totalReviewsText: {
-    color: theme.colors.text.secondary,
-    fontSize: 12,
-    marginTop: 8,
-  },
-  distributionBox: {
-    flex: 1.5,
-    paddingLeft: 15,
-    justifyContent: 'center',
-  },
-
-  // Rating Bar
-  ratingBarContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 6,
-  },
-  starLabel: {
-    fontSize: 11,
-    color: theme.colors.text.secondary,
-    width: 12,
-    marginRight: 2,
-  },
-  progressBarBackground: {
-    flex: 1,
-    height: 8,
-    backgroundColor: theme.colors.neutral[200],
-    borderRadius: 4,
-    marginHorizontal: 8,
-  },
-  progressBarFill: {
-    height: 8,
-    backgroundColor: '#FFB800',
-    borderRadius: 4,
-  },
-  countLabel: {
-    fontSize: 11,
-    color: theme.colors.text.secondary,
-    width: 25,
-    textAlign: 'right',
-  },
-
-  // Criteria
-  criteriaSection: {
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.neutral[200],
-    paddingTop: 15,
-  },
-  criteriaTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: theme.colors.text.secondary,
-    marginBottom: 12,
-  },
-  criteriaItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  criteriaLabelRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    width: 110,
-    gap: 6,
-  },
-  criteriaLabel: {
-    fontSize: 13,
-    color: theme.colors.text.secondary,
-  },
-  criteriaBarBG: {
-    flex: 1,
-    height: 8,
-    backgroundColor: theme.colors.neutral[200],
-    borderRadius: 4,
-    marginHorizontal: 10,
-  },
-  criteriaBarFill: {
-    height: 8,
-    backgroundColor: theme.colors.primary[400],
-    borderRadius: 4,
-  },
-  criteriaScore: {
-    fontSize: 13,
-    fontWeight: 'bold',
-    color: theme.colors.text.primary,
-    width: 30,
-    textAlign: 'right',
-  },
-
-  // No Reviews
-  noReviewsContainer: {
-    alignItems: 'center',
-    paddingVertical: 30,
-  },
-  noReviewsTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: theme.colors.text.primary,
-    marginTop: 15,
-  },
-  noReviewsText: {
-    fontSize: 13,
-    color: theme.colors.text.secondary,
-    textAlign: 'center',
-    marginTop: 5,
-    paddingHorizontal: 20,
-  },
-
-  // Reviews Scroll
-  reviewsScrollContent: {
-    paddingLeft: 20,
-    paddingRight: 10,
-    paddingBottom: 15,
-  },
-
-  // Review Card
-  reviewCard: {
-    width: 280,
-    backgroundColor: '#fff',
-    padding: 15,
-    borderRadius: 16,
-    marginRight: 12,
-    borderWidth: 1,
-    borderColor: theme.colors.neutral[100],
-    ...theme.shadows.sm,
-  },
-  reviewHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  avatarPlaceholder: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  avatarText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  reviewerInfo: {
-    flex: 1,
-  },
-  reviewerName: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: theme.colors.text.primary,
-  },
-  reviewDate: {
-    fontSize: 11,
-    color: theme.colors.text.tertiary,
-    marginTop: 2,
-  },
-  starsRow: {
-    flexDirection: 'row',
-    marginBottom: 10,
-    gap: 2,
-  },
-  reviewComment: {
-    fontSize: 13,
-    color: theme.colors.text.secondary,
-    lineHeight: 20,
-    fontStyle: 'italic',
-  },
-  verifiedBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 10,
-    gap: 4,
-    backgroundColor: theme.colors.semantic.success + '10',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-    alignSelf: 'flex-start',
-  },
-  verifiedText: {
-    fontSize: 11,
-    color: theme.colors.semantic.success,
-    fontWeight: '500',
-  },
-
-  // Info Rows
-  infoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 15,
-  },
-  infoIconBox: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
-    backgroundColor: theme.colors.primary[50],
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  infoContent: {
-    flex: 1,
-  },
-  infoLabel: {
-    fontSize: 12,
-    color: theme.colors.text.secondary,
-    marginBottom: 3,
-  },
-  infoValue: {
-    fontSize: 15,
-    fontWeight: '500',
-    color: theme.colors.text.primary,
-  },
-
-  // Station Card
-  stationCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: theme.colors.background.secondary,
-    padding: 12,
-    borderRadius: 12,
-    marginBottom: 10,
-  },
-  stationIconBox: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
-    backgroundColor: theme.colors.primary[50],
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  stationInfo: {
-    flex: 1,
-  },
-  stationName: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: theme.colors.text.primary,
-  },
-  stationLocation: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 4,
-    gap: 4,
-  },
-  stationLocationText: {
-    fontSize: 12,
-    color: theme.colors.text.tertiary,
-  },
-
-  // Vehicle Card
-  vehicleCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: theme.colors.background.secondary,
-    padding: 12,
-    borderRadius: 12,
-    marginBottom: 10,
-  },
-  vehicleIconBox: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    backgroundColor: theme.colors.primary[50],
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  vehicleInfo: {
-    flex: 1,
-  },
-  vehicleName: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: theme.colors.text.primary,
-  },
-  vehicleDetailsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 4,
-  },
-  vehicleImmat: {
-    fontSize: 12,
-    color: theme.colors.text.secondary,
-  },
-  vehicleSeparator: {
-    fontSize: 12,
-    color: theme.colors.text.tertiary,
-    marginHorizontal: 6,
-  },
-  vehicleCapacity: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  vehicleCapacityText: {
-    fontSize: 12,
-    color: theme.colors.text.secondary,
-  },
-  vehicleStatus: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 12,
-    gap: 6,
-  },
-  vehicleStatusDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-  },
-
-  // Trip Card
-  tripCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: theme.colors.background.secondary,
-    padding: 12,
-    borderRadius: 12,
-    marginBottom: 10,
-  },
-  tripIconBox: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
-    backgroundColor: theme.colors.secondary[500],
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  tripInfo: {
-    flex: 1,
-  },
-  tripRoute: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: theme.colors.text.primary,
-  },
-  tripDetailsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 4,
-    gap: 4,
-  },
-  tripDate: {
-    fontSize: 12,
-    color: theme.colors.text.secondary,
-  },
-  tripPriceContainer: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-  },
-  tripPrice: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: theme.colors.primary[500],
-  },
-  tripCurrency: {
-    fontSize: 12,
-    color: theme.colors.primary[500],
-    marginLeft: 2,
-  },
-
-  // Footer
-  footer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: '#fff',
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-    paddingBottom: 25,
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.neutral[200],
-    ...theme.shadows.md,
-  },
-  ctaButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: theme.colors.primary[500],
-    paddingVertical: 15,
-    borderRadius: 12,
-    gap: 10,
-  },
-  ctaText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-});

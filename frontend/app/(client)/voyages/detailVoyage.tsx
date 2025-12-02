@@ -14,16 +14,211 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../../contexts/AuthContext';
 import { voyageService, Voyage } from '../../../services/voyageService';
 import Button from '../../../components/ui/Button';
-import { theme } from '../../../constants/theme';
+import { useTheme } from '../../../contexts/ThemeContext';
 
 export default function DetailVoyage() {
   const router = useRouter();
   const { id } = useLocalSearchParams();
   const { utilisateur, isConnecte } = useAuth();
+  const { theme } = useTheme(); // 👈 dynamique
 
   const [voyage, setVoyage] = useState<Voyage | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const styles = React.useMemo(
+    () =>
+      StyleSheet.create({
+        container: {
+          flex: 1,
+          backgroundColor: theme.colors.background.secondary,
+        },
+        centerContainer: {
+          flex: 1,
+          justifyContent: 'center',
+          alignItems: 'center',
+          padding: theme.spacing.xl,
+        },
+        header: {
+          backgroundColor: theme.colors.primary[500],
+          paddingTop: 50,
+          paddingBottom: theme.spacing.xl,
+          paddingHorizontal: theme.spacing.xl,
+          flexDirection: 'row',
+          alignItems: 'center',
+        },
+        backButton: {
+          marginRight: theme.spacing.lg,
+        },
+        headerTitle: {
+          fontSize: theme.typography.sizes.h2,
+          fontWeight: theme.typography.weights.bold,
+          color: theme.colors.text.inverse,
+        },
+        content: {
+          flex: 1,
+          padding: theme.spacing.lg,
+        },
+        trajetCard: {
+          backgroundColor: theme.colors.background.primary,
+          borderRadius: theme.borderRadius.lg,
+          padding: theme.spacing.xl,
+          marginBottom: theme.spacing.lg,
+          ...theme.shadows.md,
+        },
+        trajetHeader: {
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: theme.spacing.md,
+        },
+        locationContainer: {
+          flex: 1,
+          alignItems: 'center',
+        },
+        locationText: {
+          fontSize: theme.typography.sizes.body,
+          fontWeight: theme.typography.weights.bold,
+          color: theme.colors.text.primary,
+          marginTop: theme.spacing.xs,
+          textAlign: 'center',
+        },
+        distanceContainer: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'center',
+          paddingTop: theme.spacing.md,
+          borderTopWidth: 1,
+          borderTopColor: theme.colors.neutral[300],
+        },
+        distanceText: {
+          fontSize: theme.typography.sizes.caption,
+          color: theme.colors.text.secondary,
+          marginLeft: theme.spacing.sm,
+        },
+        infoCard: {
+          backgroundColor: theme.colors.background.primary,
+          borderRadius: theme.borderRadius.md,
+          padding: theme.spacing.lg,
+          marginBottom: theme.spacing.lg,
+          ...theme.shadows.sm,
+        },
+        sectionTitle: {
+          fontSize: theme.typography.sizes.h3,
+          fontWeight: theme.typography.weights.bold,
+          color: theme.colors.primary[500],
+          marginBottom: theme.spacing.md,
+        },
+        infoRow: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          marginBottom: theme.spacing.md,
+        },
+        infoLabel: {
+          fontSize: theme.typography.sizes.caption,
+          color: theme.colors.text.secondary,
+          marginLeft: theme.spacing.sm,
+          marginRight: theme.spacing.sm,
+        },
+        infoValue: {
+          fontSize: theme.typography.sizes.caption,
+          fontWeight: theme.typography.weights.semibold,
+          color: theme.colors.text.primary,
+          flex: 1,
+        },
+        prixValue: {
+          fontSize: theme.typography.sizes.h3,
+          fontWeight: theme.typography.weights.bold,
+          color: theme.colors.primary[500],
+          flex: 1,
+        },
+        statusBadge: {
+          backgroundColor: '#E8F5E9',
+          paddingVertical: theme.spacing.sm,
+          paddingHorizontal: theme.spacing.lg,
+          borderRadius: theme.borderRadius.round,
+          alignSelf: 'flex-start',
+          marginTop: theme.spacing.sm,
+        },
+        statusText: {
+          fontSize: theme.typography.sizes.caption,
+          fontWeight: theme.typography.weights.semibold,
+          color: theme.colors.semantic.success,
+        },
+        cooperativeInfo: {
+          gap: theme.spacing.sm,
+        },
+        cooperativeName: {
+          fontSize: theme.typography.sizes.h3,
+          fontWeight: theme.typography.weights.bold,
+          color: theme.colors.primary[500],
+          marginBottom: theme.spacing.sm,
+        },
+        cooperativeContact: {
+          fontSize: theme.typography.sizes.caption,
+          color: theme.colors.text.primary,
+          marginLeft: theme.spacing.sm,
+        },
+        cooperativeAddress: {
+          fontSize: theme.typography.sizes.caption,
+          color: theme.colors.text.secondary,
+          marginLeft: theme.spacing.sm,
+        },
+        vehiculeInfo: {
+          gap: theme.spacing.sm,
+        },
+        chauffeurInfo: {
+          gap: theme.spacing.sm,
+        },
+        chauffeurName: {
+          fontSize: theme.typography.sizes.body,
+          fontWeight: theme.typography.weights.semibold,
+          color: theme.colors.text.primary,
+          marginLeft: theme.spacing.sm,
+        },
+        userInfo: {
+          backgroundColor: '#E8F5E9',
+          padding: theme.spacing.md,
+          borderRadius: theme.borderRadius.sm,
+          marginBottom: theme.spacing.lg,
+        },
+        userInfoText: {
+          fontSize: theme.typography.sizes.caption,
+          color: theme.colors.semantic.success,
+          textAlign: 'center',
+        },
+        footer: {
+          padding: theme.spacing.lg,
+          backgroundColor: theme.colors.background.primary,
+          borderTopWidth: 1,
+          borderTopColor: theme.colors.neutral[300],
+        },
+        loadingText: {
+          marginTop: theme.spacing.md,
+          fontSize: theme.typography.sizes.body,
+          color: theme.colors.text.secondary,
+        },
+        errorText: {
+          fontSize: theme.typography.sizes.body,
+          color: theme.colors.semantic.error,
+          textAlign: 'center',
+          marginVertical: theme.spacing.lg,
+        },
+        retryButton: {
+          backgroundColor: theme.colors.primary[500],
+          paddingHorizontal: theme.spacing.xl,
+          paddingVertical: theme.spacing.md,
+          borderRadius: theme.borderRadius.md,
+          marginTop: theme.spacing.lg,
+        },
+        retryText: {
+          color: theme.colors.text.inverse,
+          fontSize: theme.typography.sizes.body,
+          fontWeight: theme.typography.weights.semibold,
+        },
+      }),
+    [theme]
+  );
 
   useEffect(() => {
     if (id) {
@@ -57,10 +252,7 @@ export default function DetailVoyage() {
         'Vous devez être connecté pour réserver un voyage',
         [
           { text: 'Annuler', style: 'cancel' },
-          {
-            text: 'Se connecter',
-            onPress: () => router.push('/se-connecter'),
-          },
+          { text: 'Se connecter', onPress: () => router.push('/se-connecter') },
         ]
       );
       return;
@@ -148,7 +340,7 @@ export default function DetailVoyage() {
           </View>
         </View>
 
-        {/* Informations du voyage */}
+        {/* Infos voyage */}
         <View style={styles.infoCard}>
           <Text style={styles.sectionTitle}>Informations du voyage</Text>
 
@@ -243,7 +435,7 @@ export default function DetailVoyage() {
         )}
       </ScrollView>
 
-      {/* Bouton de réservation fixe en bas */}
+      {/* Bouton de réservation */}
       <View style={styles.footer}>
         <Button
           title={`Réserver - ${voyage.prix.toLocaleString()} Ar/place`}
@@ -255,193 +447,3 @@ export default function DetailVoyage() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background.secondary,
-  },
-  centerContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: theme.spacing.xl,
-  },
-  header: {
-    backgroundColor: theme.colors.primary[500],
-    paddingTop: 50,
-    paddingBottom: theme.spacing.xl,
-    paddingHorizontal: theme.spacing.xl,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  backButton: {
-    marginRight: theme.spacing.lg,
-  },
-  headerTitle: {
-    fontSize: theme.typography.sizes.h2,
-    fontWeight: theme.typography.weights.bold,
-    color: theme.colors.text.inverse,
-  },
-  content: {
-    flex: 1,
-    padding: theme.spacing.lg,
-  },
-  trajetCard: {
-    backgroundColor: theme.colors.background.primary,
-    borderRadius: theme.borderRadius.lg,
-    padding: theme.spacing.xl,
-    marginBottom: theme.spacing.lg,
-    ...theme.shadows.md,
-  },
-  trajetHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: theme.spacing.md,
-  },
-  locationContainer: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  locationText: {
-    fontSize: theme.typography.sizes.body,
-    fontWeight: theme.typography.weights.bold,
-    color: theme.colors.text.primary,
-    marginTop: theme.spacing.xs,
-    textAlign: 'center',
-  },
-  distanceContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingTop: theme.spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.neutral[300],
-  },
-  distanceText: {
-    fontSize: theme.typography.sizes.caption,
-    color: theme.colors.text.secondary,
-    marginLeft: theme.spacing.sm,
-  },
-  infoCard: {
-    backgroundColor: theme.colors.background.primary,
-    borderRadius: theme.borderRadius.md,
-    padding: theme.spacing.lg,
-    marginBottom: theme.spacing.lg,
-    ...theme.shadows.sm,
-  },
-  sectionTitle: {
-    fontSize: theme.typography.sizes.h3,
-    fontWeight: theme.typography.weights.bold,
-    color: theme.colors.primary[500],
-    marginBottom: theme.spacing.md,
-  },
-  infoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: theme.spacing.md,
-  },
-  infoLabel: {
-    fontSize: theme.typography.sizes.caption,
-    color: theme.colors.text.secondary,
-    marginLeft: theme.spacing.sm,
-    marginRight: theme.spacing.sm,
-  },
-  infoValue: {
-    fontSize: theme.typography.sizes.caption,
-    fontWeight: theme.typography.weights.semibold,
-    color: theme.colors.text.primary,
-    flex: 1,
-  },
-  prixValue: {
-    fontSize: theme.typography.sizes.h3,
-    fontWeight: theme.typography.weights.bold,
-    color: theme.colors.primary[500],
-    flex: 1,
-  },
-  statusBadge: {
-    backgroundColor: '#E8F5E9',
-    paddingVertical: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.lg,
-    borderRadius: theme.borderRadius.round,
-    alignSelf: 'flex-start',
-    marginTop: theme.spacing.sm,
-  },
-  statusText: {
-    fontSize: theme.typography.sizes.caption,
-    fontWeight: theme.typography.weights.semibold,
-    color: theme.colors.semantic.success,
-  },
-  cooperativeInfo: {
-    gap: theme.spacing.sm,
-  },
-  cooperativeName: {
-    fontSize: theme.typography.sizes.h3,
-    fontWeight: theme.typography.weights.bold,
-    color: theme.colors.primary[500],
-    marginBottom: theme.spacing.sm,
-  },
-  cooperativeContact: {
-    fontSize: theme.typography.sizes.caption,
-    color: theme.colors.text.primary,
-    marginLeft: theme.spacing.sm,
-  },
-  cooperativeAddress: {
-    fontSize: theme.typography.sizes.caption,
-    color: theme.colors.text.secondary,
-    marginLeft: theme.spacing.sm,
-  },
-  vehiculeInfo: {
-    gap: theme.spacing.sm,
-  },
-  chauffeurInfo: {
-    gap: theme.spacing.sm,
-  },
-  chauffeurName: {
-    fontSize: theme.typography.sizes.body,
-    fontWeight: theme.typography.weights.semibold,
-    color: theme.colors.text.primary,
-    marginLeft: theme.spacing.sm,
-  },
-  userInfo: {
-    backgroundColor: '#E8F5E9',
-    padding: theme.spacing.md,
-    borderRadius: theme.borderRadius.sm,
-    marginBottom: theme.spacing.lg,
-  },
-  userInfoText: {
-    fontSize: theme.typography.sizes.caption,
-    color: theme.colors.semantic.success,
-    textAlign: 'center',
-  },
-  footer: {
-    padding: theme.spacing.lg,
-    backgroundColor: theme.colors.background.primary,
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.neutral[300],
-  },
-  loadingText: {
-    marginTop: theme.spacing.md,
-    fontSize: theme.typography.sizes.body,
-    color: theme.colors.text.secondary,
-  },
-  errorText: {
-    fontSize: theme.typography.sizes.body,
-    color: theme.colors.semantic.error,
-    textAlign: 'center',
-    marginVertical: theme.spacing.lg,
-  },
-  retryButton: {
-    backgroundColor: theme.colors.primary[500],
-    paddingHorizontal: theme.spacing.xl,
-    paddingVertical: theme.spacing.md,
-    borderRadius: theme.borderRadius.md,
-    marginTop: theme.spacing.lg,
-  },
-  retryText: {
-    color: theme.colors.text.inverse,
-    fontSize: theme.typography.sizes.body,
-    fontWeight: theme.typography.weights.semibold,
-  },
-});

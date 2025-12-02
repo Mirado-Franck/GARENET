@@ -1,3 +1,4 @@
+// frontend/app/(client)/reservations/detailReservation.tsx
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -6,7 +7,6 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
-  Image,
   Platform,
   Modal,
 } from 'react-native';
@@ -14,17 +14,21 @@ import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { reservationService, Reservation } from '../../../services/reservationService';
 import { Toast } from '../../../components/ui/Toast';
-import { theme } from '../../../constants/theme';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
+import { useTheme } from '../../../contexts/ThemeContext';
+import type { Theme } from '../../../constants/theme';
 
 export default function DetailReservation() {
+  const { theme } = useTheme();                             // 👈 Récupération du thème dynamique
+  const styles = React.useMemo(() => createStyles(theme), [theme]); // 👈 Styles recalculés quand le thème change
+
   const params = useLocalSearchParams();
   const reservationId = parseInt(params.id as string);
 
   const [reservation, setReservation] = useState<Reservation | null>(null);
   const [loading, setLoading] = useState(true);
-  
+
   const [toastVisible, setToastVisible] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [toastType, setToastType] = useState<'success' | 'error'>('success');
@@ -59,19 +63,19 @@ export default function DetailReservation() {
 
   const performCancellation = async () => {
     setShowCancelModal(false);
-    
+
     try {
       await reservationService.cancelReservation(reservation!.id);
-      
+
       setToastMessage('Réservation annulée avec succès');
       setToastType('success');
       setToastVisible(true);
-      
+
       setTimeout(() => {
         router.back();
       }, 2000);
     } catch (error: any) {
-      setToastMessage(error.error || 'Impossible d\'annuler la réservation');
+      setToastMessage(error.error || "Impossible d'annuler la réservation");
       setToastType('error');
       setToastVisible(true);
     }
@@ -79,13 +83,13 @@ export default function DetailReservation() {
 
   const handlePrint = async () => {
     if (!reservation) return;
-    
+
     const prixTotal = reservation.nombre_places * reservation.voyage.prix;
-    // Générateur de QR Code API
     const qrData = `GARNET-${reservation.code_reservation}`;
     const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${qrData}`;
-    
-    // 🎨 TEMPLATE HTML TICKET COMPACT
+
+    // NB : ici le design du ticket reste avec des couleurs fixes (HTML à imprimer).
+    // On peut aussi brancher ces couleurs sur `theme` si tu veux.
     const htmlContent = `
       <!DOCTYPE html>
       <html>
@@ -102,7 +106,7 @@ export default function DetailReservation() {
               justify-content: center;
             }
             .ticket {
-              width: 350px; /* Format compact */
+              width: 350px;
               border: 2px dashed #333;
               padding: 20px;
               border-radius: 10px;
@@ -204,8 +208,6 @@ export default function DetailReservation() {
         </head>
         <body>
           <div class="ticket">
-            
-            <!-- Header: Nom Coopérative en haut -->
             <div class="header">
               <div class="coop-name">${reservation.voyage.cooperative.nom}</div>
               <div class="sub-header">
@@ -214,7 +216,6 @@ export default function DetailReservation() {
               </div>
             </div>
 
-            <!-- Infos Réservation -->
             <div class="row">
               <span class="label">Référence</span>
               <span class="value">${reservation.code_reservation}</span>
@@ -226,14 +227,12 @@ export default function DetailReservation() {
 
             <div class="divider"></div>
 
-            <!-- Trajet -->
             <div class="route-box">
               <div class="route-stations">
                 ${reservation.voyage.trajet.depart} <span class="route-arrow">➔</span> ${reservation.voyage.trajet.arrivee}
               </div>
             </div>
 
-            <!-- Détails Voyage -->
             <div class="row">
               <span class="label">Départ le</span>
               <span class="value">${formatDate(reservation.voyage.date_depart)}</span>
@@ -249,7 +248,6 @@ export default function DetailReservation() {
 
             <div class="divider"></div>
 
-            <!-- Places -->
             <div class="row">
               <span class="label">Places (${reservation.nombre_places})</span>
               <div class="seats-box">
@@ -257,13 +255,11 @@ export default function DetailReservation() {
               </div>
             </div>
 
-            <!-- Total -->
             <div class="total-box">
               <span>TOTAL</span>
               <span>${prixTotal.toLocaleString()} Ar</span>
             </div>
 
-            <!-- QR Code -->
             <div class="qr-container">
               <img src="${qrUrl}" class="qr-img" />
             </div>
@@ -272,7 +268,6 @@ export default function DetailReservation() {
               Merci de voyager avec nous.<br>
               Présentez ce ticket à l'embarquement.
             </div>
-
           </div>
         </body>
       </html>
@@ -288,13 +283,13 @@ export default function DetailReservation() {
         iframe.style.height = '0';
         iframe.style.border = 'none';
         document.body.appendChild(iframe);
-        
+
         const iframeDoc = iframe.contentWindow?.document;
         if (iframeDoc) {
           iframeDoc.open();
           iframeDoc.write(htmlContent);
           iframeDoc.close();
-          
+
           setTimeout(() => {
             iframe.contentWindow?.focus();
             iframe.contentWindow?.print();
@@ -310,10 +305,10 @@ export default function DetailReservation() {
           await Sharing.shareAsync(uri, {
             UTI: '.pdf',
             mimeType: 'application/pdf',
-            dialogTitle: `Ticket_${reservation.code_reservation}`
+            dialogTitle: `Ticket_${reservation.code_reservation}`,
           });
         }
-        
+
         setToastMessage('Ticket généré avec succès');
         setToastType('success');
         setToastVisible(true);
@@ -337,9 +332,21 @@ export default function DetailReservation() {
 
   const getStatusBadge = (statut: string) => {
     const statusConfig = {
-      confirmee: { color: theme.colors.semantic.success, label: 'Confirmée', icon: 'checkmark-circle' },
-      en_attente: { color: theme.colors.semantic.warning, label: 'En attente', icon: 'time' },
-      annulee: { color: theme.colors.semantic.error, label: 'Annulée', icon: 'close-circle' },
+      confirmee: {
+        color: theme.colors.semantic.success,
+        label: 'Confirmée',
+        icon: 'checkmark-circle',
+      },
+      en_attente: {
+        color: theme.colors.semantic.warning,
+        label: 'En attente',
+        icon: 'time',
+      },
+      annulee: {
+        color: theme.colors.semantic.error,
+        label: 'Annulée',
+        icon: 'close-circle',
+      },
     };
 
     const config = statusConfig[statut as keyof typeof statusConfig] || {
@@ -349,7 +356,15 @@ export default function DetailReservation() {
     };
 
     return (
-      <View style={[styles.statusBadge, { backgroundColor: config.color + '20', borderColor: config.color }]}>
+      <View
+        style={[
+          styles.statusBadge,
+          {
+            backgroundColor: config.color + '20',
+            borderColor: config.color,
+          },
+        ]}
+      >
         <Ionicons name={config.icon as any} size={20} color={config.color} />
         <Text style={[styles.statusText, { color: config.color }]}>{config.label}</Text>
       </View>
@@ -417,9 +432,7 @@ export default function DetailReservation() {
             <Text style={styles.dateReservation}>
               Réservé le {formatDate(reservation.date_reservation)}
             </Text>
-            <View style={styles.statusContainer}>
-              {getStatusBadge(reservation.statut)}
-            </View>
+            <View style={styles.statusContainer}>{getStatusBadge(reservation.statut)}</View>
           </View>
 
           {/* Trajet */}
@@ -428,22 +441,32 @@ export default function DetailReservation() {
             <View style={styles.trajetContainer}>
               <View style={styles.trajetPoint}>
                 <View style={styles.iconCircle}>
-                  <Ionicons name="location" size={24} color={theme.colors.semantic.success} />
+                  <Ionicons
+                    name="location"
+                    size={24}
+                    color={theme.colors.semantic.success}
+                  />
                 </View>
                 <View style={styles.trajetInfo}>
                   <Text style={styles.trajetLabel}>Départ</Text>
                   <Text style={styles.trajetText}>{reservation.voyage.trajet.depart}</Text>
                 </View>
               </View>
-              
+
               <View style={styles.trajetLine}>
                 <View style={styles.dashedLine} />
-                <Text style={styles.distanceText}>{reservation.voyage.trajet.distance} km</Text>
+                <Text style={styles.distanceText}>
+                  {reservation.voyage.trajet.distance} km
+                </Text>
               </View>
-              
+
               <View style={styles.trajetPoint}>
                 <View style={styles.iconCircle}>
-                  <Ionicons name="location" size={24} color={theme.colors.semantic.error} />
+                  <Ionicons
+                    name="location"
+                    size={24}
+                    color={theme.colors.semantic.error}
+                  />
                 </View>
                 <View style={styles.trajetInfo}>
                   <Text style={styles.trajetLabel}>Arrivée</Text>
@@ -459,12 +482,16 @@ export default function DetailReservation() {
             <View style={styles.infoRow}>
               <Ionicons name="calendar" size={20} color={theme.colors.primary[500]} />
               <Text style={styles.infoLabel}>Date de départ</Text>
-              <Text style={styles.infoValue}>{formatDate(reservation.voyage.date_depart)}</Text>
+              <Text style={styles.infoValue}>
+                {formatDate(reservation.voyage.date_depart)}
+              </Text>
             </View>
             <View style={styles.infoRow}>
               <Ionicons name="time" size={20} color={theme.colors.primary[500]} />
               <Text style={styles.infoLabel}>Heure de départ</Text>
-              <Text style={styles.infoValue}>{formatHeure(reservation.voyage.heure_depart)}</Text>
+              <Text style={styles.infoValue}>
+                {formatHeure(reservation.voyage.heure_depart)}
+              </Text>
             </View>
           </View>
 
@@ -481,7 +508,9 @@ export default function DetailReservation() {
             </View>
             <View style={styles.nombrePlacesContainer}>
               <Text style={styles.nombrePlacesLabel}>Nombre de places :</Text>
-              <Text style={styles.nombrePlacesValue}>{reservation.nombre_places}</Text>
+              <Text style={styles.nombrePlacesValue}>
+                {reservation.nombre_places}
+              </Text>
             </View>
           </View>
 
@@ -490,7 +519,9 @@ export default function DetailReservation() {
             <Text style={styles.cardTitle}>Tarification</Text>
             <View style={styles.prixRow}>
               <Text style={styles.prixLabel}>Prix unitaire</Text>
-              <Text style={styles.prixValue}>{reservation.voyage.prix.toLocaleString()} Ar</Text>
+              <Text style={styles.prixValue}>
+                {reservation.voyage.prix.toLocaleString()} Ar
+              </Text>
             </View>
             <View style={styles.prixRow}>
               <Text style={styles.prixLabel}>Nombre de places</Text>
@@ -508,7 +539,9 @@ export default function DetailReservation() {
             <Text style={styles.cardTitle}>Coopérative</Text>
             <View style={styles.infoRow}>
               <Ionicons name="business" size={20} color={theme.colors.primary[500]} />
-              <Text style={styles.infoValue}>{reservation.voyage.cooperative.nom}</Text>
+              <Text style={styles.infoValue}>
+                {reservation.voyage.cooperative.nom}
+              </Text>
             </View>
           </View>
 
@@ -518,12 +551,16 @@ export default function DetailReservation() {
             <View style={styles.infoRow}>
               <Ionicons name="car" size={20} color={theme.colors.primary[500]} />
               <Text style={styles.infoLabel}>Modèle</Text>
-              <Text style={styles.infoValue}>{reservation.voyage.voiture.modele}</Text>
+              <Text style={styles.infoValue}>
+                {reservation.voyage.voiture.modele}
+              </Text>
             </View>
             <View style={styles.infoRow}>
               <Ionicons name="card" size={20} color={theme.colors.primary[500]} />
               <Text style={styles.infoLabel}>Immatriculation</Text>
-              <Text style={styles.infoValue}>{reservation.voyage.voiture.immatriculation}</Text>
+              <Text style={styles.infoValue}>
+                {reservation.voyage.voiture.immatriculation}
+              </Text>
             </View>
           </View>
 
@@ -534,13 +571,24 @@ export default function DetailReservation() {
       {/* Footer fixe */}
       <View style={styles.footer}>
         <TouchableOpacity style={styles.printButton} onPress={handlePrint}>
-          <Ionicons name="print-outline" size={20} color={theme.colors.primary[500]} />
+          <Ionicons
+            name="print-outline"
+            size={20}
+            color={theme.colors.primary[500]}
+          />
           <Text style={styles.printButtonText}>Télécharger le Ticket</Text>
         </TouchableOpacity>
 
         {reservation.statut === 'confirmee' && (
-          <TouchableOpacity style={styles.cancelButton} onPress={handleCancelReservation}>
-            <Ionicons name="close-circle-outline" size={20} color={theme.colors.semantic.error} />
+          <TouchableOpacity
+            style={styles.cancelButton}
+            onPress={handleCancelReservation}
+          >
+            <Ionicons
+              name="close-circle-outline"
+              size={20}
+              color={theme.colors.semantic.error}
+            />
             <Text style={styles.cancelButtonText}>Annuler la réservation</Text>
           </TouchableOpacity>
         )}
@@ -555,15 +603,19 @@ export default function DetailReservation() {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Ionicons name="warning-outline" size={60} color={theme.colors.semantic.error} />
-            
+            <Ionicons
+              name="warning-outline"
+              size={60}
+              color={theme.colors.semantic.error}
+            />
+
             <Text style={styles.modalTitle}>Annuler la réservation</Text>
-            
+
             <Text style={styles.modalMessage}>
               Voulez-vous vraiment annuler la réservation{' '}
               <Text style={styles.modalCode}>{reservation.code_reservation}</Text> ?
             </Text>
-            
+
             <Text style={styles.modalWarning}>
               ⚠️ Cette action est irréversible
             </Text>
@@ -575,7 +627,7 @@ export default function DetailReservation() {
               >
                 <Text style={styles.modalButtonTextCancel}>Non, garder</Text>
               </TouchableOpacity>
-              
+
               <TouchableOpacity
                 style={[styles.modalButton, styles.modalButtonConfirm]}
                 onPress={performCancellation}
@@ -583,7 +635,6 @@ export default function DetailReservation() {
                 <Text style={styles.modalButtonTextConfirm}>Oui, annuler</Text>
               </TouchableOpacity>
             </View>
-            
           </View>
         </View>
       </Modal>
@@ -601,370 +652,372 @@ export default function DetailReservation() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background.secondary,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingText: {
-    marginTop: theme.spacing.md,
-    fontSize: theme.typography.sizes.body,
-    color: theme.colors.text.secondary,
-  },
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  errorText: {
-    fontSize: theme.typography.sizes.h3,
-    color: theme.colors.semantic.error,
-    marginVertical: theme.spacing.lg,
-  },
-  backButton: {
-    backgroundColor: theme.colors.primary[500],
-    paddingHorizontal: theme.spacing.xl,
-    paddingVertical: theme.spacing.md,
-    borderRadius: theme.borderRadius.md,
-  },
-  backButtonText: {
-    color: theme.colors.text.inverse,
-    fontSize: theme.typography.sizes.body,
-    fontWeight: theme.typography.weights.semibold,
-  },
-  header: {
-    backgroundColor: theme.colors.primary[500],
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingTop: 50,
-    paddingBottom: 20,
-    paddingHorizontal: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 5,
-  },
-  headerBackButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  headerTitle: {
-    fontSize: theme.typography.sizes.h2,
-    fontWeight: theme.typography.weights.bold,
-    color: theme.colors.text.inverse,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  content: {
-    padding: theme.spacing.lg,
-  },
-  topCard: {
-    backgroundColor: theme.colors.background.primary,
-    borderRadius: theme.borderRadius.lg,
-    padding: theme.spacing.xl,
-    marginBottom: theme.spacing.lg,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  codeReservation: {
-    fontSize: theme.typography.sizes.h1,
-    fontWeight: theme.typography.weights.bold,
-    color: theme.colors.primary[500],
-    marginBottom: theme.spacing.sm,
-  },
-  dateReservation: {
-    fontSize: theme.typography.sizes.body,
-    color: theme.colors.text.secondary,
-    marginBottom: theme.spacing.lg,
-  },
-  statusContainer: {
-    marginTop: theme.spacing.sm,
-  },
-  statusBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: theme.borderRadius.round,
-    borderWidth: 2,
-  },
-  statusText: {
-    fontSize: theme.typography.sizes.body,
-    fontWeight: theme.typography.weights.bold,
-  },
-  card: {
-    backgroundColor: theme.colors.background.primary,
-    borderRadius: theme.borderRadius.md,
-    padding: theme.spacing.lg,
-    marginBottom: theme.spacing.lg,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  cardTitle: {
-    fontSize: theme.typography.sizes.h3,
-    fontWeight: theme.typography.weights.bold,
-    color: theme.colors.text.primary,
-    marginBottom: theme.spacing.md,
-  },
-  trajetContainer: {
-    paddingVertical: theme.spacing.sm,
-  },
-  trajetPoint: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: theme.spacing.md,
-  },
-  iconCircle: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: theme.colors.background.secondary,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  trajetInfo: {
-    flex: 1,
-  },
-  trajetLabel: {
-    fontSize: theme.typography.sizes.small,
-    color: theme.colors.text.secondary,
-    marginBottom: 4,
-  },
-  trajetText: {
-    fontSize: theme.typography.sizes.h3,
-    fontWeight: theme.typography.weights.semibold,
-    color: theme.colors.text.primary,
-  },
-  trajetLine: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingLeft: 25,
-    paddingVertical: theme.spacing.md,
-  },
-  dashedLine: {
-    width: 3,
-    height: 40,
-    backgroundColor: theme.colors.neutral[300],
-    marginRight: theme.spacing.md,
-  },
-  distanceText: {
-    fontSize: theme.typography.sizes.small,
-    color: theme.colors.text.secondary,
-    fontStyle: 'italic',
-  },
-  infoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: theme.spacing.md,
-    gap: theme.spacing.sm,
-  },
-  infoLabel: {
-    fontSize: theme.typography.sizes.body,
-    color: theme.colors.text.secondary,
-    flex: 1,
-  },
-  infoValue: {
-    fontSize: theme.typography.sizes.body,
-    fontWeight: theme.typography.weights.semibold,
-    color: theme.colors.text.primary,
-  },
-  placesGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: theme.spacing.sm,
-    marginBottom: theme.spacing.md,
-  },
-  placeChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: theme.colors.primary[50],
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.sm,
-    borderRadius: theme.borderRadius.round,
-    borderWidth: 1,
-    borderColor: theme.colors.primary[500],
-  },
-  placeText: {
-    fontSize: theme.typography.sizes.body,
-    fontWeight: theme.typography.weights.bold,
-    color: theme.colors.primary[500],
-  },
-  nombrePlacesContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingTop: theme.spacing.sm,
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.neutral[200],
-  },
-  nombrePlacesLabel: {
-    fontSize: theme.typography.sizes.body,
-    color: theme.colors.text.secondary,
-  },
-  nombrePlacesValue: {
-    fontSize: theme.typography.sizes.body,
-    fontWeight: theme.typography.weights.bold,
-    color: theme.colors.text.primary,
-  },
-  prixRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: theme.spacing.sm,
-  },
-  prixLabel: {
-    fontSize: theme.typography.sizes.body,
-    color: theme.colors.text.secondary,
-  },
-  prixValue: {
-    fontSize: theme.typography.sizes.body,
-    color: theme.colors.text.primary,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: theme.colors.neutral[300],
-    marginVertical: theme.spacing.md,
-  },
-  totalLabel: {
-    fontSize: theme.typography.sizes.h3,
-    fontWeight: theme.typography.weights.bold,
-    color: theme.colors.text.primary,
-  },
-  totalValue: {
-    fontSize: theme.typography.sizes.h3,
-    fontWeight: theme.typography.weights.bold,
-    color: theme.colors.primary[500],
-  },
-  footer: {
-    padding: theme.spacing.lg,
-    backgroundColor: theme.colors.background.primary,
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.neutral[200],
-    gap: theme.spacing.sm,
-  },
-  printButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: theme.spacing.sm,
-    backgroundColor: theme.colors.primary[50],
-    paddingVertical: theme.spacing.md,
-    borderRadius: theme.borderRadius.md,
-    borderWidth: 1,
-    borderColor: theme.colors.primary[500],
-  },
-  printButtonText: {
-    fontSize: theme.typography.sizes.body,
-    fontWeight: theme.typography.weights.bold,
-    color: theme.colors.primary[500],
-  },
-  cancelButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: theme.spacing.sm,
-    backgroundColor: theme.colors.semantic.error + '10',
-    paddingVertical: theme.spacing.md,
-    borderRadius: theme.borderRadius.md,
-    borderWidth: 1,
-    borderColor: theme.colors.semantic.error,
-  },
-  cancelButtonText: {
-    fontSize: theme.typography.sizes.body,
-    fontWeight: theme.typography.weights.bold,
-    color: theme.colors.semantic.error,
-  },
-  // Modal styles
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  modalContent: {
-    backgroundColor: theme.colors.background.primary,
-    borderRadius: theme.borderRadius.lg,
-    padding: 24,
-    width: '100%',
-    maxWidth: 400,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 16,
-    elevation: 10,
-  },
-  modalTitle: {
-    fontSize: theme.typography.sizes.h2,
-    fontWeight: theme.typography.weights.bold,
-    color: theme.colors.text.primary,
-    marginTop: 16,
-    marginBottom: 12,
-    textAlign: 'center',
-  },
-  modalMessage: {
-    fontSize: theme.typography.sizes.body,
-    color: theme.colors.text.secondary,
-    textAlign: 'center',
-    marginBottom: 8,
-  },
-  modalCode: {
-    fontWeight: theme.typography.weights.bold,
-    color: theme.colors.primary[500],
-  },
-  modalWarning: {
-    fontSize: theme.typography.sizes.small,
-    color: theme.colors.semantic.error,
-    textAlign: 'center',
-    marginBottom: 24,
-    fontStyle: 'italic',
-  },
-  modalButtons: {
-    flexDirection: 'row',
-    gap: 12,
-    width: '100%',
-  },
-  modalButton: {
-    flex: 1,
-    paddingVertical: 14,
-    borderRadius: theme.borderRadius.md,
-    alignItems: 'center',
-  },
-  modalButtonCancel: {
-    backgroundColor: theme.colors.neutral[200],
-  },
-  modalButtonConfirm: {
-    backgroundColor: theme.colors.semantic.error,
-  },
-  modalButtonTextCancel: {
-    color: theme.colors.text.secondary,
-    fontSize: theme.typography.sizes.body,
-    fontWeight: theme.typography.weights.semibold,
-  },
-  modalButtonTextConfirm: {
-    color: theme.colors.text.inverse,
-    fontSize: theme.typography.sizes.body,
-    fontWeight: theme.typography.weights.bold,
-  },
-});
+// ✅ Styles dépendants du thème, générés à partir du ThemeContext
+const createStyles = (theme: Theme) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: theme.colors.background.secondary,
+    },
+    loadingContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    loadingText: {
+      marginTop: theme.spacing.md,
+      fontSize: theme.typography.sizes.body,
+      color: theme.colors.text.secondary,
+    },
+    errorContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: 20,
+    },
+    errorText: {
+      fontSize: theme.typography.sizes.h3,
+      color: theme.colors.semantic.error,
+      marginVertical: theme.spacing.lg,
+    },
+    backButton: {
+      backgroundColor: theme.colors.primary[500],
+      paddingHorizontal: theme.spacing.xl,
+      paddingVertical: theme.spacing.md,
+      borderRadius: theme.borderRadius.md,
+    },
+    backButtonText: {
+      color: theme.colors.text.inverse,
+      fontSize: theme.typography.sizes.body,
+      fontWeight: theme.typography.weights.semibold,
+    },
+    header: {
+      backgroundColor: theme.colors.primary[500],
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingTop: 50,
+      paddingBottom: 20,
+      paddingHorizontal: 20,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+      elevation: 5,
+    },
+    headerBackButton: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      backgroundColor: 'rgba(255,255,255,0.2)',
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    headerTitle: {
+      fontSize: theme.typography.sizes.h2,
+      fontWeight: theme.typography.weights.bold,
+      color: theme.colors.text.inverse,
+    },
+    scrollView: {
+      flex: 1,
+    },
+    content: {
+      padding: theme.spacing.lg,
+    },
+    topCard: {
+      backgroundColor: theme.colors.background.primary,
+      borderRadius: theme.borderRadius.lg,
+      padding: theme.spacing.xl,
+      marginBottom: theme.spacing.lg,
+      alignItems: 'center',
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.1,
+      shadowRadius: 8,
+      elevation: 4,
+    },
+    codeReservation: {
+      fontSize: theme.typography.sizes.h1,
+      fontWeight: theme.typography.weights.bold,
+      color: theme.colors.primary[500],
+      marginBottom: theme.spacing.sm,
+    },
+    dateReservation: {
+      fontSize: theme.typography.sizes.body,
+      color: theme.colors.text.secondary,
+      marginBottom: theme.spacing.lg,
+    },
+    statusContainer: {
+      marginTop: theme.spacing.sm,
+    },
+    statusBadge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      paddingHorizontal: 16,
+      paddingVertical: 10,
+      borderRadius: theme.borderRadius.round,
+      borderWidth: 2,
+    },
+    statusText: {
+      fontSize: theme.typography.sizes.body,
+      fontWeight: theme.typography.weights.bold,
+    },
+    card: {
+      backgroundColor: theme.colors.background.primary,
+      borderRadius: theme.borderRadius.md,
+      padding: theme.spacing.lg,
+      marginBottom: theme.spacing.lg,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+      elevation: 3,
+    },
+    cardTitle: {
+      fontSize: theme.typography.sizes.h3,
+      fontWeight: theme.typography.weights.bold,
+      color: theme.colors.text.primary,
+      marginBottom: theme.spacing.md,
+    },
+    trajetContainer: {
+      paddingVertical: theme.spacing.sm,
+    },
+    trajetPoint: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: theme.spacing.md,
+    },
+    iconCircle: {
+      width: 50,
+      height: 50,
+      borderRadius: 25,
+      backgroundColor: theme.colors.background.secondary,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    trajetInfo: {
+      flex: 1,
+    },
+    trajetLabel: {
+      fontSize: theme.typography.sizes.small,
+      color: theme.colors.text.secondary,
+      marginBottom: 4,
+    },
+    trajetText: {
+      fontSize: theme.typography.sizes.h3,
+      fontWeight: theme.typography.weights.semibold,
+      color: theme.colors.text.primary,
+    },
+    trajetLine: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingLeft: 25,
+      paddingVertical: theme.spacing.md,
+    },
+    dashedLine: {
+      width: 3,
+      height: 40,
+      backgroundColor: theme.colors.neutral[300],
+      marginRight: theme.spacing.md,
+    },
+    distanceText: {
+      fontSize: theme.typography.sizes.small,
+      color: theme.colors.text.secondary,
+      fontStyle: 'italic',
+    },
+    infoRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: theme.spacing.md,
+      gap: theme.spacing.sm,
+    },
+    infoLabel: {
+      fontSize: theme.typography.sizes.body,
+      color: theme.colors.text.secondary,
+      flex: 1,
+    },
+    infoValue: {
+      fontSize: theme.typography.sizes.body,
+      fontWeight: theme.typography.weights.semibold,
+      color: theme.colors.text.primary,
+    },
+    placesGrid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: theme.spacing.sm,
+      marginBottom: theme.spacing.md,
+    },
+    placeChip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      backgroundColor: theme.colors.primary[50],
+      paddingHorizontal: theme.spacing.md,
+      paddingVertical: theme.spacing.sm,
+      borderRadius: theme.borderRadius.round,
+      borderWidth: 1,
+      borderColor: theme.colors.primary[500],
+    },
+    placeText: {
+      fontSize: theme.typography.sizes.body,
+      fontWeight: theme.typography.weights.bold,
+      color: theme.colors.primary[500],
+    },
+    nombrePlacesContainer: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      paddingTop: theme.spacing.sm,
+      borderTopWidth: 1,
+      borderTopColor: theme.colors.neutral[200],
+    },
+    nombrePlacesLabel: {
+      fontSize: theme.typography.sizes.body,
+      color: theme.colors.text.secondary,
+    },
+    nombrePlacesValue: {
+      fontSize: theme.typography.sizes.body,
+      fontWeight: theme.typography.weights.bold,
+      color: theme.colors.text.primary,
+    },
+    prixRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      marginBottom: theme.spacing.sm,
+    },
+    prixLabel: {
+      fontSize: theme.typography.sizes.body,
+      color: theme.colors.text.secondary,
+    },
+    prixValue: {
+      fontSize: theme.typography.sizes.body,
+      color: theme.colors.text.primary,
+    },
+    divider: {
+      height: 1,
+      backgroundColor: theme.colors.neutral[300],
+      marginVertical: theme.spacing.md,
+    },
+    totalLabel: {
+      fontSize: theme.typography.sizes.h3,
+      fontWeight: theme.typography.weights.bold,
+      color: theme.colors.text.primary,
+    },
+    totalValue: {
+      fontSize: theme.typography.sizes.h3,
+      fontWeight: theme.typography.weights.bold,
+      color: theme.colors.primary[500],
+    },
+    footer: {
+      padding: theme.spacing.lg,
+      backgroundColor: theme.colors.background.primary,
+      borderTopWidth: 1,
+      borderTopColor: theme.colors.neutral[200],
+      gap: theme.spacing.sm,
+    },
+    printButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: theme.spacing.sm,
+      backgroundColor: theme.colors.primary[50],
+      paddingVertical: theme.spacing.md,
+      borderRadius: theme.borderRadius.md,
+      borderWidth: 1,
+      borderColor: theme.colors.primary[500],
+    },
+    printButtonText: {
+      fontSize: theme.typography.sizes.body,
+      fontWeight: theme.typography.weights.bold,
+      color: theme.colors.primary[500],
+    },
+    cancelButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: theme.spacing.sm,
+      backgroundColor: theme.colors.semantic.error + '10',
+      paddingVertical: theme.spacing.md,
+      borderRadius: theme.borderRadius.md,
+      borderWidth: 1,
+      borderColor: theme.colors.semantic.error,
+    },
+    cancelButtonText: {
+      fontSize: theme.typography.sizes.body,
+      fontWeight: theme.typography.weights.bold,
+      color: theme.colors.semantic.error,
+    },
+    // Modal styles
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: 20,
+    },
+    modalContent: {
+      backgroundColor: theme.colors.background.primary,
+      borderRadius: theme.borderRadius.lg,
+      padding: 24,
+      width: '100%',
+      maxWidth: 400,
+      alignItems: 'center',
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: 0.3,
+      shadowRadius: 16,
+      elevation: 10,
+    },
+    modalTitle: {
+      fontSize: theme.typography.sizes.h2,
+      fontWeight: theme.typography.weights.bold,
+      color: theme.colors.text.primary,
+      marginTop: 16,
+      marginBottom: 12,
+      textAlign: 'center',
+    },
+    modalMessage: {
+      fontSize: theme.typography.sizes.body,
+      color: theme.colors.text.secondary,
+      textAlign: 'center',
+      marginBottom: 8,
+    },
+    modalCode: {
+      fontWeight: theme.typography.weights.bold,
+      color: theme.colors.primary[500],
+    },
+    modalWarning: {
+      fontSize: theme.typography.sizes.small,
+      color: theme.colors.semantic.error,
+      textAlign: 'center',
+      marginBottom: 24,
+      fontStyle: 'italic',
+    },
+    modalButtons: {
+      flexDirection: 'row',
+      gap: 12,
+      width: '100%',
+    },
+    modalButton: {
+      flex: 1,
+      paddingVertical: 14,
+      borderRadius: theme.borderRadius.md,
+      alignItems: 'center',
+    },
+    modalButtonCancel: {
+      backgroundColor: theme.colors.neutral[200],
+    },
+    modalButtonConfirm: {
+      backgroundColor: theme.colors.semantic.error,
+    },
+    modalButtonTextCancel: {
+      color: theme.colors.text.secondary,
+      fontSize: theme.typography.sizes.body,
+      fontWeight: theme.typography.weights.semibold,
+    },
+    modalButtonTextConfirm: {
+      color: theme.colors.text.inverse,
+      fontSize: theme.typography.sizes.body,
+      fontWeight: theme.typography.weights.bold,
+    },
+  });

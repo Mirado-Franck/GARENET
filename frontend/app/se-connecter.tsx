@@ -1,3 +1,4 @@
+// app/se-connecter.tsx
 import React, { useState } from 'react';
 import { Toast } from '../components/ui/Toast';
 import {
@@ -10,16 +11,17 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
-  Alert, // ✅ Alert native maintenue
+  Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import Button from '../components/ui/Button';
 import { useAuth } from '../contexts/AuthContext';
-import { theme } from '../constants/theme';
+import { useTheme } from '../contexts/ThemeContext';
 
 export default function SeConnecter() {
   const router = useRouter();
+  const { theme } = useTheme(); // 👈 thème dynamique
   const { login, redirectAfterLogin, setRedirectAfterLogin } = useAuth();
   
   const [toastVisible, setToastVisible] = useState(false);
@@ -34,6 +36,125 @@ export default function SeConnecter() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<any>({});
+
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: theme.colors.background.secondary,
+    },
+    scrollContent: {
+      flexGrow: 1,
+    },
+    header: {
+      backgroundColor: theme.colors.primary[500],
+      paddingTop: theme.spacing.xxxl + 20,
+      paddingBottom: theme.spacing.xl,
+      paddingHorizontal: theme.spacing.xl,
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    backButton: {
+      marginRight: theme.spacing.lg,
+    },
+    headerTitle: {
+      fontSize: theme.typography.sizes.h2,
+      fontWeight: theme.typography.weights.bold,
+      color: theme.colors.text.inverse,
+    },
+    formContainer: {
+      padding: theme.spacing.xl,
+    },
+    title: {
+      fontSize: theme.typography.sizes.h1,
+      fontWeight: theme.typography.weights.bold,
+      color: theme.colors.primary[500],
+      marginBottom: theme.spacing.sm,
+    },
+    subtitle: {
+      fontSize: theme.typography.sizes.body,
+      color: theme.colors.text.secondary,
+      marginBottom: theme.spacing.xxxl,
+    },
+    inputGroup: {
+      marginBottom: theme.spacing.xl,
+    },
+    label: {
+      fontSize: theme.typography.sizes.body,
+      fontWeight: theme.typography.weights.semibold,
+      color: theme.colors.text.primary,
+      marginBottom: theme.spacing.sm,
+    },
+    input: {
+      backgroundColor: theme.colors.background.primary,
+      borderWidth: 1,
+      borderColor: theme.colors.neutral[300],
+      borderRadius: theme.borderRadius.md,
+      paddingHorizontal: theme.spacing.lg,
+      paddingVertical: theme.spacing.md,
+      fontSize: theme.typography.sizes.body,
+      color: theme.colors.text.primary,
+    },
+    inputError: {
+      borderColor: theme.colors.semantic.error,
+      borderWidth: 1.5,
+    },
+    passwordContainer: {
+      position: 'relative',
+    },
+    passwordInput: {
+      backgroundColor: theme.colors.background.primary,
+      borderWidth: 1,
+      borderColor: theme.colors.neutral[300],
+      borderRadius: theme.borderRadius.md,
+      paddingHorizontal: theme.spacing.lg,
+      paddingVertical: theme.spacing.md,
+      paddingRight: 50,
+      fontSize: theme.typography.sizes.body,
+      color: theme.colors.text.primary,
+    },
+    eyeIcon: {
+      position: 'absolute',
+      right: theme.spacing.lg,
+      top: theme.spacing.md,
+    },
+    errorText: {
+      color: theme.colors.semantic.error,
+      fontSize: theme.typography.sizes.small,
+      marginTop: theme.spacing.xs,
+      marginLeft: theme.spacing.xs,
+    },
+    forgotPassword: {
+      alignSelf: 'flex-end',
+      marginBottom: theme.spacing.xl,
+    },
+    forgotPasswordText: {
+      color: theme.colors.primary[500],
+      fontSize: theme.typography.sizes.caption,
+      fontWeight: theme.typography.weights.semibold,
+    },
+    submitButton: {
+      marginTop: theme.spacing.md,
+      marginBottom: theme.spacing.lg,
+    },
+    loader: {
+      marginVertical: theme.spacing.md,
+    },
+    footer: {
+      flexDirection: 'row',
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginTop: theme.spacing.xl,
+    },
+    footerText: {
+      fontSize: theme.typography.sizes.caption,
+      color: theme.colors.text.secondary,
+    },
+    linkText: {
+      fontSize: theme.typography.sizes.caption,
+      color: theme.colors.primary[500],
+      fontWeight: theme.typography.weights.semibold,
+    },
+  });
 
   const validateForm = (): boolean => {
     const newErrors: any = {};
@@ -78,23 +199,12 @@ export default function SeConnecter() {
       }, 1000);
 
     } catch (error: any) {
-      // ✅ Extraction du message d'erreur sans log console
-      const errorMessage = 
-        error.response?.data?.error || 
-        error.message || 
-        error.error || 
-        'Email ou mot de passe invalide';
-
-      // ✅ Affichage de l'Alert native (Popup)
       Alert.alert(
         "Échec de connexion",
         "Email ou mot de passe incorrect. Veuillez réessayer.",
         [{ text: "OK" }]
       );
-
-      // Optionnel : Afficher aussi le toast discret en bas
-     // showToast(errorMessage, 'error');
-
+      // Optionnel : showToast('Email ou mot de passe invalide', 'error');
     } finally {
       setLoading(false);
     }
@@ -126,7 +236,7 @@ export default function SeConnecter() {
               style={styles.backButton}
               onPress={() => router.back()}
             >
-              <Ionicons name="arrow-back" size={24} color="white" />
+              <Ionicons name="arrow-back" size={24} color={theme.colors.text.inverse} />
             </TouchableOpacity>
             <Text style={styles.headerTitle}>Connexion</Text>
           </View>
@@ -210,7 +320,6 @@ export default function SeConnecter() {
         </ScrollView>
       </KeyboardAvoidingView>
 
-      {/* Toast hors du ScrollView */}
       {toastVisible && (
         <Toast
           message={toastMessage}
@@ -222,122 +331,3 @@ export default function SeConnecter() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background.secondary,
-  },
-  scrollContent: {
-    flexGrow: 1,
-  },
-  header: {
-    backgroundColor: theme.colors.primary[500],
-    paddingTop: theme.spacing.xxxl + 20,
-    paddingBottom: theme.spacing.xl,
-    paddingHorizontal: theme.spacing.xl,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  backButton: {
-    marginRight: theme.spacing.lg,
-  },
-  headerTitle: {
-    fontSize: theme.typography.sizes.h2,
-    fontWeight: theme.typography.weights.bold,
-    color: theme.colors.text.inverse,
-  },
-  formContainer: {
-    padding: theme.spacing.xl,
-  },
-  title: {
-    fontSize: theme.typography.sizes.h1,
-    fontWeight: theme.typography.weights.bold,
-    color: theme.colors.primary[500],
-    marginBottom: theme.spacing.sm,
-  },
-  subtitle: {
-    fontSize: theme.typography.sizes.body,
-    color: theme.colors.text.secondary,
-    marginBottom: theme.spacing.xxxl,
-  },
-  inputGroup: {
-    marginBottom: theme.spacing.xl,
-  },
-  label: {
-    fontSize: theme.typography.sizes.body,
-    fontWeight: theme.typography.weights.semibold,
-    color: theme.colors.text.primary,
-    marginBottom: theme.spacing.sm,
-  },
-  input: {
-    backgroundColor: theme.colors.background.primary,
-    borderWidth: 1,
-    borderColor: theme.colors.neutral[300],
-    borderRadius: theme.borderRadius.md,
-    paddingHorizontal: theme.spacing.lg,
-    paddingVertical: theme.spacing.md,
-    fontSize: theme.typography.sizes.body,
-    color: theme.colors.text.primary,
-  },
-  inputError: {
-    borderColor: theme.colors.semantic.error,
-    borderWidth: 1.5,
-  },
-  passwordContainer: {
-    position: 'relative',
-  },
-  passwordInput: {
-    backgroundColor: theme.colors.background.primary,
-    borderWidth: 1,
-    borderColor: theme.colors.neutral[300],
-    borderRadius: theme.borderRadius.md,
-    paddingHorizontal: theme.spacing.lg,
-    paddingVertical: theme.spacing.md,
-    paddingRight: 50,
-    fontSize: theme.typography.sizes.body,
-    color: theme.colors.text.primary,
-  },
-  eyeIcon: {
-    position: 'absolute',
-    right: theme.spacing.lg,
-    top: theme.spacing.md,
-  },
-  errorText: {
-    color: theme.colors.semantic.error,
-    fontSize: theme.typography.sizes.small,
-    marginTop: theme.spacing.xs,
-    marginLeft: theme.spacing.xs,
-  },
-  forgotPassword: {
-    alignSelf: 'flex-end',
-    marginBottom: theme.spacing.xl,
-  },
-  forgotPasswordText: {
-    color: theme.colors.primary[500],
-    fontSize: theme.typography.sizes.caption,
-    fontWeight: theme.typography.weights.semibold,
-  },
-  submitButton: {
-    marginTop: theme.spacing.md,
-    marginBottom: theme.spacing.lg,
-  },
-  loader: {
-    marginVertical: theme.spacing.md,
-  },
-  footer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: theme.spacing.xl,
-  },
-  footerText: {
-    fontSize: theme.typography.sizes.caption,
-    color: theme.colors.text.secondary,
-  },
-  linkText: {
-    fontSize: theme.typography.sizes.caption,
-    color: theme.colors.primary[500],
-    fontWeight: theme.typography.weights.semibold,
-  },
-});

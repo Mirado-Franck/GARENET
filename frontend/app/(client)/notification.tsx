@@ -13,17 +13,198 @@ import {
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { notificationService, Notification } from '../../services/notificationService';
-import { theme } from '../../constants/theme';
+import { useTheme } from '../../contexts/ThemeContext';
 
-// Types pour le mapping
 type NotificationType = 'reservation' | 'promotion' | 'system' | 'alerte';
 
 export default function NotificationPage() {
   const router = useRouter();
+  const { theme } = useTheme(); // 👈 dynamique
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+
+  const styles = React.useMemo(
+    () =>
+      StyleSheet.create({
+        container: {
+          flex: 1,
+          backgroundColor: theme.colors.background.secondary,
+        },
+        loadingContainer: {
+          flex: 1,
+          justifyContent: 'center',
+          alignItems: 'center',
+          backgroundColor: theme.colors.background.secondary,
+        },
+        loadingText: {
+          marginTop: theme.spacing.md,
+          fontSize: theme.typography.sizes.body,
+          color: theme.colors.text.secondary,
+        },
+        header: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          paddingHorizontal: theme.spacing.xl,
+          paddingTop: 50,
+          paddingBottom: theme.spacing.lg,
+          backgroundColor: theme.colors.background.primary,
+          borderBottomWidth: 1,
+          borderBottomColor: theme.colors.neutral[200],
+        },
+        backButton: {
+          marginRight: theme.spacing.lg,
+        },
+        headerTitle: {
+          fontSize: theme.typography.sizes.h2,
+          fontWeight: theme.typography.weights.bold,
+          color: theme.colors.primary[500],
+          flex: 1,
+        },
+        badge: {
+          backgroundColor: theme.colors.semantic.error,
+          borderRadius: 12,
+          minWidth: 24,
+          height: 24,
+          alignItems: 'center',
+          justifyContent: 'center',
+          paddingHorizontal: 6,
+        },
+        badgeText: {
+          color: theme.colors.text.inverse,
+          fontSize: 12,
+          fontWeight: theme.typography.weights.bold,
+        },
+        actionsContainer: {
+          paddingHorizontal: theme.spacing.xl,
+          paddingVertical: theme.spacing.md,
+          backgroundColor: theme.colors.background.primary,
+          borderBottomWidth: 1,
+          borderBottomColor: theme.colors.neutral[200],
+        },
+        actionButton: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: theme.spacing.xs,
+        },
+        actionText: {
+          color: theme.colors.primary[500],
+          fontSize: theme.typography.sizes.caption,
+          fontWeight: theme.typography.weights.semibold,
+        },
+        scrollView: {
+          flex: 1,
+        },
+        scrollContent: {
+          flexGrow: 1,
+          paddingBottom: theme.spacing.xl,
+        },
+        emptyContainer: {
+          flex: 1,
+          alignItems: 'center',
+          justifyContent: 'center',
+          paddingHorizontal: theme.spacing.xxxl,
+          paddingVertical: 100,
+        },
+        emptyTitle: {
+          fontSize: theme.typography.sizes.h2,
+          fontWeight: theme.typography.weights.bold,
+          color: theme.colors.text.secondary,
+          marginTop: theme.spacing.lg,
+          marginBottom: theme.spacing.sm,
+        },
+        emptyText: {
+          fontSize: theme.typography.sizes.body,
+          color: theme.colors.text.tertiary,
+          textAlign: 'center',
+          lineHeight: 22,
+        },
+        notificationsList: {
+          padding: theme.spacing.lg,
+          gap: theme.spacing.md,
+        },
+        notificationCard: {
+          flexDirection: 'row',
+          backgroundColor: theme.colors.background.primary,
+          borderRadius: theme.borderRadius.md,
+          padding: theme.spacing.lg,
+          borderWidth: 1,
+          borderColor: theme.colors.neutral[200],
+          position: 'relative',
+          ...theme.shadows.sm,
+        },
+        notificationNonLue: {
+          backgroundColor: theme.colors.primary[50],
+          borderColor: theme.colors.primary[200],
+        },
+        unreadIndicator: {
+          position: 'absolute',
+          left: 8,
+          top: '50%',
+          marginTop: -4,
+          width: 8,
+          height: 8,
+          borderRadius: 4,
+          backgroundColor: theme.colors.primary[500],
+        },
+        iconContainer: {
+          width: 44,
+          height: 44,
+          borderRadius: 22,
+          alignItems: 'center',
+          justifyContent: 'center',
+          marginRight: theme.spacing.md,
+        },
+        notificationContent: {
+          flex: 1,
+        },
+        notificationHeader: {
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+          alignItems: 'flex-start',
+          marginBottom: theme.spacing.sm,
+        },
+        notificationTitle: {
+          fontSize: theme.typography.sizes.body,
+          fontWeight: theme.typography.weights.semibold,
+          color: theme.colors.text.primary,
+          flex: 1,
+          marginRight: theme.spacing.md,
+          textTransform: 'capitalize',
+        },
+        notificationDate: {
+          fontSize: theme.typography.sizes.small,
+          color: theme.colors.text.tertiary,
+        },
+        notificationMessage: {
+          fontSize: theme.typography.sizes.caption,
+          color: theme.colors.text.secondary,
+          lineHeight: 20,
+          marginBottom: theme.spacing.sm,
+        },
+        canalBadge: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 4,
+          alignSelf: 'flex-start',
+          backgroundColor: theme.colors.neutral[100],
+          paddingHorizontal: theme.spacing.sm,
+          paddingVertical: 2,
+          borderRadius: theme.borderRadius.sm,
+        },
+        canalText: {
+          fontSize: theme.typography.sizes.small,
+          color: theme.colors.text.secondary,
+          textTransform: 'uppercase',
+        },
+        deleteButton: {
+          padding: theme.spacing.xs,
+          marginLeft: theme.spacing.sm,
+        },
+      }),
+    [theme]
+  );
 
   useEffect(() => {
     loadNotifications();
@@ -34,7 +215,7 @@ export default function NotificationPage() {
       setLoading(true);
       const [notifs, count] = await Promise.all([
         notificationService.getNotifications(),
-        notificationService.getUnreadCount()
+        notificationService.getUnreadCount(),
       ]);
       setNotifications(notifs);
       setUnreadCount(count);
@@ -55,15 +236,11 @@ export default function NotificationPage() {
   const marquerCommeLue = async (id: number) => {
     try {
       await notificationService.markAsRead(id);
-      
-      // Mettre à jour localement
       setNotifications(prev =>
         prev.map(notif =>
           notif.id === id ? { ...notif, statut: 'lu' } : notif
         )
       );
-      
-      // Décrémenter le compteur
       setUnreadCount(prev => Math.max(0, prev - 1));
     } catch (error) {
       console.error('Erreur marquage notification:', error);
@@ -73,12 +250,9 @@ export default function NotificationPage() {
   const marquerToutesCommeLues = async () => {
     try {
       await notificationService.markAllAsRead();
-      
-      // Mettre à jour toutes localement
       setNotifications(prev =>
         prev.map(notif => ({ ...notif, statut: 'lu' as const }))
       );
-      
       setUnreadCount(0);
     } catch (error) {
       console.error('Erreur marquage toutes notifications:', error);
@@ -99,7 +273,6 @@ export default function NotificationPage() {
             try {
               await notificationService.deleteNotification(id);
               
-              // Retirer localement
               const notifToDelete = notifications.find(n => n.id === id);
               if (notifToDelete && notifToDelete.statut === 'non_lu') {
                 setUnreadCount(prev => Math.max(0, prev - 1));
@@ -116,7 +289,6 @@ export default function NotificationPage() {
     );
   };
 
-  // Mapper le type de notification vers l'icône
   const getIconByType = (type: string): keyof typeof Ionicons.glyphMap => {
     const typeMap: Record<string, keyof typeof Ionicons.glyphMap> = {
       reservation_confirmee: 'ticket',
@@ -132,7 +304,6 @@ export default function NotificationPage() {
     return typeMap[type] || 'notifications';
   };
 
-  // Mapper le type vers la couleur
   const getColorByType = (type: string): string => {
     const colorMap: Record<string, string> = {
       reservation_confirmee: theme.colors.semantic.success,
@@ -192,7 +363,6 @@ export default function NotificationPage() {
         )}
       </View>
 
-      {/* Actions rapides */}
       {unreadCount > 0 && (
         <View style={styles.actionsContainer}>
           <TouchableOpacity style={styles.actionButton} onPress={marquerToutesCommeLues}>
@@ -202,11 +372,16 @@ export default function NotificationPage() {
         </View>
       )}
 
-      {/* Liste des notifications */}
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[theme.colors.primary[500]]} />}
+        refreshControl={
+          <RefreshControl 
+            refreshing={refreshing} 
+            onRefresh={onRefresh} 
+            colors={[theme.colors.primary[500]]} 
+          />
+        }
         showsVerticalScrollIndicator={false}
       >
         {notifications.length === 0 ? (
@@ -233,10 +408,8 @@ export default function NotificationPage() {
                 }}
                 activeOpacity={0.7}
               >
-                {/* Indicateur de non-lu */}
                 {notification.statut === 'non_lu' && <View style={styles.unreadIndicator} />}
 
-                {/* Icône */}
                 <View
                   style={[
                     styles.iconContainer,
@@ -250,16 +423,18 @@ export default function NotificationPage() {
                   />
                 </View>
 
-                {/* Contenu */}
                 <View style={styles.notificationContent}>
                   <View style={styles.notificationHeader}>
-                    <Text style={styles.notificationTitle}>{notification.type.replace(/_/g, ' ')}</Text>
-                    <Text style={styles.notificationDate}>{formatDate(notification.date_envoi)}</Text>
+                    <Text style={styles.notificationTitle}>
+                      {notification.type.replace(/_/g, ' ')}
+                    </Text>
+                    <Text style={styles.notificationDate}>
+                      {formatDate(notification.date_envoi)}
+                    </Text>
                   </View>
 
                   <Text style={styles.notificationMessage}>{notification.contenu}</Text>
 
-                  {/* Badge canal */}
                   <View style={styles.canalBadge}>
                     <Ionicons
                       name={
@@ -276,7 +451,6 @@ export default function NotificationPage() {
                   </View>
                 </View>
 
-                {/* Bouton suppression */}
                 <TouchableOpacity
                   style={styles.deleteButton}
                   onPress={(e) => {
@@ -294,180 +468,3 @@ export default function NotificationPage() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background.secondary,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: theme.colors.background.secondary,
-  },
-  loadingText: {
-    marginTop: theme.spacing.md,
-    fontSize: theme.typography.sizes.body,
-    color: theme.colors.text.secondary,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: theme.spacing.xl,
-    paddingTop: 50,
-    paddingBottom: theme.spacing.lg,
-    backgroundColor: theme.colors.background.primary,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.neutral[200],
-  },
-  backButton: {
-    marginRight: theme.spacing.lg,
-  },
-  headerTitle: {
-    fontSize: theme.typography.sizes.h2,
-    fontWeight: theme.typography.weights.bold,
-    color: theme.colors.primary[500],
-    flex: 1,
-  },
-  badge: {
-    backgroundColor: theme.colors.semantic.error,
-    borderRadius: 12,
-    minWidth: 24,
-    height: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 6,
-  },
-  badgeText: {
-    color: theme.colors.text.inverse,
-    fontSize: 12,
-    fontWeight: theme.typography.weights.bold,
-  },
-  actionsContainer: {
-    paddingHorizontal: theme.spacing.xl,
-    paddingVertical: theme.spacing.md,
-    backgroundColor: theme.colors.background.primary,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.neutral[200],
-  },
-  actionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: theme.spacing.xs,
-  },
-  actionText: {
-    color: theme.colors.primary[500],
-    fontSize: theme.typography.sizes.caption,
-    fontWeight: theme.typography.weights.semibold,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    flexGrow: 1,
-    paddingBottom: theme.spacing.xl,
-  },
-  emptyContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: theme.spacing.xxxl,
-    paddingVertical: 100,
-  },
-  emptyTitle: {
-    fontSize: theme.typography.sizes.h2,
-    fontWeight: theme.typography.weights.bold,
-    color: theme.colors.text.secondary,
-    marginTop: theme.spacing.lg,
-    marginBottom: theme.spacing.sm,
-  },
-  emptyText: {
-    fontSize: theme.typography.sizes.body,
-    color: theme.colors.text.tertiary,
-    textAlign: 'center',
-    lineHeight: 22,
-  },
-  notificationsList: {
-    padding: theme.spacing.lg,
-    gap: theme.spacing.md,
-  },
-  notificationCard: {
-    flexDirection: 'row',
-    backgroundColor: theme.colors.background.primary,
-    borderRadius: theme.borderRadius.md,
-    padding: theme.spacing.lg,
-    ...theme.shadows.sm,
-    borderWidth: 1,
-    borderColor: theme.colors.neutral[200],
-    position: 'relative',
-  },
-  notificationNonLue: {
-    backgroundColor: theme.colors.primary[50],
-    borderColor: theme.colors.primary[200],
-  },
-  unreadIndicator: {
-    position: 'absolute',
-    left: 8,
-    top: '50%',
-    marginTop: -4,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: theme.colors.primary[500],
-  },
-  iconContainer: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: theme.spacing.md,
-  },
-  notificationContent: {
-    flex: 1,
-  },
-  notificationHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: theme.spacing.sm,
-  },
-  notificationTitle: {
-    fontSize: theme.typography.sizes.body,
-    fontWeight: theme.typography.weights.semibold,
-    color: theme.colors.text.primary,
-    flex: 1,
-    marginRight: theme.spacing.md,
-    textTransform: 'capitalize',
-  },
-  notificationDate: {
-    fontSize: theme.typography.sizes.small,
-    color: theme.colors.text.tertiary,
-  },
-  notificationMessage: {
-    fontSize: theme.typography.sizes.caption,
-    color: theme.colors.text.secondary,
-    lineHeight: 20,
-    marginBottom: theme.spacing.sm,
-  },
-  canalBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    alignSelf: 'flex-start',
-    backgroundColor: theme.colors.neutral[100],
-    paddingHorizontal: theme.spacing.sm,
-    paddingVertical: 2,
-    borderRadius: theme.borderRadius.sm,
-  },
-  canalText: {
-    fontSize: theme.typography.sizes.small,
-    color: theme.colors.text.secondary,
-    textTransform: 'uppercase',
-  },
-  deleteButton: {
-    padding: theme.spacing.xs,
-    marginLeft: theme.spacing.sm,
-  },
-});

@@ -1,4 +1,3 @@
-// app/(client)/profil/theme-selector.tsx
 import React, { useState } from 'react';
 import {
   View,
@@ -6,158 +5,256 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Alert,
+  ActivityIndicator,
   StatusBar,
+  Animated,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
-import { theme } from '../../../constants/theme';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { router, Stack } from 'expo-router';
+import { useTheme } from '../../../contexts/ThemeContext';
+import { getThemeConfig, ThemeKey } from '../../../constants/themes';
 
-// Définition des thèmes disponibles
-const THEMES = [
+// Définition des thèmes disponibles (id = clés de ThemeKey)
+const THEMES: { id: ThemeKey; name: string; description: string; icon: string }[] = [
   {
     id: 'blue',
     name: 'Océan',
-    description: 'Thème par défaut, professionnel et moderne',
-    color: '#3b82f6',
-    gradient: ['#3b82f6', '#1d4ed8'],
+    description: 'Professionnel et moderne',
     icon: 'water-outline',
   },
   {
     id: 'green',
     name: 'Nature',
-    description: 'Frais et reposant pour les yeux',
-    color: '#22c55e',
-    gradient: ['#22c55e', '#16a34a'],
+    description: 'Frais et reposant',
     icon: 'leaf-outline',
   },
   {
     id: 'purple',
     name: 'Royal',
     description: 'Élégant et créatif',
-    color: '#a855f7',
-    gradient: ['#a855f7', '#7e22ce'],
     icon: 'diamond-outline',
   },
   {
-    id: 'orange',
-    name: 'Soleil',
-    description: 'Énergique et chaleureux',
-    color: '#f97316',
-    gradient: ['#f97316', '#ea580c'],
-    icon: 'sunny-outline',
+    id: 'orange', // 🟤 chocolat
+    name: 'Chocolat',
+    description: 'Chaud et gourmand',
+    icon: 'cafe-outline',
   },
   {
     id: 'red',
     name: 'Passion',
     description: 'Dynamique et audacieux',
-    color: '#ef4444',
-    gradient: ['#ef4444', '#dc2626'],
     icon: 'flame-outline',
   },
   {
-    id: 'dark',
-    name: 'Nuit',
-    description: 'Repose les yeux en mode sombre',
-    color: '#71717a',
-    gradient: ['#27272a', '#18181b'],
-    icon: 'moon-outline',
+    id: 'dark', // 🟡 jaune
+    name: 'Jaune',
+    description: 'Lumineux et optimiste',
+    icon: 'sunny-outline',
   },
 ];
 
-export default function ThemeSelector() {
-  const [selectedTheme, setSelectedTheme] = useState('blue'); // Thème actuel
-  const [isSaving, setIsSaving] = useState(false);
+// Composant Toast
+const Toast = ({
+  visible,
+  message,
+  type = 'success',
+}: {
+  visible: boolean;
+  message: string;
+  type?: 'success' | 'error';
+}) => {
+  const [fadeAnim] = useState(new Animated.Value(0));
 
-  // Charger le thème sauvegardé au démarrage
   React.useEffect(() => {
-    loadSavedTheme();
-  }, []);
-
-  const loadSavedTheme = async () => {
-    try {
-      const saved = await AsyncStorage.getItem('app_theme');
-      if (saved) {
-        setSelectedTheme(saved);
-      }
-    } catch (error) {
-      console.error('Erreur chargement thème:', error);
+    if (visible) {
+      Animated.sequence([
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+        Animated.delay(2000),
+        Animated.timing(fadeAnim, {
+          toValue: 0,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+      ]).start();
     }
-  };
+  }, [visible]);
 
-  const handleThemeSelect = (themeId: string) => {
-    setSelectedTheme(themeId);
-  };
+  if (!visible) return null;
 
-  const handleSaveTheme = async () => {
+  return (
+    <Animated.View
+      style={[
+        styles.toast,
+        {
+          opacity: fadeAnim,
+          backgroundColor: type === 'success' ? '#22c55e' : '#ef4444',
+        },
+      ]}
+    >
+      <Ionicons
+        name={type === 'success' ? 'checkmark-circle' : 'close-circle'}
+        size={20}
+        color="#fff"
+      />
+      <Text style={styles.toastText}>{message}</Text>
+    </Animated.View>
+  );
+};
+
+export default function ThemeSelector() {
+  const { theme, currentThemeKey, setTheme, isLoading } = useTheme();
+  const [selectedTheme, setSelectedTheme] = useState<ThemeKey>(currentThemeKey);
+  const [isSaving, setIsSaving] = useState(false);
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+
+  // Mettre à jour la sélection quand le thème change
+  React.useEffect(() => {
+    setSelectedTheme(currentThemeKey);
+  }, [currentThemeKey]);
+
+  const handleThemeSelect = async (themeId: ThemeKey) => {
     try {
+      setSelectedTheme(themeId);
       setIsSaving(true);
-      await AsyncStorage.setItem('app_theme', selectedTheme);
-      
-      Alert.alert(
-        '✅ Thème enregistré',
-        'Le thème sera appliqué au prochain redémarrage de l\'application.',
-        [
-          {
-            text: 'OK',
-            onPress: () => router.back(),
-          },
-        ]
-      );
+
+      // Appliquer le thème instantanément
+      await setTheme(themeId);
+
+      // Afficher le toast de confirmation
+      setToastMessage('✨ Thème appliqué avec succès !');
+      setShowToast(true);
+
+      setTimeout(() => {
+        setShowToast(false);
+      }, 2500);
     } catch (error) {
-      Alert.alert('❌ Erreur', 'Impossible de sauvegarder le thème');
-      console.error('Erreur sauvegarde thème:', error);
+      console.error('Erreur changement thème:', error);
+      setToastMessage("❌ Erreur lors de l'application du thème");
+      setShowToast(true);
+      setTimeout(() => {
+        setShowToast(false);
+      }, 2500);
     } finally {
       setIsSaving(false);
     }
   };
 
-  const currentTheme = THEMES.find(t => t.id === selectedTheme) || THEMES[0];
+  if (isLoading) {
+    return (
+      <View
+        style={[
+          styles.loadingContainer,
+          { backgroundColor: theme.colors.background.secondary },
+        ]}
+      >
+        {/* 🔒 Masquer le header Expo pour éviter la barre blanche "theme-selector" */}
+        <Stack.Screen options={{ headerShown: false }} />
+        <ActivityIndicator size="large" color={theme.colors.primary[500]} />
+      </View>
+    );
+  }
+
+  // Couleur du thème ACTUEL (pour le header, l'aperçu global)
+  const currentColor = theme.colors.primary[500];
 
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor={theme.colors.primary[500]} />
-      
-      {/* Header */}
-      <View style={[styles.header, { backgroundColor: currentTheme.color }]}>
-        <TouchableOpacity 
-          style={styles.backButton} 
-          onPress={() => router.back()}
-        >
+    <View
+      style={[styles.container, { backgroundColor: theme.colors.background.secondary }]}
+    >
+      {/* 🔒 Masquer le header par défaut */}
+      <Stack.Screen options={{ headerShown: false }} />
+
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={currentColor}
+        translucent
+      />
+
+      {/* Header avec effet wave */}
+      <View style={[styles.header, { backgroundColor: currentColor }]}>
+        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={24} color="#fff" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Choisir un thème</Text>
+        <View style={styles.headerCenter}>
+          <Ionicons
+            name="color-palette"
+            size={28}
+            color="#fff"
+            style={{ marginBottom: 4 }}
+          />
+          <Text style={styles.headerTitle}>Personnalisation</Text>
+          <Text style={styles.headerSubtitle}>
+            Choisissez votre thème préféré
+          </Text>
+        </View>
         <View style={{ width: 40 }} />
       </View>
 
-      <ScrollView 
-        style={styles.content}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Section info */}
-        <View style={styles.infoSection}>
-          <Ionicons name="color-palette" size={32} color={currentTheme.color} />
-          <Text style={styles.infoTitle}>Personnalisez votre expérience</Text>
-          <Text style={styles.infoSubtitle}>
-            Choisissez le thème qui correspond à votre style
-          </Text>
-        </View>
-
-        {/* Aperçu du thème sélectionné */}
+      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        {/* Aperçu en temps réel (du thème ACTUEL) */}
         <View style={styles.previewSection}>
-          <Text style={styles.sectionTitle}>Aperçu en temps réel</Text>
-          <View style={[styles.previewCard, { borderColor: currentTheme.color }]}>
-            <View style={[styles.previewHeader, { backgroundColor: currentTheme.color }]}>
+          <Text
+            style={[styles.sectionTitle, { color: theme.colors.text.primary }]}
+          >
+            Aperçu instantané
+          </Text>
+          <View
+            style={[
+              styles.previewCard,
+              {
+                borderColor: currentColor,
+                backgroundColor: theme.colors.background.primary,
+              },
+            ]}
+          >
+            <View
+              style={[styles.previewHeader, { backgroundColor: currentColor }]}
+            >
+              <Ionicons name="sparkles" size={20} color="#fff" />
               <Text style={styles.previewHeaderText}>En-tête</Text>
             </View>
             <View style={styles.previewBody}>
-              <View style={[styles.previewButton, { backgroundColor: currentTheme.color }]}>
+              <View
+                style={[styles.previewButton, { backgroundColor: currentColor }]}
+              >
                 <Text style={styles.previewButtonText}>Bouton principal</Text>
               </View>
-              <View style={[styles.previewButton, { backgroundColor: currentTheme.color + '20', borderWidth: 1, borderColor: currentTheme.color }]}>
-                <Text style={[styles.previewButtonText, { color: currentTheme.color }]}>
+              <View
+                style={[
+                  styles.previewButton,
+                  {
+                    backgroundColor: currentColor + '20',
+                    borderWidth: 1,
+                    borderColor: currentColor,
+                  },
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.previewButtonText,
+                    { color: currentColor },
+                  ]}
+                >
                   Bouton secondaire
+                </Text>
+              </View>
+              <View style={styles.previewTextSection}>
+                <View
+                  style={[styles.previewDot, { backgroundColor: currentColor }]}
+                />
+                <Text
+                  style={[
+                    styles.previewText,
+                    { color: theme.colors.text.secondary },
+                  ]}
+                >
+                  Texte d'exemple avec le nouveau thème
                 </Text>
               </View>
             </View>
@@ -166,126 +263,189 @@ export default function ThemeSelector() {
 
         {/* Grille des thèmes */}
         <View style={styles.themesSection}>
-          <Text style={styles.sectionTitle}>Thèmes disponibles ({THEMES.length})</Text>
-          
+          <Text
+            style={[styles.sectionTitle, { color: theme.colors.text.primary }]}
+          >
+            Thèmes disponibles ({THEMES.length})
+          </Text>
+
           <View style={styles.themesGrid}>
             {THEMES.map((themeOption) => {
               const isSelected = selectedTheme === themeOption.id;
-              
+              const isCurrentActive = currentThemeKey === themeOption.id;
+
+              // 🎨 Palette propre à CHAQUE thème (indépendante du thème actuel de l'app)
+              const optionTheme = getThemeConfig(themeOption.id);
+              const optionColor = optionTheme.colors.primary[500];
+
               return (
                 <TouchableOpacity
                   key={themeOption.id}
                   style={[
                     styles.themeCard,
+                    {
+                      backgroundColor: theme.colors.background.primary,
+                      borderColor: isSelected
+                        ? optionColor
+                        : theme.colors.neutral[200],
+                    },
                     isSelected && styles.themeCardSelected,
-                    isSelected && { 
-                      borderColor: themeOption.color,
-                      shadowColor: themeOption.color,
-                    }
+                    isSelected && {
+                      shadowColor: optionColor,
+                      borderWidth: 3,
+                    },
                   ]}
                   onPress={() => handleThemeSelect(themeOption.id)}
                   activeOpacity={0.7}
+                  disabled={isSaving}
                 >
-                  {/* Badge sélectionné */}
-                  {isSelected && (
-                    <View style={[styles.selectedBadge, { backgroundColor: themeOption.color }]}>
-                      <Ionicons name="checkmark-circle" size={16} color="#fff" />
-                      <Text style={styles.selectedBadgeText}>Actif</Text>
+                  {/* Badge actif */}
+                  {isCurrentActive && (
+                    <View
+                      style={[
+                        styles.activeBadge,
+                        { backgroundColor: optionColor },
+                      ]}
+                    >
+                      <Ionicons
+                        name="checkmark-circle"
+                        size={14}
+                        color="#fff"
+                      />
+                      <Text style={styles.activeBadgeText}>Actif</Text>
                     </View>
                   )}
 
-                  {/* Icône du thème */}
-                  <View style={[styles.themeIconContainer, { backgroundColor: themeOption.color }]}>
-                    <Ionicons name={themeOption.icon as any} size={32} color="#fff" />
+                  {/* Icône du thème – fond = couleur du thème, pas celle de l'app */}
+                  <View
+                    style={[
+                      styles.themeIconContainer,
+                      { backgroundColor: optionColor },
+                    ]}
+                  >
+                    <Ionicons
+                      name={themeOption.icon as any}
+                      size={32}
+                      color="#fff"
+                    />
                   </View>
 
-                  {/* Nom du thème */}
-                  <Text style={[
-                    styles.themeName,
-                    isSelected && { color: themeOption.color }
-                  ]}>
+                  {/* Nom du thème – accent avec couleur du thème sélectionné */}
+                  <Text
+                    style={[
+                      styles.themeName,
+                      {
+                        color: isSelected
+                          ? optionColor
+                          : theme.colors.text.primary,
+                      },
+                    ]}
+                  >
                     {themeOption.name}
                   </Text>
 
                   {/* Description */}
-                  <Text style={styles.themeDescription} numberOfLines={2}>
+                  <Text
+                    style={[
+                      styles.themeDescription,
+                      { color: theme.colors.text.secondary },
+                    ]}
+                    numberOfLines={2}
+                  >
                     {themeOption.description}
                   </Text>
 
-                  {/* Mini aperçu de couleurs */}
-                  <View style={styles.colorPreview}>
-                    <View style={[styles.colorDot, { backgroundColor: themeOption.gradient[0] }]} />
-                    <View style={[styles.colorDot, { backgroundColor: themeOption.gradient[1] }]} />
-                    <View style={[styles.colorDot, { backgroundColor: themeOption.color }]} />
-                  </View>
+                  {/* Indicateur de chargement */}
+                  {isSaving && isSelected && (
+                    <View style={styles.loadingOverlay}>
+                      <ActivityIndicator size="small" color={optionColor} />
+                    </View>
+                  )}
                 </TouchableOpacity>
               );
             })}
           </View>
         </View>
 
-        {/* Informations supplémentaires */}
-        <View style={styles.infoBox}>
-          <Ionicons name="information-circle" size={20} color={theme.colors.semantic.info} />
-          <Text style={styles.infoBoxText}>
-            Le changement de thème prendra effet au prochain redémarrage de l'application.
+        {/* Info box */}
+        <View
+          style={[
+            styles.infoBox,
+            { backgroundColor: theme.colors.semantic.info + '15' },
+          ]}
+        >
+          <Ionicons
+            name="information-circle"
+            size={20}
+            color={theme.colors.semantic.info}
+          />
+          <Text
+            style={[
+              styles.infoBoxText,
+              { color: theme.colors.text.secondary },
+            ]}
+          >
+            💡 Le changement de thème est instantané et s'applique à toute
+            l'application !
           </Text>
         </View>
 
-        <View style={{ height: 100 }} />
+        <View style={{ height: 30 }} />
       </ScrollView>
 
-      {/* Bouton de sauvegarde fixe */}
-      <View style={styles.footer}>
-        <TouchableOpacity
-          style={[
-            styles.saveButton,
-            { backgroundColor: currentTheme.color },
-            isSaving && styles.saveButtonDisabled
-          ]}
-          onPress={handleSaveTheme}
-          disabled={isSaving}
-          activeOpacity={0.8}
-        >
-          {isSaving ? (
-            <Text style={styles.saveButtonText}>Enregistrement...</Text>
-          ) : (
-            <>
-              <Ionicons name="checkmark-circle" size={20} color="#fff" />
-              <Text style={styles.saveButtonText}>Enregistrer le thème</Text>
-            </>
-          )}
-        </TouchableOpacity>
-      </View>
+      {/* Toast notification */}
+      <Toast visible={showToast} message={toastMessage} type="success" />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background.secondary,
   },
-  
+
   // Header
   header: {
+    paddingTop: 50,
+    paddingBottom: 30,
+    paddingHorizontal: 20,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingTop: 50,
-    paddingBottom: 15,
-    paddingHorizontal: 20,
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 5,
   },
   backButton: {
     width: 40,
     height: 40,
     justifyContent: 'center',
     alignItems: 'center',
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+  },
+  headerCenter: {
+    flex: 1,
+    alignItems: 'center',
   },
   headerTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: 'bold',
     color: '#fff',
+    marginBottom: 2,
+  },
+  headerSubtitle: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.9)',
   },
 
   // Content
@@ -293,46 +453,33 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 
-  // Info Section
-  infoSection: {
-    alignItems: 'center',
-    paddingVertical: 30,
-    paddingHorizontal: 20,
-  },
-  infoTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: theme.colors.text.primary,
-    marginTop: 12,
-    marginBottom: 6,
-  },
-  infoSubtitle: {
-    fontSize: 14,
-    color: theme.colors.text.secondary,
-    textAlign: 'center',
-  },
-
   // Preview Section
   previewSection: {
     paddingHorizontal: 20,
-    marginBottom: 30,
+    paddingTop: 20,
+    marginBottom: 20,
   },
   sectionTitle: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: theme.colors.text.primary,
     marginBottom: 12,
   },
   previewCard: {
-    backgroundColor: theme.colors.background.primary,
     borderRadius: 16,
     overflow: 'hidden',
     borderWidth: 2,
-    ...theme.shadows.sm,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   previewHeader: {
     padding: 16,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
   },
   previewHeaderText: {
     color: '#fff',
@@ -353,6 +500,21 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontSize: 14,
   },
+  previewTextSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingTop: 8,
+  },
+  previewDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  previewText: {
+    fontSize: 13,
+    flex: 1,
+  },
 
   // Themes Grid
   themesSection: {
@@ -366,20 +528,22 @@ const styles = StyleSheet.create({
   },
   themeCard: {
     width: '48%',
-    backgroundColor: theme.colors.background.primary,
     borderRadius: 16,
     padding: 16,
     borderWidth: 2,
-    borderColor: theme.colors.neutral[200],
     position: 'relative',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
   themeCardSelected: {
-    borderWidth: 3,
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.2,
     shadowRadius: 8,
-    elevation: 8,
+    elevation: 6,
   },
-  selectedBadge: {
+  activeBadge: {
     position: 'absolute',
     top: 8,
     right: 8,
@@ -391,7 +555,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     zIndex: 1,
   },
-  selectedBadgeText: {
+  activeBadgeText: {
     color: '#fff',
     fontSize: 10,
     fontWeight: 'bold',
@@ -404,39 +568,39 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     alignSelf: 'center',
     marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   themeName: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: theme.colors.text.primary,
     textAlign: 'center',
     marginBottom: 6,
   },
   themeDescription: {
     fontSize: 12,
-    color: theme.colors.text.secondary,
     textAlign: 'center',
-    marginBottom: 12,
     lineHeight: 16,
   },
-  colorPreview: {
-    flexDirection: 'row',
+  loadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(255,255,255,0.8)',
     justifyContent: 'center',
-    gap: 6,
-  },
-  colorDot: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    borderWidth: 2,
-    borderColor: '#fff',
+    alignItems: 'center',
+    borderRadius: 16,
   },
 
   // Info Box
   infoBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: theme.colors.semantic.info + '15',
     padding: 16,
     marginHorizontal: 20,
     borderRadius: 12,
@@ -445,32 +609,31 @@ const styles = StyleSheet.create({
   infoBoxText: {
     flex: 1,
     fontSize: 13,
-    color: theme.colors.text.secondary,
     lineHeight: 18,
   },
 
-  // Footer
-  footer: {
-    padding: 20,
-    backgroundColor: theme.colors.background.primary,
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.neutral[200],
-    ...theme.shadows.md,
-  },
-  saveButton: {
+  // Toast
+  toast: {
+    position: 'absolute',
+    top: 60,
+    left: 20,
+    right: 20,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 16,
+    gap: 10,
+    padding: 16,
     borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+    zIndex: 9999,
   },
-  saveButtonDisabled: {
-    opacity: 0.6,
-  },
-  saveButtonText: {
+  toastText: {
     color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
+    fontSize: 14,
+    fontWeight: '600',
+    flex: 1,
   },
 });

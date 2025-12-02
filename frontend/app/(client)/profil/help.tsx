@@ -3,10 +3,114 @@ import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Linking } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { theme } from '../../../constants/theme';
+import { useTheme } from '../../../contexts/ThemeContext';
 
 export default function Help() {
   const router = useRouter();
+  const { theme } = useTheme();
+
+  const styles = React.useMemo(
+    () =>
+      StyleSheet.create({
+        container: {
+          flex: 1,
+          backgroundColor: theme.colors.background.secondary,
+        },
+        header: {
+          backgroundColor: theme.colors.primary[500],
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          paddingTop: 50,
+          paddingBottom: 20,
+          paddingHorizontal: 20,
+          ...theme.shadows.sm,
+        },
+        headerBackButton: {
+          width: 40,
+          height: 40,
+          borderRadius: 20,
+          backgroundColor: 'rgba(255,255,255,0.2)',
+          justifyContent: 'center',
+          alignItems: 'center',
+        },
+        headerTitle: {
+          fontSize: theme.typography.sizes.h2,
+          fontWeight: theme.typography.weights.bold,
+          color: theme.colors.text.inverse,
+        },
+        scrollView: {
+          flex: 1,
+        },
+        content: {
+          padding: theme.spacing.xl,
+        },
+        iconContainer: {
+          width: 100,
+          height: 100,
+          borderRadius: 50,
+          backgroundColor: theme.colors.secondary[50],
+          justifyContent: 'center',
+          alignItems: 'center',
+          alignSelf: 'center',
+          marginBottom: theme.spacing.lg,
+        },
+        subtitle: {
+          fontSize: theme.typography.sizes.body,
+          color: theme.colors.text.secondary,
+          textAlign: 'center',
+          marginBottom: theme.spacing.xxxl,
+        },
+        section: {
+          backgroundColor: theme.colors.background.primary,
+          padding: theme.spacing.lg,
+          borderRadius: theme.borderRadius.md,
+          marginBottom: theme.spacing.lg,
+          ...theme.shadows.sm,
+        },
+        sectionTitle: {
+          fontSize: theme.typography.sizes.h3,
+          fontWeight: theme.typography.weights.bold,
+          color: theme.colors.text.primary,
+          marginBottom: theme.spacing.md,
+        },
+        text: {
+          fontSize: theme.typography.sizes.body,
+          color: theme.colors.text.secondary,
+          lineHeight: 24,
+        },
+        contactItem: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          paddingVertical: theme.spacing.md,
+          borderBottomWidth: 1,
+          borderBottomColor: theme.colors.neutral[200],
+        },
+        contactIconContainer: {
+          width: 48,
+          height: 48,
+          borderRadius: theme.borderRadius.md,
+          backgroundColor: theme.colors.background.secondary,
+          justifyContent: 'center',
+          alignItems: 'center',
+          marginRight: theme.spacing.md,
+        },
+        contactInfo: {
+          flex: 1,
+        },
+        contactLabel: {
+          fontSize: theme.typography.sizes.small,
+          color: theme.colors.text.secondary,
+          marginBottom: 2,
+        },
+        contactValue: {
+          fontSize: theme.typography.sizes.body,
+          fontWeight: theme.typography.weights.semibold,
+          color: theme.colors.text.primary,
+        },
+      }),
+    [theme]
+  );
 
   const handleEmail = () => {
     Linking.openURL('mailto:support@garenet.com');
@@ -109,102 +213,3 @@ export default function Help() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background.secondary,
-  },
-  header: {
-    backgroundColor: theme.colors.primary[500],
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingTop: 50,
-    paddingBottom: 20,
-    paddingHorizontal: 20,
-    ...theme.shadows.sm,
-  },
-  headerBackButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  headerTitle: {
-    fontSize: theme.typography.sizes.h2,
-    fontWeight: theme.typography.weights.bold,
-    color: theme.colors.text.inverse,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  content: {
-    padding: theme.spacing.xl,
-  },
-  iconContainer: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: theme.colors.secondary[50],
-    justifyContent: 'center',
-    alignItems: 'center',
-    alignSelf: 'center',
-    marginBottom: theme.spacing.lg,
-  },
-  subtitle: {
-    fontSize: theme.typography.sizes.body,
-    color: theme.colors.text.secondary,
-    textAlign: 'center',
-    marginBottom: theme.spacing.xxxl,
-  },
-  section: {
-    backgroundColor: theme.colors.background.primary,
-    padding: theme.spacing.lg,
-    borderRadius: theme.borderRadius.md,
-    marginBottom: theme.spacing.lg,
-    ...theme.shadows.sm,
-  },
-  sectionTitle: {
-    fontSize: theme.typography.sizes.h3,
-    fontWeight: theme.typography.weights.bold,
-    color: theme.colors.text.primary,
-    marginBottom: theme.spacing.md,
-  },
-  text: {
-    fontSize: theme.typography.sizes.body,
-    color: theme.colors.text.secondary,
-    lineHeight: 24,
-  },
-  contactItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: theme.spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.neutral[200],
-  },
-  contactIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: theme.borderRadius.md,
-    backgroundColor: theme.colors.background.secondary,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: theme.spacing.md,
-  },
-  contactInfo: {
-    flex: 1,
-  },
-  contactLabel: {
-    fontSize: theme.typography.sizes.small,
-    color: theme.colors.text.secondary,
-    marginBottom: 2,
-  },
-  contactValue: {
-    fontSize: theme.typography.sizes.body,
-    fontWeight: theme.typography.weights.semibold,
-    color: theme.colors.text.primary,
-  },
-});

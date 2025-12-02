@@ -18,14 +18,14 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '../../../contexts/AuthContext';
 import { utilisateurService, UpdateProfileData, ChangePasswordData } from '../../../services/utilisateurService';
-import { theme } from '../../../constants/theme';
 import { Toast } from '../../../components/ui/Toast';
+import { useTheme } from '../../../contexts/ThemeContext';
 
 export default function ModifierProfile() {
   const router = useRouter();
   const { utilisateur, refreshUtilisateur } = useAuth();
+  const { theme } = useTheme(); // 👈 dynamique
 
-  // États pour les informations de base
   const [formData, setFormData] = useState<UpdateProfileData>({
     nom: utilisateur?.nom || '',
     prenoms: utilisateur?.prenoms || '',
@@ -33,11 +33,9 @@ export default function ModifierProfile() {
     telephone: utilisateur?.telephone || '',
   });
 
-  // États pour la photo
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [currentPhotoUrl, setCurrentPhotoUrl] = useState<string | null>(null);
 
-  // États pour le mot de passe
   const [showPasswordSection, setShowPasswordSection] = useState(false);
   const [passwordData, setPasswordData] = useState<ChangePasswordData>({
     ancien_mot_de_passe: '',
@@ -48,13 +46,182 @@ export default function ModifierProfile() {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  // États généraux
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<any>({});
   const [toastConfig, setToastConfig] = useState<{
     message: string;
     type: 'success' | 'error' | 'info' | 'warning';
   } | null>(null);
+
+  const styles = React.useMemo(
+    () =>
+      StyleSheet.create({
+        container: {
+          flex: 1,
+          backgroundColor: theme.colors.background.secondary,
+        },
+        header: {
+          backgroundColor: theme.colors.primary[500],
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          paddingTop: 50,
+          paddingBottom: 20,
+          paddingHorizontal: 20,
+          ...theme.shadows.sm,
+        },
+        headerBackButton: {
+          width: 40,
+          height: 40,
+          borderRadius: 20,
+          backgroundColor: 'rgba(255,255,255,0.2)',
+          justifyContent: 'center',
+          alignItems: 'center',
+        },
+        headerTitle: {
+          fontSize: theme.typography.sizes.h2,
+          fontWeight: theme.typography.weights.bold,
+          color: theme.colors.text.inverse,
+        },
+        scrollView: {
+          flex: 1,
+        },
+        photoSection: {
+          alignItems: 'center',
+          paddingVertical: theme.spacing.xxxl,
+          backgroundColor: theme.colors.background.primary,
+          marginBottom: theme.spacing.lg,
+        },
+        photoContainer: {
+          width: 140,
+          height: 140,
+          borderRadius: 70,
+          overflow: 'hidden',
+          borderWidth: 4,
+          borderColor: theme.colors.primary[500],
+          marginBottom: theme.spacing.md,
+          position: 'relative',
+        },
+        photo: {
+          width: '100%',
+          height: '100%',
+          resizeMode: 'cover',
+        },
+        photoPlaceholder: {
+          width: '100%',
+          height: '100%',
+          backgroundColor: theme.colors.neutral[100],
+          justifyContent: 'center',
+          alignItems: 'center',
+        },
+        cameraIconContainer: {
+          position: 'absolute',
+          bottom: 0,
+          right: 0,
+          width: 44,
+          height: 44,
+          borderRadius: 22,
+          backgroundColor: theme.colors.primary[500],
+          justifyContent: 'center',
+          alignItems: 'center',
+          borderWidth: 3,
+          borderColor: theme.colors.background.primary,
+        },
+        photoHint: {
+          fontSize: theme.typography.sizes.small,
+          color: theme.colors.text.secondary,
+          fontStyle: 'italic',
+        },
+        formSection: {
+          backgroundColor: theme.colors.background.primary,
+          marginHorizontal: theme.spacing.lg,
+          marginBottom: theme.spacing.lg,
+          padding: theme.spacing.lg,
+          borderRadius: theme.borderRadius.md,
+          ...theme.shadows.sm,
+        },
+        sectionTitle: {
+          fontSize: theme.typography.sizes.h3,
+          fontWeight: theme.typography.weights.bold,
+          color: theme.colors.text.primary,
+          marginBottom: theme.spacing.lg,
+        },
+        passwordSectionHeader: {
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: theme.spacing.lg,
+        },
+        inputGroup: {
+          marginBottom: theme.spacing.lg,
+        },
+        label: {
+          fontSize: theme.typography.sizes.body,
+          fontWeight: theme.typography.weights.semibold,
+          color: theme.colors.text.primary,
+          marginBottom: theme.spacing.sm,
+        },
+        input: {
+          backgroundColor: theme.colors.background.secondary,
+          borderWidth: 1,
+          borderColor: theme.colors.neutral[300],
+          borderRadius: theme.borderRadius.md,
+          paddingHorizontal: theme.spacing.lg,
+          paddingVertical: theme.spacing.md,
+          fontSize: theme.typography.sizes.body,
+          color: theme.colors.text.primary,
+        },
+        inputError: {
+          borderColor: theme.colors.semantic.error,
+          borderWidth: 1.5,
+        },
+        passwordContainer: {
+          position: 'relative',
+        },
+        passwordInput: {
+          backgroundColor: theme.colors.background.secondary,
+          borderWidth: 1,
+          borderColor: theme.colors.neutral[300],
+          borderRadius: theme.borderRadius.md,
+          paddingHorizontal: theme.spacing.lg,
+          paddingVertical: theme.spacing.md,
+          paddingRight: 50,
+          fontSize: theme.typography.sizes.body,
+          color: theme.colors.text.primary,
+        },
+        eyeIcon: {
+          position: 'absolute',
+          right: theme.spacing.lg,
+          top: theme.spacing.md,
+        },
+        errorText: {
+          color: theme.colors.semantic.error,
+          fontSize: theme.typography.sizes.small,
+          marginTop: theme.spacing.xs,
+          marginLeft: theme.spacing.xs,
+        },
+        saveButton: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: theme.spacing.sm,
+          backgroundColor: theme.colors.primary[500],
+          paddingVertical: theme.spacing.md,
+          borderRadius: theme.borderRadius.md,
+          marginTop: theme.spacing.md,
+          ...theme.shadows.sm,
+        },
+        passwordButton: {
+          backgroundColor: theme.colors.secondary[500],
+        },
+        saveButtonText: {
+          fontSize: theme.typography.sizes.body,
+          fontWeight: theme.typography.weights.bold,
+          color: theme.colors.text.inverse,
+        },
+      }),
+    [theme]
+  );
 
   useEffect(() => {
     if (utilisateur?.photo_identite) {
@@ -63,12 +230,14 @@ export default function ModifierProfile() {
     }
   }, [utilisateur]);
 
-  const showToast = (message: string, type: 'success' | 'error' | 'info' | 'warning' = 'success') => {
+  const showToast = (
+    message: string,
+    type: 'success' | 'error' | 'info' | 'warning' = 'success'
+  ) => {
     setToastConfig({ message, type });
     setTimeout(() => setToastConfig(null), 3500);
   };
 
-  // ✨ Fonctions de gestion de la photo
   const handlePickImage = async () => {
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -124,14 +293,8 @@ export default function ModifierProfile() {
       'Photo de profil',
       'Choisissez une option',
       [
-        {
-          text: 'Prendre une photo',
-          onPress: handleTakePhoto,
-        },
-        {
-          text: 'Choisir dans la galerie',
-          onPress: handlePickImage,
-        },
+        { text: 'Prendre une photo', onPress: handleTakePhoto },
+        { text: 'Choisir dans la galerie', onPress: handlePickImage },
         ...(photoUri || currentPhotoUrl
           ? [
               {
@@ -144,16 +307,12 @@ export default function ModifierProfile() {
               },
             ]
           : []),
-        {
-          text: 'Annuler',
-          style: 'cancel' as const,
-        },
+        { text: 'Annuler', style: 'cancel' as const },
       ],
       { cancelable: true }
     );
   };
 
-  // ✨ Validation du formulaire
   const validateProfileForm = (): boolean => {
     const newErrors: any = {};
 
@@ -194,13 +353,9 @@ export default function ModifierProfile() {
     return Object.keys(newErrors).length === 0;
   };
 
-  // ✨ Sauvegarder les modifications du profil
   const handleSaveProfile = async () => {
     setErrors({});
-
-    if (!validateProfileForm()) {
-      return;
-    }
+    if (!validateProfileForm()) return;
 
     if (!utilisateur?.id) {
       showToast('Utilisateur non trouvé', 'error');
@@ -214,15 +369,9 @@ export default function ModifierProfile() {
         formData,
         photoUri || undefined
       );
-
-      // Rafraîchir les données utilisateur
       await refreshUtilisateur?.();
-
       showToast('Profil mis à jour avec succès ! 🎉', 'success');
-
-      setTimeout(() => {
-        router.back();
-      }, 1500);
+      setTimeout(() => router.back(), 1500);
     } catch (error: any) {
       console.error('Erreur update profil:', error);
       showToast(error.error || 'Erreur lors de la mise à jour', 'error');
@@ -231,13 +380,9 @@ export default function ModifierProfile() {
     }
   };
 
-  // ✨ Changer le mot de passe
   const handleChangePassword = async () => {
     setErrors({});
-
-    if (!validatePasswordForm()) {
-      return;
-    }
+    if (!validatePasswordForm()) return;
 
     if (!utilisateur?.id) {
       showToast('Utilisateur non trouvé', 'error');
@@ -247,14 +392,8 @@ export default function ModifierProfile() {
     setLoading(true);
     try {
       await utilisateurService.changePassword(utilisateur.id, passwordData);
-
       showToast('Mot de passe modifié avec succès ! 🔒', 'success');
-
-      // Réinitialiser le formulaire de mot de passe
-      setPasswordData({
-        ancien_mot_de_passe: '',
-        nouveau_mot_de_passe: '',
-      });
+      setPasswordData({ ancien_mot_de_passe: '', nouveau_mot_de_passe: '' });
       setConfirmPassword('');
       setShowPasswordSection(false);
     } catch (error: any) {
@@ -266,7 +405,7 @@ export default function ModifierProfile() {
   };
 
   const updateFormData = (field: keyof UpdateProfileData, value: string) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
+    setFormData(prev => ({ ...prev, [field]: value }));
     if (errors[field]) {
       setErrors((prev: any) => ({ ...prev, [field]: undefined }));
     }
@@ -306,7 +445,7 @@ export default function ModifierProfile() {
           <Text style={styles.photoHint}>Appuyez pour modifier la photo</Text>
         </View>
 
-        {/* Formulaire informations */}
+        {/* Formulaire infos */}
         <View style={styles.formSection}>
           <Text style={styles.sectionTitle}>Informations personnelles</Text>
 
@@ -379,7 +518,7 @@ export default function ModifierProfile() {
           </TouchableOpacity>
         </View>
 
-        {/* Section mot de passe */}
+        {/* Section Mot de passe */}
         <View style={styles.formSection}>
           <TouchableOpacity
             style={styles.passwordSectionHeader}
@@ -403,7 +542,7 @@ export default function ModifierProfile() {
                     placeholder="Votre mot de passe actuel"
                     value={passwordData.ancien_mot_de_passe}
                     onChangeText={(text) => {
-                      setPasswordData((prev) => ({ ...prev, ancien_mot_de_passe: text }));
+                      setPasswordData(prev => ({ ...prev, ancien_mot_de_passe: text }));
                       if (errors.ancien_mot_de_passe) {
                         setErrors((prev: any) => ({ ...prev, ancien_mot_de_passe: undefined }));
                       }
@@ -436,7 +575,7 @@ export default function ModifierProfile() {
                     placeholder="Minimum 6 caractères"
                     value={passwordData.nouveau_mot_de_passe}
                     onChangeText={(text) => {
-                      setPasswordData((prev) => ({ ...prev, nouveau_mot_de_passe: text }));
+                      setPasswordData(prev => ({ ...prev, nouveau_mot_de_passe: text }));
                       if (errors.nouveau_mot_de_passe) {
                         setErrors((prev: any) => ({ ...prev, nouveau_mot_de_passe: undefined }));
                       }
@@ -515,7 +654,6 @@ export default function ModifierProfile() {
         <View style={{ height: 40 }} />
       </ScrollView>
 
-      {/* Toast */}
       {toastConfig && (
         <Toast
           message={toastConfig.message}
@@ -526,169 +664,3 @@ export default function ModifierProfile() {
     </KeyboardAvoidingView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background.secondary,
-  },
-  header: {
-    backgroundColor: theme.colors.primary[500],
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingTop: 50,
-    paddingBottom: 20,
-    paddingHorizontal: 20,
-    ...theme.shadows.sm,
-  },
-  headerBackButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  headerTitle: {
-    fontSize: theme.typography.sizes.h2,
-    fontWeight: theme.typography.weights.bold,
-    color: theme.colors.text.inverse,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  photoSection: {
-    alignItems: 'center',
-    paddingVertical: theme.spacing.xxxl,
-    backgroundColor: theme.colors.background.primary,
-    marginBottom: theme.spacing.lg,
-  },
-  photoContainer: {
-    width: 140,
-    height: 140,
-    borderRadius: 70,
-    overflow: 'hidden',
-    borderWidth: 4,
-    borderColor: theme.colors.primary[500],
-    marginBottom: theme.spacing.md,
-    position: 'relative',
-  },
-  photo: {
-    width: '100%',
-    height: '100%',
-    resizeMode: 'cover',
-  },
-  photoPlaceholder: {
-    width: '100%',
-    height: '100%',
-    backgroundColor: theme.colors.neutral[100],
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  cameraIconContainer: {
-    position: 'absolute',
-    bottom: 0,
-    right: 0,
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: theme.colors.primary[500],
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 3,
-    borderColor: theme.colors.background.primary,
-  },
-  photoHint: {
-    fontSize: theme.typography.sizes.small,
-    color: theme.colors.text.secondary,
-    fontStyle: 'italic',
-  },
-  formSection: {
-    backgroundColor: theme.colors.background.primary,
-    marginHorizontal: theme.spacing.lg,
-    marginBottom: theme.spacing.lg,
-    padding: theme.spacing.lg,
-    borderRadius: theme.borderRadius.md,
-    ...theme.shadows.sm,
-  },
-  sectionTitle: {
-    fontSize: theme.typography.sizes.h3,
-    fontWeight: theme.typography.weights.bold,
-    color: theme.colors.text.primary,
-    marginBottom: theme.spacing.lg,
-  },
-  passwordSectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: theme.spacing.lg,
-  },
-  inputGroup: {
-    marginBottom: theme.spacing.lg,
-  },
-  label: {
-    fontSize: theme.typography.sizes.body,
-    fontWeight: theme.typography.weights.semibold,
-    color: theme.colors.text.primary,
-    marginBottom: theme.spacing.sm,
-  },
-  input: {
-    backgroundColor: theme.colors.background.secondary,
-    borderWidth: 1,
-    borderColor: theme.colors.neutral[300],
-    borderRadius: theme.borderRadius.md,
-    paddingHorizontal: theme.spacing.lg,
-    paddingVertical: theme.spacing.md,
-    fontSize: theme.typography.sizes.body,
-    color: theme.colors.text.primary,
-  },
-  inputError: {
-    borderColor: theme.colors.semantic.error,
-    borderWidth: 1.5,
-  },
-  passwordContainer: {
-    position: 'relative',
-  },
-  passwordInput: {
-    backgroundColor: theme.colors.background.secondary,
-    borderWidth: 1,
-    borderColor: theme.colors.neutral[300],
-    borderRadius: theme.borderRadius.md,
-    paddingHorizontal: theme.spacing.lg,
-    paddingVertical: theme.spacing.md,
-    paddingRight: 50,
-    fontSize: theme.typography.sizes.body,
-    color: theme.colors.text.primary,
-  },
-  eyeIcon: {
-    position: 'absolute',
-    right: theme.spacing.lg,
-    top: theme.spacing.md,
-  },
-  errorText: {
-    color: theme.colors.semantic.error,
-    fontSize: theme.typography.sizes.small,
-    marginTop: theme.spacing.xs,
-    marginLeft: theme.spacing.xs,
-  },
-  saveButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: theme.spacing.sm,
-    backgroundColor: theme.colors.primary[500],
-    paddingVertical: theme.spacing.md,
-    borderRadius: theme.borderRadius.md,
-    marginTop: theme.spacing.md,
-    ...theme.shadows.sm,
-  },
-  passwordButton: {
-    backgroundColor: theme.colors.secondary[500],
-  },
-  saveButtonText: {
-    fontSize: theme.typography.sizes.body,
-    fontWeight: theme.typography.weights.bold,
-    color: theme.colors.text.inverse,
-  },
-});

@@ -1,3 +1,4 @@
+// app/(client)/home.tsx
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
@@ -13,16 +14,17 @@ import {
 import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
+import { useTheme } from '../../contexts/ThemeContext';
 import { cooperativeService, Cooperative } from '../../services/cooperativeService';
 import { voyageService, Voyage } from '../../services/voyageService';
 import { avisService } from '../../services/avisService';
 import { notificationService } from '../../services/notificationService';
-import { theme } from '../../constants/theme';
 import { UPLOADS_URL } from '../../services/api';
 
 export default function Home() {
   const router = useRouter();
   const { utilisateur } = useAuth();
+  const { theme } = useTheme(); // 👈 thème dynamique
 
   const [cooperatives, setCooperatives] = useState<Cooperative[]>([]);
   const [voyages, setVoyages] = useState<Voyage[]>([]);
@@ -32,21 +34,12 @@ export default function Home() {
   const [refreshing, setRefreshing] = useState(false);
   const [lastAvis, setLastAvis] = useState<any[]>([]);
   const [isSearchMode, setIsSearchMode] = useState(false);
-  
   const [unreadCount, setUnreadCount] = useState(0);
 
-  // ❌ SUPPRIMÉ : useEffect simple qui ne chargeait qu'une fois
-  /*
-  useEffect(() => {
-    loadData();
-  }, []);
-  */
-
-  // ✅ CORRECTION : useFocusEffect pour TOUT recharger (Notifs + Données) à chaque retour
   useFocusEffect(
     useCallback(() => {
       loadNotificationCount();
-      loadData(); // On recharge les avis et coopératives ici !
+      loadData();
     }, [])
   );
 
@@ -54,7 +47,7 @@ export default function Home() {
     try {
       const count = await notificationService.getUnreadCount();
       setUnreadCount(count);
-    } catch (error) {
+    } catch {
       console.log('Erreur chargement compteur notifs');
     }
   };
@@ -69,18 +62,14 @@ export default function Home() {
   }, [searchQuery]);
 
   const loadData = async () => {
-    // On ne met setLoading(true) que si ce n'est pas un refresh manuel pour éviter le clignotement trop fréquent
-    // Mais pour le premier chargement, on peut gérer un état local si besoin.
     try {
-      // Charger les coopératives
       const coopData = await cooperativeService.getAllCooperatives();
       setCooperatives(coopData);
 
-      // Charger les derniers avis
       try {
-        const avisData = await avisService.getLatestAvis(5); // On en charge 5 pour le scroll horizontal
+        const avisData = await avisService.getLatestAvis(5);
         setLastAvis(avisData.avis || []);
-      } catch (error) {
+      } catch {
         console.log('Erreur chargement avis (non bloquant)');
       }
     } catch (error) {
@@ -155,6 +144,319 @@ export default function Home() {
       minute: '2-digit',
     });
   };
+
+  // Styles dynamiques
+  const styles = React.useMemo(
+    () =>
+      StyleSheet.create({
+        container: {
+          flex: 1,
+          backgroundColor: theme.colors.background.secondary,
+        },
+        header: {
+          backgroundColor: theme.colors.primary[500],
+          paddingTop: 50,
+          paddingBottom: theme.spacing.xl,
+          paddingHorizontal: theme.spacing.xl,
+          borderBottomLeftRadius: theme.borderRadius.xl,
+          borderBottomRightRadius: theme.borderRadius.xl,
+          ...theme.shadows.md,
+        },
+        headerTop: {
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: theme.spacing.lg,
+        },
+        greeting: {
+          fontSize: theme.typography.sizes.body,
+          color: theme.colors.text.light,
+          marginBottom: 4,
+        },
+        userName: {
+          fontSize: theme.typography.sizes.h2,
+          fontWeight: theme.typography.weights.bold,
+          color: theme.colors.text.inverse,
+        },
+        notificationButton: {
+          position: 'relative',
+          padding: theme.spacing.sm,
+        },
+        notificationBadge: {
+          position: 'absolute',
+          top: 4,
+          right: 4,
+          backgroundColor: theme.colors.semantic.error,
+          borderRadius: 10,
+          minWidth: 20,
+          height: 20,
+          justifyContent: 'center',
+          alignItems: 'center',
+          borderWidth: 2,
+          borderColor: theme.colors.primary[500],
+        },
+        notificationBadgeText: {
+          color: theme.colors.text.inverse,
+          fontSize: 10,
+          fontWeight: theme.typography.weights.bold,
+        },
+        searchContainer: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          backgroundColor: theme.colors.background.primary,
+          borderRadius: theme.borderRadius.md,
+          paddingHorizontal: theme.spacing.md,
+          paddingVertical: theme.spacing.sm,
+          gap: theme.spacing.sm,
+        },
+        searchIcon: {
+          marginRight: theme.spacing.xs,
+        },
+        searchInput: {
+          flex: 1,
+          fontSize: theme.typography.sizes.body,
+          color: theme.colors.text.primary,
+          paddingVertical: theme.spacing.xs,
+        },
+        scrollView: {
+          flex: 1,
+        },
+        loadingContainer: {
+          alignItems: 'center',
+          paddingVertical: theme.spacing.xxxl,
+        },
+        loadingText: {
+          marginTop: theme.spacing.md,
+          fontSize: theme.typography.sizes.body,
+          color: theme.colors.text.secondary,
+        },
+        section: {
+          paddingHorizontal: theme.spacing.xl,
+          marginTop: theme.spacing.xl,
+        },
+        sectionHeader: {
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: theme.spacing.lg,
+        },
+        sectionTitle: {
+          fontSize: theme.typography.sizes.h3,
+          fontWeight: theme.typography.weights.bold,
+          color: theme.colors.text.primary,
+          marginBottom: theme.spacing.md,
+        },
+        voirToutText: {
+          fontSize: theme.typography.sizes.body,
+          color: theme.colors.primary[500],
+          fontWeight: theme.typography.weights.semibold,
+        },
+        sloganSection: {
+          paddingHorizontal: theme.spacing.xl,
+          marginTop: theme.spacing.xl,
+        },
+        sloganCard: {
+          backgroundColor: theme.colors.primary[500],
+          padding: theme.spacing.xxxl,
+          borderRadius: theme.borderRadius.lg,
+          alignItems: 'center',
+          ...theme.shadows.md,
+        },
+        sloganIconContainer: {
+          width: 80,
+          height: 80,
+          borderRadius: 40,
+          backgroundColor: 'rgba(255,255,255,0.2)',
+          justifyContent: 'center',
+          alignItems: 'center',
+          marginBottom: theme.spacing.lg,
+        },
+        sloganTitle: {
+          fontSize: theme.typography.sizes.h1,
+          fontWeight: theme.typography.weights.bold,
+          color: theme.colors.text.inverse,
+          marginBottom: theme.spacing.md,
+          textAlign: 'center',
+        },
+        sloganText: {
+          fontSize: theme.typography.sizes.h3,
+          color: theme.colors.text.inverse,
+          textAlign: 'center',
+          lineHeight: 32,
+        },
+        sloganHighlight: {
+          fontWeight: theme.typography.weights.bold,
+          color: theme.colors.secondary[300],
+          textDecorationLine: 'underline',
+        },
+        horizontalScroll: {
+          paddingRight: theme.spacing.xl,
+          gap: theme.spacing.md,
+        },
+        cooperativeCardHorizontal: {
+          width: 150,
+          backgroundColor: theme.colors.background.primary,
+          borderRadius: theme.borderRadius.md,
+          padding: theme.spacing.md,
+          ...theme.shadows.sm,
+        },
+        cooperativeImageContainerHorizontal: {
+          width: '100%',
+          height: 80,
+          borderRadius: theme.borderRadius.sm,
+          overflow: 'hidden',
+          marginBottom: theme.spacing.sm,
+          backgroundColor: '#fff',
+          borderWidth: 1,
+          borderColor: theme.colors.neutral[100],
+        },
+        cooperativeImageHorizontal: {
+          width: '100%',
+          height: '100%',
+          resizeMode: 'contain',
+        },
+        cooperativeImagePlaceholderHorizontal: {
+          width: '100%',
+          height: '100%',
+          backgroundColor: theme.colors.primary[50],
+          justifyContent: 'center',
+          alignItems: 'center',
+        },
+        cooperativeNameHorizontal: {
+          fontSize: theme.typography.sizes.caption,
+          fontWeight: theme.typography.weights.semibold,
+          color: theme.colors.text.primary,
+          marginBottom: theme.spacing.sm,
+          minHeight: 32,
+        },
+        cooperativeMetaHorizontal: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 4,
+        },
+        statusDot: {
+          width: 8,
+          height: 8,
+          borderRadius: 4,
+        },
+        statusTextSmall: {
+          fontSize: theme.typography.sizes.small,
+          color: theme.colors.text.secondary,
+          textTransform: 'capitalize',
+        },
+        emptyContainer: {
+          alignItems: 'center',
+          paddingVertical: theme.spacing.xxxl,
+        },
+        emptyText: {
+          fontSize: theme.typography.sizes.body,
+          fontWeight: theme.typography.weights.semibold,
+          color: theme.colors.text.secondary,
+          marginTop: theme.spacing.md,
+        },
+        voyagesGrid: {
+          gap: theme.spacing.md,
+        },
+        voyageCard: {
+          flexDirection: 'row',
+          backgroundColor: theme.colors.background.primary,
+          borderRadius: theme.borderRadius.md,
+          padding: theme.spacing.md,
+          ...theme.shadows.sm,
+        },
+        voyageImagePlaceholder: {
+          width: 60,
+          height: 60,
+          backgroundColor: theme.colors.primary[50],
+          borderRadius: theme.borderRadius.sm,
+          alignItems: 'center',
+          justifyContent: 'center',
+          marginRight: theme.spacing.md,
+        },
+        voyageInfo: {
+          flex: 1,
+          justifyContent: 'center',
+        },
+        voyageTitre: {
+          fontSize: theme.typography.sizes.body,
+          fontWeight: theme.typography.weights.bold,
+          color: theme.colors.text.primary,
+          marginBottom: theme.spacing.xs,
+        },
+        voyageDetails: {
+          fontSize: theme.typography.sizes.small,
+          color: theme.colors.text.secondary,
+          marginBottom: theme.spacing.xs,
+        },
+        voyagePrix: {
+          fontSize: theme.typography.sizes.body,
+          fontWeight: theme.typography.weights.bold,
+          color: theme.colors.primary[500],
+          marginBottom: theme.spacing.xs,
+        },
+        voyageCooperative: {
+          fontSize: theme.typography.sizes.small,
+          color: theme.colors.secondary[500],
+          fontWeight: theme.typography.weights.semibold,
+        },
+        avisCardHorizontal: {
+          width: 280,
+          backgroundColor: theme.colors.background.primary,
+          padding: theme.spacing.lg,
+          borderRadius: theme.borderRadius.md,
+          ...theme.shadows.sm,
+          justifyContent: 'space-between',
+        },
+        avisHeader: {
+          marginBottom: theme.spacing.sm,
+        },
+        avisUserInfo: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: theme.spacing.sm,
+        },
+        avisAvatar: {
+          width: 36,
+          height: 36,
+          borderRadius: 18,
+          backgroundColor: theme.colors.primary[50],
+          justifyContent: 'center',
+          alignItems: 'center',
+        },
+        avisUserName: {
+          fontSize: theme.typography.sizes.caption,
+          fontWeight: theme.typography.weights.semibold,
+          color: theme.colors.text.primary,
+          marginBottom: 2,
+        },
+        avisStars: {
+          flexDirection: 'row',
+          gap: 2,
+        },
+        avisContent: {
+          flex: 1,
+          justifyContent: 'center',
+          marginBottom: theme.spacing.sm,
+        },
+        avisComment: {
+          fontSize: theme.typography.sizes.caption,
+          color: theme.colors.text.secondary,
+          lineHeight: 18,
+          fontStyle: 'italic',
+        },
+        avisFooter: {
+          borderTopWidth: 1,
+          borderTopColor: theme.colors.neutral[100],
+          paddingTop: 8,
+        },
+        avisTrajet: {
+          fontSize: theme.typography.sizes.small,
+          color: theme.colors.primary[500],
+          fontWeight: theme.typography.weights.medium,
+        },
+      }),
+    [theme]
+  );
 
   return (
     <View style={styles.container}>
@@ -260,7 +562,7 @@ export default function Home() {
               </View>
             ) : (
               <>
-                {/* Slogan Section */}
+                {/* Slogan */}
                 <View style={styles.sloganSection}>
                   <View style={styles.sloganCard}>
                     <View style={styles.sloganIconContainer}>
@@ -277,7 +579,7 @@ export default function Home() {
                   </View>
                 </View>
 
-                {/* Section Coopératives populaires */}
+                {/* Coopératives populaires */}
                 <View style={styles.section}>
                   <View style={styles.sectionHeader}>
                     <Text style={styles.sectionTitle}>Coopératives populaires</Text>
@@ -332,14 +634,14 @@ export default function Home() {
                   </ScrollView>
                 </View>
 
-                {/* ✅ SECTION AVIS MODIFIÉE : SCROLL HORIZONTAL */}
+                {/* Derniers avis */}
                 {lastAvis.length > 0 && (
                   <View style={styles.section}>
                     <Text style={styles.sectionTitle}>Derniers avis</Text>
                     <ScrollView
                       horizontal
                       showsHorizontalScrollIndicator={false}
-                      contentContainerStyle={styles.horizontalScroll} // Réutilisation du style horizontal
+                      contentContainerStyle={styles.horizontalScroll}
                     >
                       {lastAvis.map((avis, index) => (
                         <View key={index} style={styles.avisCardHorizontal}>
@@ -393,312 +695,3 @@ export default function Home() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background.secondary,
-  },
-  header: {
-    backgroundColor: theme.colors.primary[500],
-    paddingTop: 50,
-    paddingBottom: theme.spacing.xl,
-    paddingHorizontal: theme.spacing.xl,
-    borderBottomLeftRadius: theme.borderRadius.xl,
-    borderBottomRightRadius: theme.borderRadius.xl,
-    ...theme.shadows.md,
-  },
-  headerTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: theme.spacing.lg,
-  },
-  greeting: {
-    fontSize: theme.typography.sizes.body,
-    color: theme.colors.text.light,
-    marginBottom: 4,
-  },
-  userName: {
-    fontSize: theme.typography.sizes.h2,
-    fontWeight: theme.typography.weights.bold,
-    color: theme.colors.text.inverse,
-  },
-  notificationButton: {
-    position: 'relative',
-    padding: theme.spacing.sm,
-  },
-  notificationBadge: {
-    position: 'absolute',
-    top: 4,
-    right: 4,
-    backgroundColor: theme.colors.semantic.error,
-    borderRadius: 10,
-    minWidth: 20,
-    height: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: theme.colors.primary[500],
-  },
-  notificationBadgeText: {
-    color: theme.colors.text.inverse,
-    fontSize: 10,
-    fontWeight: theme.typography.weights.bold,
-  },
-  searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: theme.colors.background.primary,
-    borderRadius: theme.borderRadius.md,
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.sm,
-    gap: theme.spacing.sm,
-  },
-  searchIcon: {
-    marginRight: theme.spacing.xs,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: theme.typography.sizes.body,
-    color: theme.colors.text.primary,
-    paddingVertical: theme.spacing.xs,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  loadingContainer: {
-    alignItems: 'center',
-    paddingVertical: theme.spacing.xxxl,
-  },
-  loadingText: {
-    marginTop: theme.spacing.md,
-    fontSize: theme.typography.sizes.body,
-    color: theme.colors.text.secondary,
-  },
-  section: {
-    paddingHorizontal: theme.spacing.xl,
-    marginTop: theme.spacing.xl,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: theme.spacing.lg,
-  },
-  sectionTitle: {
-    fontSize: theme.typography.sizes.h3,
-    fontWeight: theme.typography.weights.bold,
-    color: theme.colors.text.primary,
-    marginBottom: theme.spacing.md, // Espace sous le titre
-  },
-  voirToutText: {
-    fontSize: theme.typography.sizes.body,
-    color: theme.colors.primary[500],
-    fontWeight: theme.typography.weights.semibold,
-  },
-  sloganSection: {
-    paddingHorizontal: theme.spacing.xl,
-    marginTop: theme.spacing.xl,
-  },
-  sloganCard: {
-    backgroundColor: theme.colors.primary[500],
-    padding: theme.spacing.xxxl,
-    borderRadius: theme.borderRadius.lg,
-    alignItems: 'center',
-    ...theme.shadows.md,
-  },
-  sloganIconContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: theme.spacing.lg,
-  },
-  sloganTitle: {
-    fontSize: theme.typography.sizes.h1,
-    fontWeight: theme.typography.weights.bold,
-    color: theme.colors.text.inverse,
-    marginBottom: theme.spacing.md,
-    textAlign: 'center',
-  },
-  sloganText: {
-    fontSize: theme.typography.sizes.h3,
-    color: theme.colors.text.inverse,
-    textAlign: 'center',
-    lineHeight: 32,
-  },
-  sloganHighlight: {
-    fontWeight: theme.typography.weights.bold,
-    color: theme.colors.secondary[300],
-    textDecorationLine: 'underline',
-  },
-  horizontalScroll: {
-    paddingRight: theme.spacing.xl,
-    gap: theme.spacing.md,
-  },
-  cooperativeCardHorizontal: {
-    width: 150,
-    backgroundColor: theme.colors.background.primary,
-    borderRadius: theme.borderRadius.md,
-    padding: theme.spacing.md,
-    ...theme.shadows.sm,
-  },
-  cooperativeImageContainerHorizontal: {
-    width: '100%',
-    height: 80,
-    borderRadius: theme.borderRadius.sm,
-    overflow: 'hidden',
-    marginBottom: theme.spacing.sm,
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: theme.colors.neutral[100],
-  },
-  cooperativeImageHorizontal: {
-    width: '100%',
-    height: '100%',
-    resizeMode: 'contain',
-  },
-  cooperativeImagePlaceholderHorizontal: {
-    width: '100%',
-    height: '100%',
-    backgroundColor: theme.colors.primary[50],
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  cooperativeNameHorizontal: {
-    fontSize: theme.typography.sizes.caption,
-    fontWeight: theme.typography.weights.semibold,
-    color: theme.colors.text.primary,
-    marginBottom: theme.spacing.sm,
-    minHeight: 32,
-  },
-  cooperativeMetaHorizontal: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  statusDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  statusTextSmall: {
-    fontSize: theme.typography.sizes.small,
-    color: theme.colors.text.secondary,
-    textTransform: 'capitalize',
-  },
-  emptyContainer: {
-    alignItems: 'center',
-    paddingVertical: theme.spacing.xxxl,
-  },
-  emptyText: {
-    fontSize: theme.typography.sizes.body,
-    fontWeight: theme.typography.weights.semibold,
-    color: theme.colors.text.secondary,
-    marginTop: theme.spacing.md,
-  },
-  voyagesGrid: {
-    gap: theme.spacing.md,
-  },
-  voyageCard: {
-    flexDirection: 'row',
-    backgroundColor: theme.colors.background.primary,
-    borderRadius: theme.borderRadius.md,
-    padding: theme.spacing.md,
-    ...theme.shadows.sm,
-  },
-  voyageImagePlaceholder: {
-    width: 60,
-    height: 60,
-    backgroundColor: theme.colors.primary[50],
-    borderRadius: theme.borderRadius.sm,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: theme.spacing.md,
-  },
-  voyageInfo: {
-    flex: 1,
-    justifyContent: 'center',
-  },
-  voyageTitre: {
-    fontSize: theme.typography.sizes.body,
-    fontWeight: theme.typography.weights.bold,
-    color: theme.colors.text.primary,
-    marginBottom: theme.spacing.xs,
-  },
-  voyageDetails: {
-    fontSize: theme.typography.sizes.small,
-    color: theme.colors.text.secondary,
-    marginBottom: theme.spacing.xs,
-  },
-  voyagePrix: {
-    fontSize: theme.typography.sizes.body,
-    fontWeight: theme.typography.weights.bold,
-    color: theme.colors.primary[500],
-    marginBottom: theme.spacing.xs,
-  },
-  voyageCooperative: {
-    fontSize: theme.typography.sizes.small,
-    color: theme.colors.secondary[500],
-    fontWeight: theme.typography.weights.semibold,
-  },
-  // ✅ NOUVEAUX STYLES POUR AVIS HORIZONTAL
-  avisCardHorizontal: {
-    width: 280, // Largeur fixe pour le scroll horizontal
-    backgroundColor: theme.colors.background.primary,
-    padding: theme.spacing.lg,
-    borderRadius: theme.borderRadius.md,
-    ...theme.shadows.sm,
-    justifyContent: 'space-between',
-  },
-  avisHeader: {
-    marginBottom: theme.spacing.sm,
-  },
-  avisUserInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: theme.spacing.sm,
-  },
-  avisAvatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: theme.colors.primary[50],
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  avisUserName: {
-    fontSize: theme.typography.sizes.caption,
-    fontWeight: theme.typography.weights.semibold,
-    color: theme.colors.text.primary,
-    marginBottom: 2,
-  },
-  avisStars: {
-    flexDirection: 'row',
-    gap: 2,
-  },
-  avisContent: {
-    flex: 1,
-    justifyContent: 'center',
-    marginBottom: theme.spacing.sm,
-  },
-  avisComment: {
-    fontSize: theme.typography.sizes.caption,
-    color: theme.colors.text.secondary,
-    lineHeight: 18,
-    fontStyle: 'italic',
-  },
-  avisFooter: {
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.neutral[100],
-    paddingTop: 8,
-  },
-  avisTrajet: {
-    fontSize: theme.typography.sizes.small,
-    color: theme.colors.primary[500],
-    fontWeight: theme.typography.weights.medium,
-  },
-});

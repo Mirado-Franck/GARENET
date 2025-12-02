@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
-import { theme } from '../../constants/theme';
+import { useTheme } from '../../contexts/ThemeContext';
 
 interface DatePickerProps {
   value: Date | null;
@@ -14,6 +14,7 @@ interface DatePickerProps {
 }
 
 export default function DatePicker({ value, onChange, label, placeholder, minimumDate }: DatePickerProps) {
+  const { theme } = useTheme(); // 👈 Hook dynamique
   const [show, setShow] = useState(false);
 
   const handleChange = (event: any, selectedDate?: Date) => {
@@ -41,6 +42,49 @@ export default function DatePicker({ value, onChange, label, placeholder, minimu
   const clearDate = () => {
     onChange(null);
   };
+
+  const styles = StyleSheet.create({
+    container: {
+      marginBottom: theme.spacing.lg,
+    },
+    label: {
+      fontSize: theme.typography.sizes.body,
+      fontWeight: theme.typography.weights.semibold,
+      color: theme.colors.text.primary,
+      marginBottom: theme.spacing.sm,
+    },
+    inputContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: theme.spacing.sm,
+    },
+    dateButton: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: theme.spacing.md,
+      backgroundColor: theme.colors.background.primary,
+      borderWidth: 1,
+      borderColor: theme.colors.neutral[300],
+      borderRadius: theme.borderRadius.md,
+      paddingHorizontal: theme.spacing.lg,
+      paddingVertical: theme.spacing.md,
+    },
+    placeholderText: {
+      flex: 1,
+      fontSize: theme.typography.sizes.body,
+      color: theme.colors.neutral[400],
+    },
+    dateText: {
+      flex: 1,
+      fontSize: theme.typography.sizes.body,
+      color: theme.colors.text.primary,
+      fontWeight: theme.typography.weights.medium,
+    },
+    clearButton: {
+      padding: theme.spacing.sm,
+    },
+  });
 
   return (
     <View style={styles.container}>
@@ -72,46 +116,3 @@ export default function DatePicker({ value, onChange, label, placeholder, minimu
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    marginBottom: theme.spacing.lg,
-  },
-  label: {
-    fontSize: theme.typography.sizes.body,
-    fontWeight: theme.typography.weights.semibold,
-    color: theme.colors.text.primary,
-    marginBottom: theme.spacing.sm,
-  },
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: theme.spacing.sm,
-  },
-  dateButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: theme.spacing.md,
-    backgroundColor: theme.colors.background.primary,
-    borderWidth: 1,
-    borderColor: theme.colors.neutral[300],
-    borderRadius: theme.borderRadius.md,
-    paddingHorizontal: theme.spacing.lg,
-    paddingVertical: theme.spacing.md,
-  },
-  placeholderText: {
-    flex: 1,
-    fontSize: theme.typography.sizes.body,
-    color: theme.colors.neutral[400],
-  },
-  dateText: {
-    flex: 1,
-    fontSize: theme.typography.sizes.body,
-    color: theme.colors.text.primary,
-    fontWeight: theme.typography.weights.medium,
-  },
-  clearButton: {
-    padding: theme.spacing.sm,
-  },
-});

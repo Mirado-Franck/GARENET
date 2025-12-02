@@ -1,3 +1,4 @@
+// app/(client)/historique/historiquePaiement.tsx
 import React, { useEffect, useState } from 'react';
 import { 
   View, 
@@ -7,23 +8,200 @@ import {
   ActivityIndicator, 
   TouchableOpacity, 
   Alert,
-  Platform 
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
-//import * as FileSystem from 'expo-file-system';
-
 import { paiementService, Paiement } from '../../../services/paiementService';
-import { theme } from '../../../constants/theme';
+import { useTheme } from '../../../contexts/ThemeContext';
 
 export default function HistoriquePaiement() {
+  const { theme } = useTheme(); // 👈 dynamique
   const [paiements, setPaiements] = useState<Paiement[]>([]);
   const [loading, setLoading] = useState(true);
-  // ✅ Pour gérer le chargement spécifique par item
   const [generatingId, setGeneratingId] = useState<number | null>(null);
   const router = useRouter();
+
+  const styles = React.useMemo(
+    () =>
+      StyleSheet.create({
+        container: {
+          flex: 1,
+          backgroundColor: theme.colors.background.secondary,
+        },
+        loadingContainer: {
+          flex: 1,
+          justifyContent: 'center',
+          alignItems: 'center',
+        },
+        loadingText: {
+          marginTop: theme.spacing.md,
+          fontSize: theme.typography.sizes.body,
+          color: theme.colors.text.secondary,
+        },
+        header: {
+          backgroundColor: theme.colors.primary[500],
+          paddingTop: 60,
+          paddingBottom: 30,
+          paddingHorizontal: 20,
+          flexDirection: 'row',
+          alignItems: 'center',
+        },
+        backButton: {
+          marginRight: theme.spacing.md,
+        },
+        headerTextContainer: {
+          flex: 1,
+        },
+        title: {
+          fontSize: theme.typography.sizes.h1,
+          fontWeight: theme.typography.weights.bold,
+          color: theme.colors.text.inverse,
+          marginBottom: 8,
+        },
+        subtitle: {
+          fontSize: theme.typography.sizes.body,
+          color: theme.colors.text.inverse,
+          opacity: 0.9,
+        },
+        listContent: {
+          padding: theme.spacing.lg,
+          paddingBottom: theme.spacing.xl,
+        },
+        card: {
+          backgroundColor: theme.colors.background.primary,
+          borderRadius: theme.borderRadius.md,
+          padding: theme.spacing.lg,
+          marginBottom: theme.spacing.lg,
+          elevation: 2,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 1 },
+          shadowOpacity: 0.1,
+          shadowRadius: 2,
+        },
+        cardHeader: {
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: theme.spacing.md,
+        },
+        date: {
+          fontSize: theme.typography.sizes.body,
+          color: theme.colors.text.secondary,
+          fontWeight: theme.typography.weights.medium,
+        },
+        badge: {
+          paddingHorizontal: 8,
+          paddingVertical: 4,
+          borderRadius: theme.borderRadius.sm,
+        },
+        badgeSuccess: { backgroundColor: '#E8F5E9' },
+        badgeError: { backgroundColor: '#FFEBEE' },
+        badgeText: {
+          fontSize: theme.typography.sizes.small,
+          fontWeight: 'bold',
+        },
+        textSuccess: { color: theme.colors.semantic.success },
+        textError: { color: theme.colors.semantic.error },
+        amountContainer: {
+          marginBottom: theme.spacing.sm,
+        },
+        amountLabel: {
+          fontSize: theme.typography.sizes.small,
+          color: theme.colors.text.secondary,
+        },
+        amountValue: {
+          fontSize: 24,
+          fontWeight: theme.typography.weights.bold,
+          color: theme.colors.primary[600],
+        },
+        divider: {
+          height: 1,
+          backgroundColor: theme.colors.neutral[200],
+          marginVertical: theme.spacing.sm,
+        },
+        detailsContainer: {
+          marginBottom: theme.spacing.md,
+        },
+        detailRow: {
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+          marginBottom: 4,
+        },
+        detailLabel: {
+          fontSize: theme.typography.sizes.small,
+          color: theme.colors.text.secondary,
+        },
+        detailValue: {
+          fontSize: theme.typography.sizes.small,
+          color: theme.colors.text.primary,
+          fontWeight: '600',
+        },
+        tripInfo: {
+          backgroundColor: theme.colors.background.secondary,
+          padding: theme.spacing.md,
+          borderRadius: theme.borderRadius.sm,
+        },
+        tripLabel: {
+          fontSize: theme.typography.sizes.small,
+          color: theme.colors.text.tertiary,
+          marginBottom: 2,
+        },
+        tripRoute: {
+          fontSize: theme.typography.sizes.body,
+          fontWeight: theme.typography.weights.semibold,
+          color: theme.colors.text.primary,
+        },
+        tripCoop: {
+          fontSize: theme.typography.sizes.small,
+          color: theme.colors.text.secondary,
+          marginTop: 2,
+        },
+        actionsContainer: {
+          marginTop: theme.spacing.md,
+          borderTopWidth: 1,
+          borderTopColor: theme.colors.neutral[200],
+          paddingTop: theme.spacing.md,
+        },
+        receiptButton: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'center',
+          paddingVertical: 10,
+          borderRadius: theme.borderRadius.sm,
+          borderWidth: 1,
+          borderColor: theme.colors.primary[200],
+          backgroundColor: theme.colors.primary[50],
+          gap: 8,
+        },
+        receiptButtonText: {
+          fontSize: theme.typography.sizes.body,
+          fontWeight: theme.typography.weights.semibold,
+          color: theme.colors.primary[500],
+        },
+        emptyContainer: {
+          flex: 1,
+          justifyContent: 'center',
+          alignItems: 'center',
+          paddingHorizontal: 40,
+        },
+        emptyTitle: {
+          fontSize: theme.typography.sizes.h2,
+          fontWeight: theme.typography.weights.bold,
+          color: theme.colors.text.primary,
+          marginTop: theme.spacing.lg,
+          marginBottom: theme.spacing.sm,
+          textAlign: 'center',
+        },
+        emptySubtitle: {
+          fontSize: theme.typography.sizes.body,
+          color: theme.colors.text.secondary,
+          textAlign: 'center',
+        },
+      }),
+    [theme]
+  );
 
   useEffect(() => {
     loadPaiements();
@@ -39,15 +217,13 @@ export default function HistoriquePaiement() {
       setLoading(false);
     }
   };
-  // 🖨️ FONCTION DE GÉNÉRATION DU REÇU (COMPATIBLE EXPO 54+)
+
   const handleGenerateReceipt = async (payment: Paiement) => {
     setGeneratingId(payment.id);
-
     try {
       const qrData = `RECU-${payment.code_paiement}`;
       const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${qrData}`;
       
-      // Template HTML
       const html = `
         <!DOCTYPE html>
         <html>
@@ -110,22 +286,17 @@ export default function HistoriquePaiement() {
         </html>
       `;
 
-      // 1. Génération du PDF
-      // On n'a pas besoin de déplacer le fichier, on partage directement celui généré
       const { uri } = await Print.printToFileAsync({ html });
-      console.log('📄 PDF généré:', uri);
 
-      // 2. Partage direct
       if (await Sharing.isAvailableAsync()) {
         await Sharing.shareAsync(uri, {
           UTI: '.pdf',
           mimeType: 'application/pdf',
-          dialogTitle: `Reçu de paiement ${payment.code_paiement}`
+          dialogTitle: `Reçu de paiement ${payment.code_paiement}`,
         });
       } else {
         Alert.alert("Erreur", "Le partage n'est pas supporté sur cet appareil");
       }
-
     } catch (error) {
       console.error('❌ Erreur génération reçu:', error);
       Alert.alert('Erreur', 'Impossible de générer le reçu.');
@@ -173,7 +344,6 @@ export default function HistoriquePaiement() {
         </View>
       </View>
 
-      {/* Protection contre les données manquantes */}
       {item.reservation?.voyage && (
         <View style={styles.tripInfo}>
           <Text style={styles.tripLabel}>Pour le voyage :</Text>
@@ -188,7 +358,6 @@ export default function HistoriquePaiement() {
         </View>
       )}
 
-      {/* ✅ BOUTON TÉLÉCHARGER REÇU */}
       <View style={styles.actionsContainer}>
         <TouchableOpacity 
           style={styles.receiptButton}
@@ -219,7 +388,7 @@ export default function HistoriquePaiement() {
 
   return (
     <View style={styles.container}>
-      {/* Header avec flèche de retour */}
+      {/* Header avec retour */}
       <View style={styles.header}>
         <TouchableOpacity 
           style={styles.backButton}
@@ -255,188 +424,3 @@ export default function HistoriquePaiement() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background.secondary,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingText: {
-    marginTop: theme.spacing.md,
-    fontSize: theme.typography.sizes.body,
-    color: theme.colors.text.secondary,
-  },
-  header: {
-    backgroundColor: theme.colors.primary[500],
-    paddingTop: 60,
-    paddingBottom: 30,
-    paddingHorizontal: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  backButton: {
-    marginRight: theme.spacing.md,
-  },
-  headerTextContainer: {
-    flex: 1,
-  },
-  title: {
-    fontSize: theme.typography.sizes.h1,
-    fontWeight: theme.typography.weights.bold,
-    color: theme.colors.text.inverse,
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: theme.typography.sizes.body,
-    color: theme.colors.text.inverse,
-    opacity: 0.9,
-  },
-  listContent: {
-    padding: theme.spacing.lg,
-    paddingBottom: theme.spacing.xl,
-  },
-  card: {
-    backgroundColor: theme.colors.background.primary,
-    borderRadius: theme.borderRadius.md,
-    padding: theme.spacing.lg,
-    marginBottom: theme.spacing.lg,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: theme.spacing.md,
-  },
-  date: {
-    fontSize: theme.typography.sizes.body,
-    color: theme.colors.text.secondary,
-    fontWeight: theme.typography.weights.medium,
-  },
-  badge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: theme.borderRadius.sm,
-  },
-  badgeSuccess: { 
-    backgroundColor: '#E8F5E9' 
-  },
-  badgeError: { 
-    backgroundColor: '#FFEBEE' 
-  },
-  badgeText: {
-    fontSize: theme.typography.sizes.small,
-    fontWeight: 'bold',
-  },
-  textSuccess: { 
-    color: theme.colors.semantic.success 
-  },
-  textError: { 
-    color: theme.colors.semantic.error 
-  },
-  amountContainer: {
-    marginBottom: theme.spacing.sm,
-  },
-  amountLabel: {
-    fontSize: theme.typography.sizes.small,
-    color: theme.colors.text.secondary,
-  },
-  amountValue: {
-    fontSize: 24,
-    fontWeight: theme.typography.weights.bold,
-    color: theme.colors.primary[600],
-  },
-  divider: {
-    height: 1,
-    backgroundColor: theme.colors.neutral[200],
-    marginVertical: theme.spacing.sm,
-  },
-  detailsContainer: {
-    marginBottom: theme.spacing.md,
-  },
-  detailRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 4,
-  },
-  detailLabel: {
-    fontSize: theme.typography.sizes.small,
-    color: theme.colors.text.secondary,
-  },
-  detailValue: {
-    fontSize: theme.typography.sizes.small,
-    color: theme.colors.text.primary,
-    fontWeight: '600',
-  },
-  tripInfo: {
-    backgroundColor: theme.colors.background.secondary,
-    padding: theme.spacing.md,
-    borderRadius: theme.borderRadius.sm,
-  },
-  tripLabel: {
-    fontSize: theme.typography.sizes.small,
-    color: theme.colors.text.tertiary,
-    marginBottom: 2,
-  },
-  tripRoute: {
-    fontSize: theme.typography.sizes.body,
-    fontWeight: theme.typography.weights.semibold,
-    color: theme.colors.text.primary,
-  },
-  tripCoop: {
-    fontSize: theme.typography.sizes.small,
-    color: theme.colors.text.secondary,
-    marginTop: 2,
-  },
-  // ✅ Nouveaux styles pour le bouton
-  actionsContainer: {
-    marginTop: theme.spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.neutral[200],
-    paddingTop: theme.spacing.md,
-  },
-  receiptButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 10,
-    borderRadius: theme.borderRadius.sm,
-    borderWidth: 1,
-    borderColor: theme.colors.primary[200],
-    backgroundColor: theme.colors.primary[50],
-    gap: 8,
-  },
-  receiptButtonText: {
-    fontSize: theme.typography.sizes.body,
-    fontWeight: theme.typography.weights.semibold,
-    color: theme.colors.primary[500],
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 40,
-  },
-  emptyTitle: {
-    fontSize: theme.typography.sizes.h2,
-    fontWeight: theme.typography.weights.bold,
-    color: theme.colors.text.primary,
-    marginTop: theme.spacing.lg,
-    marginBottom: theme.spacing.sm,
-    textAlign: 'center',
-  },
-  emptySubtitle: {
-    fontSize: theme.typography.sizes.body,
-    color: theme.colors.text.secondary,
-    textAlign: 'center',
-  },
-});

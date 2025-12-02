@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
-  Platform,
   Modal,
 } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
@@ -15,9 +14,13 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { voyageService, PlacesVoyageResponse, Place } from '../../../services/voyageService';
 import { reservationService } from '../../../services/reservationService';
 import { Toast } from '../../../components/ui/Toast';
-import { theme } from '../../../constants/theme';
+import { useTheme } from '../../../contexts/ThemeContext';
+import type { Theme } from '../../../constants/theme';
 
 export default function Reservation() {
+  const { theme } = useTheme(); // 👈 thème dynamique
+  const styles = React.useMemo(() => createStyles(theme), [theme]); // 👈 styles dépendants du thème (sauf sièges)
+
   const params = useLocalSearchParams();
   const voyageId = parseInt(params.voyageId as string);
   const prixUnitaire = parseFloat(params.prix as string);
@@ -30,7 +33,7 @@ export default function Reservation() {
   const [toastVisible, setToastVisible] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [toastType, setToastType] = useState<'success' | 'error'>('success');
-  
+
   const [showConfirmModal, setShowConfirmModal] = useState(false);
 
   const prixTotal = selectedPlaces.length * prixUnitaire;
@@ -62,12 +65,8 @@ export default function Reservation() {
     }
   };
 
-  const handleValidate = async () => {
-    console.log('🔵 handleValidate appelé');
-    console.log('📋 selectedPlaces:', selectedPlaces);
-
+  const handleValidate = () => {
     if (selectedPlaces.length === 0) {
-      console.log('⚠️ Aucune place sélectionnée');
       Alert.alert('Attention', 'Veuillez sélectionner au moins une place');
       return;
     }
@@ -93,7 +92,7 @@ export default function Reservation() {
         places: selectedPlaces,
         montant: prixTotal,
         code_reservation: response.reservation.code_reservation,
-        voyage: response.reservation.voyage
+        voyage: response.reservation.voyage,
       };
 
       await AsyncStorage.setItem('temp_reservation', JSON.stringify(dataForPayment));
@@ -108,14 +107,13 @@ export default function Reservation() {
           pathname: '/(client)/voyages/paiement',
           params: {
             reservationId: response.reservation.id,
-            montant: prixTotal
-          }
+            montant: prixTotal,
+          },
         });
       }, 1500);
-
     } catch (error: any) {
       console.error('❌ Erreur création réservation:', error);
-      
+
       if (error.error?.includes('Déjà réservé')) {
         setToastMessage('Une ou plusieurs places ont été réservées entre temps');
       } else if (error.error?.includes('Place(s) introuvable')) {
@@ -123,10 +121,10 @@ export default function Reservation() {
       } else {
         setToastMessage(error.error || 'Erreur lors de la réservation');
       }
-      
+
       setToastType('error');
       setToastVisible(true);
-      
+
       loadPlaces();
     } finally {
       setSubmitting(false);
@@ -146,40 +144,38 @@ export default function Reservation() {
     return styles.placeTextAvailable;
   };
 
-  // 🔥 FONCTION MODIFIÉE : Même organisation mais avec tri des numéros
+  // Organisation des places (tri + rangées)
   const organizeCarLayout = (places: Place[]) => {
-    const chauffeur = places.find(place => place.est_chauffeur);
-    const voyageurs = places.filter(place => !place.est_chauffeur);
-    
-    // 🔥 TRI DES PLACES PAR NUMÉRO (ordre numérique)
+    const chauffeur = places.find((place) => place.est_chauffeur);
+    const voyageurs = places.filter((place) => !place.est_chauffeur);
+
     const sortedVoyageurs = voyageurs.sort((a, b) => {
       const numA = parseInt(a.numero);
       const numB = parseInt(b.numero);
-      
+
       if (!isNaN(numA) && !isNaN(numB)) {
         return numA - numB;
       }
       return a.numero.localeCompare(b.numero);
     });
-    
-    const rows = [];
-    
+
+    const rows: Place[][] = [];
+
     // Rangée 1 : Conducteur + 2 passagers avant
-    const row1 = [];
+    const row1: Place[] = [];
     if (chauffeur) row1.push(chauffeur);
-    
-    // Ajouter les 2 premiers passagers triés pour la première rangée
+
     const avantPassagers = sortedVoyageurs.slice(0, 2);
     row1.push(...avantPassagers);
     rows.push(row1);
-    
-    // Rangées suivantes : 4 places par rangée (triées)
+
+    // Rangées suivantes : 4 places par rangée
     const placesRestantes = sortedVoyageurs.slice(2);
     for (let i = 0; i < placesRestantes.length; i += 4) {
       const row = placesRestantes.slice(i, i + 4);
       rows.push(row);
     }
-    
+
     return rows;
   };
 
@@ -230,22 +226,21 @@ export default function Reservation() {
           </View>
         </View>
 
-        {/* DISPOSITION ORIGINALE AVEC PLACES TRIÉES */}
         <View style={styles.carContainer}>
           <View style={styles.carHeader}>
             <Text style={styles.carDirection}>⬆️ Avant du véhicule</Text>
           </View>
-          
+
           <View style={styles.steeringWheelContainer}>
             <Text style={styles.steeringWheel}>🚗</Text>
           </View>
 
           <View style={styles.carLayout}>
             {carLayout.map((row, rowIndex) => (
-              <View key={rowIndex} style={[
-                styles.carRow,
-                rowIndex === 0 && styles.frontRow
-              ]}>
+              <View
+                key={rowIndex}
+                style={[styles.carRow, rowIndex === 0 && styles.frontRow]}
+              >
                 {row.map((place: Place, seatIndex: number) => (
                   <TouchableOpacity
                     key={place.numero}
@@ -261,7 +256,7 @@ export default function Reservation() {
                   >
                     <Text style={getPlaceTextStyle(place)}>
                       {place.numero}
-                      {seatIndex === 0 && rowIndex === 0 && " 🪑"}
+                      {seatIndex === 0 && rowIndex === 0 && ' 🪑'}
                     </Text>
                   </TouchableOpacity>
                 ))}
@@ -278,12 +273,15 @@ export default function Reservation() {
           <View style={styles.summaryRow}>
             <Text style={styles.summaryLabel}>Places sélectionnées :</Text>
             <Text style={styles.summaryValue}>
-              {selectedPlaces.length} {selectedPlaces.length > 1 ? 'places' : 'place'}
+              {selectedPlaces.length}{' '}
+              {selectedPlaces.length > 1 ? 'places' : 'place'}
             </Text>
           </View>
           <View style={styles.summaryRow}>
             <Text style={styles.summaryLabel}>Prix unitaire :</Text>
-            <Text style={styles.summaryValue}>{prixUnitaire.toLocaleString()} Ar</Text>
+            <Text style={styles.summaryValue}>
+              {prixUnitaire.toLocaleString()} Ar
+            </Text>
           </View>
           <View style={styles.summaryDivider} />
           <View style={styles.summaryRow}>
@@ -295,7 +293,9 @@ export default function Reservation() {
         {selectedPlaces.length > 0 && (
           <View style={styles.selectedPlacesContainer}>
             <Text style={styles.selectedPlacesTitle}>Vos places :</Text>
-            <Text style={styles.selectedPlacesList}>{selectedPlaces.join(', ')}</Text>
+            <Text style={styles.selectedPlacesList}>
+              {selectedPlaces.join(', ')}
+            </Text>
           </View>
         )}
       </ScrollView>
@@ -304,7 +304,8 @@ export default function Reservation() {
         <TouchableOpacity
           style={[
             styles.validateButton,
-            (selectedPlaces.length === 0 || submitting) && styles.validateButtonDisabled,
+            (selectedPlaces.length === 0 || submitting) &&
+              styles.validateButtonDisabled,
           ]}
           onPress={handleValidate}
           disabled={selectedPlaces.length === 0 || submitting}
@@ -329,19 +330,24 @@ export default function Reservation() {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Confirmer la réservation</Text>
-            
+
             <Text style={styles.modalMessage}>
               Vous allez réserver {selectedPlaces.length} place(s) pour un total de{' '}
-              <Text style={styles.modalPrice}>{prixTotal.toLocaleString()} Ar</Text>
+              <Text style={styles.modalPrice}>
+                {prixTotal.toLocaleString()} Ar
+              </Text>
             </Text>
-            
+
             <View style={styles.modalPlaces}>
               <Text style={styles.modalPlacesLabel}>Places sélectionnées :</Text>
-              <Text style={styles.modalPlacesList}>{selectedPlaces.join(', ')}</Text>
+              <Text style={styles.modalPlacesList}>
+                {selectedPlaces.join(', ')}
+              </Text>
             </View>
 
             <Text style={styles.modalInfo}>
-              ℹ️ Une réservation sera créée et vous serez redirigé vers la page de paiement
+              ℹ️ Une réservation sera créée et vous serez redirigé vers la page de
+              paiement
             </Text>
 
             <View style={styles.modalButtons}>
@@ -351,7 +357,7 @@ export default function Reservation() {
               >
                 <Text style={styles.modalButtonTextCancel}>Annuler</Text>
               </TouchableOpacity>
-              
+
               <TouchableOpacity
                 style={[styles.modalButton, styles.modalButtonConfirm]}
                 onPress={confirmReservation}
@@ -363,7 +369,6 @@ export default function Reservation() {
         </View>
       </Modal>
 
-      {/* Toast */}
       {toastVisible && (
         <Toast
           message={toastMessage}
@@ -376,319 +381,326 @@ export default function Reservation() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background.secondary,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingText: {
-    marginTop: theme.spacing.md,
-    fontSize: theme.typography.sizes.body,
-    color: theme.colors.text.secondary,
-  },
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  errorText: {
-    fontSize: theme.typography.sizes.body,
-    color: theme.colors.semantic.error,
-  },
-  scrollContent: {
-    padding: theme.spacing.xl,
-    paddingBottom: 100,
-  },
-  header: {
-    marginBottom: theme.spacing.xl,
-  },
-  title: {
-    fontSize: theme.typography.sizes.h2,
-    fontWeight: theme.typography.weights.bold,
-    color: theme.colors.text.primary,
-    marginBottom: theme.spacing.sm,
-  },
-  subtitle: {
-    fontSize: theme.typography.sizes.caption,
-    color: theme.colors.text.secondary,
-    marginBottom: theme.spacing.xs,
-  },
-  legend: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: theme.spacing.md,
-    marginBottom: theme.spacing.xl,
-    backgroundColor: theme.colors.background.primary,
-    padding: theme.spacing.md,
-    borderRadius: theme.borderRadius.sm,
-  },
-  legendItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: theme.spacing.sm,
-  },
-  legendBox: {
-    width: 20,
-    height: 20,
-    borderRadius: theme.borderRadius.sm - 4,
-  },
-  legendText: {
-    fontSize: theme.typography.sizes.small,
-    color: theme.colors.text.secondary,
-  },
-  carContainer: {
-    marginBottom: theme.spacing.xl,
-    backgroundColor: theme.colors.background.primary,
-    borderRadius: theme.borderRadius.md,
-    padding: theme.spacing.lg,
-  },
-  carHeader: {
-    alignItems: 'center',
-    marginBottom: theme.spacing.md,
-  },
-  carDirection: {
-    fontSize: theme.typography.sizes.caption,
-    color: theme.colors.text.secondary,
-    fontWeight: theme.typography.weights.semibold,
-  },
-  steeringWheelContainer: {
-    alignItems: 'center',
-    marginBottom: theme.spacing.lg,
-  },
-  steeringWheel: {
-    fontSize: 24,
-  },
-  carLayout: {
-    alignItems: 'center',
-  },
-  carRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: theme.spacing.lg,
-    gap: theme.spacing.md,
-  },
-  frontRow: {
-    marginBottom: theme.spacing.xl,
-  },
-  seat: {
-    width: 50,
-    height: 50,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderRadius: theme.borderRadius.sm,
-    borderWidth: 2,
-  },
-  frontSeat: {
-    width: 55,
-    height: 55,
-  },
-  driverSeat: {
-    backgroundColor: '#FFF3E0',
-    borderColor: theme.colors.semantic.warning,
-    width: 60,
-    height: 60,
-  },
-  carFooter: {
-    alignItems: 'center',
-    marginTop: theme.spacing.md,
-  },
-  placeAvailable: {
-    backgroundColor: '#E8F5E9',
-    borderColor: theme.colors.semantic.success,
-  },
-  placeSelected: {
-    backgroundColor: theme.colors.primary[500],
-    borderColor: theme.colors.primary[700],
-  },
-  placeReserved: {
-    backgroundColor: '#FFEBEE',
-    borderColor: theme.colors.semantic.error,
-  },
-  placeChauffeur: {
-    backgroundColor: '#FFF3E0',
-    borderColor: theme.colors.semantic.warning,
-  },
-  placeTextAvailable: {
-    color: theme.colors.semantic.success,
-    fontWeight: theme.typography.weights.semibold,
-    fontSize: theme.typography.sizes.caption,
-  },
-  placeTextSelected: {
-    color: theme.colors.text.inverse,
-    fontWeight: theme.typography.weights.bold,
-    fontSize: theme.typography.sizes.caption,
-  },
-  placeTextDisabled: {
-    color: theme.colors.text.tertiary,
-    fontSize: theme.typography.sizes.caption,
-  },
-  summary: {
-    backgroundColor: theme.colors.background.primary,
-    padding: theme.spacing.lg,
-    borderRadius: theme.borderRadius.md,
-    marginBottom: theme.spacing.lg,
-  },
-  summaryRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: theme.spacing.sm,
-  },
-  summaryLabel: {
-    fontSize: theme.typography.sizes.caption,
-    color: theme.colors.text.secondary,
-  },
-  summaryValue: {
-    fontSize: theme.typography.sizes.caption,
-    color: theme.colors.text.primary,
-    fontWeight: theme.typography.weights.semibold,
-  },
-  summaryDivider: {
-    height: 1,
-    backgroundColor: theme.colors.neutral[300],
-    marginVertical: theme.spacing.md,
-  },
-  totalLabel: {
-    fontSize: theme.typography.sizes.h3,
-    fontWeight: theme.typography.weights.bold,
-    color: theme.colors.text.primary,
-  },
-  totalValue: {
-    fontSize: theme.typography.sizes.h3,
-    fontWeight: theme.typography.weights.bold,
-    color: theme.colors.primary[500],
-  },
-  selectedPlacesContainer: {
-    backgroundColor: '#E3F2FD',
-    padding: theme.spacing.md,
-    borderRadius: theme.borderRadius.sm,
-    marginBottom: theme.spacing.lg,
-  },
-  selectedPlacesTitle: {
-    fontSize: theme.typography.sizes.caption,
-    fontWeight: theme.typography.weights.semibold,
-    color: theme.colors.primary[700],
-    marginBottom: theme.spacing.xs,
-  },
-  selectedPlacesList: {
-    fontSize: theme.typography.sizes.body,
-    color: theme.colors.primary[900],
-    fontWeight: theme.typography.weights.bold,
-  },
-  footer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: theme.colors.background.primary,
-    padding: theme.spacing.lg,
-    borderTopWidth: 1,
-    borderTopColor: theme.colors.neutral[300],
-  },
-  validateButton: {
-    backgroundColor: theme.colors.primary[500],
-    padding: theme.spacing.lg,
-    borderRadius: theme.borderRadius.md,
-    alignItems: 'center',
-  },
-  validateButtonDisabled: {
-    backgroundColor: theme.colors.neutral[400],
-  },
-  validateButtonText: {
-    color: theme.colors.text.inverse,
-    fontSize: theme.typography.sizes.body,
-    fontWeight: theme.typography.weights.bold,
-  },
-  // Styles de la modal
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  modalContent: {
-    backgroundColor: theme.colors.background.primary,
-    borderRadius: theme.borderRadius.lg,
-    padding: 24,
-    width: '100%',
-    maxWidth: 400,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 16,
-    elevation: 10,
-  },
-  modalTitle: {
-    fontSize: theme.typography.sizes.h2,
-    fontWeight: theme.typography.weights.bold,
-    color: theme.colors.text.primary,
-    marginBottom: 16,
-    textAlign: 'center',
-  },
-  modalMessage: {
-    fontSize: theme.typography.sizes.body,
-    color: theme.colors.text.secondary,
-    lineHeight: 24,
-    marginBottom: 16,
-    textAlign: 'center',
-  },
-  modalPrice: {
-    fontWeight: theme.typography.weights.bold,
-    color: theme.colors.primary[500],
-    fontSize: theme.typography.sizes.h3,
-  },
-  modalPlaces: {
-    backgroundColor: theme.colors.background.secondary,
-    padding: 12,
-    borderRadius: theme.borderRadius.sm,
-    marginBottom: 16,
-  },
-  modalPlacesLabel: {
-    fontSize: theme.typography.sizes.small,
-    color: theme.colors.text.secondary,
-    marginBottom: 4,
-  },
-  modalPlacesList: {
-    fontSize: theme.typography.sizes.h3,
-    fontWeight: theme.typography.weights.bold,
-    color: theme.colors.primary[700],
-  },
-  modalInfo: {
-    fontSize: theme.typography.sizes.small,
-    color: theme.colors.text.tertiary,
-    fontStyle: 'italic',
-    marginBottom: 20,
-    textAlign: 'center',
-  },
-  modalButtons: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  modalButton: {
-    flex: 1,
-    paddingVertical: 14,
-    borderRadius: theme.borderRadius.md,
-    alignItems: 'center',
-  },
-  modalButtonCancel: {
-    backgroundColor: theme.colors.neutral[200],
-  },
-  modalButtonConfirm: {
-    backgroundColor: theme.colors.primary[500],
-  },
-  modalButtonTextCancel: {
-    color: theme.colors.text.secondary,
-    fontSize: theme.typography.sizes.body,
-    fontWeight: theme.typography.weights.semibold,
-  },
-  modalButtonTextConfirm: {
-    color: theme.colors.text.inverse,
-    fontSize: theme.typography.sizes.body,
-    fontWeight: theme.typography.weights.bold,
-  },
-});
+// ✅ Styles : thème dynamique pour la structure, couleurs FIXES pour les sièges
+const createStyles = (theme: Theme) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: theme.colors.background.secondary,
+    },
+    loadingContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: theme.colors.background.secondary,
+    },
+    loadingText: {
+      marginTop: theme.spacing.md,
+      fontSize: theme.typography.sizes.body,
+      color: theme.colors.text.secondary,
+    },
+    errorContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: theme.colors.background.secondary,
+    },
+    errorText: {
+      fontSize: theme.typography.sizes.body,
+      color: theme.colors.semantic.error,
+    },
+    scrollContent: {
+      padding: theme.spacing.xl,
+      paddingBottom: 100,
+    },
+    header: {
+      marginBottom: theme.spacing.xl,
+    },
+    title: {
+      fontSize: theme.typography.sizes.h2,
+      fontWeight: theme.typography.weights.bold,
+      color: theme.colors.text.primary,
+      marginBottom: theme.spacing.sm,
+    },
+    subtitle: {
+      fontSize: theme.typography.sizes.caption,
+      color: theme.colors.text.secondary,
+      marginBottom: theme.spacing.xs,
+    },
+    legend: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: theme.spacing.md,
+      marginBottom: theme.spacing.xl,
+      backgroundColor: theme.colors.background.primary,
+      padding: theme.spacing.md,
+      borderRadius: theme.borderRadius.sm,
+    },
+    legendItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: theme.spacing.sm,
+    },
+    legendBox: {
+      width: 20,
+      height: 20,
+      borderRadius: theme.borderRadius.sm - 4,
+    },
+    legendText: {
+      fontSize: theme.typography.sizes.small,
+      color: theme.colors.text.secondary,
+    },
+    carContainer: {
+      marginBottom: theme.spacing.xl,
+      backgroundColor: theme.colors.background.primary,
+      borderRadius: theme.borderRadius.md,
+      padding: theme.spacing.lg,
+    },
+    carHeader: {
+      alignItems: 'center',
+      marginBottom: theme.spacing.md,
+    },
+    carDirection: {
+      fontSize: theme.typography.sizes.caption,
+      color: theme.colors.text.secondary,
+      fontWeight: theme.typography.weights.semibold,
+    },
+    steeringWheelContainer: {
+      alignItems: 'center',
+      marginBottom: theme.spacing.lg,
+    },
+    steeringWheel: {
+      fontSize: 24,
+    },
+    carLayout: {
+      alignItems: 'center',
+    },
+    carRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: theme.spacing.lg,
+      gap: theme.spacing.md,
+    },
+    frontRow: {
+      marginBottom: theme.spacing.xl,
+    },
+
+    // 🚫 Partie SIÈGES : couleurs FIXES (ne dépendent pas du thème choisi)
+    seat: {
+      width: 50,
+      height: 50,
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderRadius: 8,
+      borderWidth: 2,
+    },
+    frontSeat: {
+      width: 55,
+      height: 55,
+    },
+    driverSeat: {
+      backgroundColor: '#FFF3E0',
+      borderColor: '#F59E0B', // warning statique
+      width: 60,
+      height: 60,
+    },
+    placeAvailable: {
+      backgroundColor: '#E8F5E9', // vert clair fixe
+      borderColor: '#22C55E', // succès fixe
+    },
+    placeSelected: {
+      backgroundColor: '#3B82F6', // bleu fixe (équiv. primary[500] par défaut)
+      borderColor: '#1D4ED8', // bleu foncé fixe (équiv. primary[700])
+    },
+    placeReserved: {
+      backgroundColor: '#FFEBEE', // rouge clair fixe
+      borderColor: '#EF4444', // rouge fixe
+    },
+    placeChauffeur: {
+      backgroundColor: '#FFF3E0', // orange clair fixe
+      borderColor: '#F59E0B',
+    },
+    placeTextAvailable: {
+      color: '#22C55E',
+      fontWeight: theme.typography.weights.semibold,
+      fontSize: theme.typography.sizes.caption,
+    },
+    placeTextSelected: {
+      color: '#FFFFFF',
+      fontWeight: theme.typography.weights.bold,
+      fontSize: theme.typography.sizes.caption,
+    },
+    placeTextDisabled: {
+      color: '#9CA3AF',
+      fontSize: theme.typography.sizes.caption,
+    },
+
+    carFooter: {
+      alignItems: 'center',
+      marginTop: theme.spacing.md,
+    },
+
+    summary: {
+      backgroundColor: theme.colors.background.primary,
+      padding: theme.spacing.lg,
+      borderRadius: theme.borderRadius.md,
+      marginBottom: theme.spacing.lg,
+    },
+    summaryRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      marginBottom: theme.spacing.sm,
+    },
+    summaryLabel: {
+      fontSize: theme.typography.sizes.caption,
+      color: theme.colors.text.secondary,
+    },
+    summaryValue: {
+      fontSize: theme.typography.sizes.caption,
+      color: theme.colors.text.primary,
+      fontWeight: theme.typography.weights.semibold,
+    },
+    summaryDivider: {
+      height: 1,
+      backgroundColor: theme.colors.neutral[300],
+      marginVertical: theme.spacing.md,
+    },
+    totalLabel: {
+      fontSize: theme.typography.sizes.h3,
+      fontWeight: theme.typography.weights.bold,
+      color: theme.colors.text.primary,
+    },
+    totalValue: {
+      fontSize: theme.typography.sizes.h3,
+      fontWeight: theme.typography.weights.bold,
+      color: theme.colors.primary[500],
+    },
+    selectedPlacesContainer: {
+      backgroundColor: '#E3F2FD',
+      padding: theme.spacing.md,
+      borderRadius: theme.borderRadius.sm,
+      marginBottom: theme.spacing.lg,
+    },
+    selectedPlacesTitle: {
+      fontSize: theme.typography.sizes.caption,
+      fontWeight: theme.typography.weights.semibold,
+      color: theme.colors.primary[700],
+      marginBottom: theme.spacing.xs,
+    },
+    selectedPlacesList: {
+      fontSize: theme.typography.sizes.body,
+      color: theme.colors.primary[900],
+      fontWeight: theme.typography.weights.bold,
+    },
+    footer: {
+      position: 'absolute',
+      bottom: 0,
+      left: 0,
+      right: 0,
+      backgroundColor: theme.colors.background.primary,
+      padding: theme.spacing.lg,
+      borderTopWidth: 1,
+      borderTopColor: theme.colors.neutral[300],
+    },
+    validateButton: {
+      backgroundColor: theme.colors.primary[500],
+      padding: theme.spacing.lg,
+      borderRadius: theme.borderRadius.md,
+      alignItems: 'center',
+    },
+    validateButtonDisabled: {
+      backgroundColor: theme.colors.neutral[400],
+    },
+    validateButtonText: {
+      color: theme.colors.text.inverse,
+      fontSize: theme.typography.sizes.body,
+      fontWeight: theme.typography.weights.bold,
+    },
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: 20,
+    },
+    modalContent: {
+      backgroundColor: theme.colors.background.primary,
+      borderRadius: theme.borderRadius.lg,
+      padding: 24,
+      width: '100%',
+      maxWidth: 400,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: 0.3,
+      shadowRadius: 16,
+      elevation: 10,
+    },
+    modalTitle: {
+      fontSize: theme.typography.sizes.h2,
+      fontWeight: theme.typography.weights.bold,
+      color: theme.colors.text.primary,
+      marginBottom: 16,
+      textAlign: 'center',
+    },
+    modalMessage: {
+      fontSize: theme.typography.sizes.body,
+      color: theme.colors.text.secondary,
+      lineHeight: 24,
+      marginBottom: 16,
+      textAlign: 'center',
+    },
+    modalPrice: {
+      fontWeight: theme.typography.weights.bold,
+      color: theme.colors.primary[500],
+      fontSize: theme.typography.sizes.h3,
+    },
+    modalPlaces: {
+      backgroundColor: theme.colors.background.secondary,
+      padding: 12,
+      borderRadius: theme.borderRadius.sm,
+      marginBottom: 16,
+    },
+    modalPlacesLabel: {
+      fontSize: theme.typography.sizes.small,
+      color: theme.colors.text.secondary,
+      marginBottom: 4,
+    },
+    modalPlacesList: {
+      fontSize: theme.typography.sizes.h3,
+      fontWeight: theme.typography.weights.bold,
+      color: theme.colors.primary[700],
+    },
+    modalInfo: {
+      fontSize: theme.typography.sizes.small,
+      color: theme.colors.text.tertiary,
+      fontStyle: 'italic',
+      marginBottom: 20,
+      textAlign: 'center',
+    },
+    modalButtons: {
+      flexDirection: 'row',
+      gap: 12,
+    },
+    modalButton: {
+      flex: 1,
+      paddingVertical: 14,
+      borderRadius: theme.borderRadius.md,
+      alignItems: 'center',
+    },
+    modalButtonCancel: {
+      backgroundColor: theme.colors.neutral[200],
+    },
+    modalButtonConfirm: {
+      backgroundColor: theme.colors.primary[500],
+    },
+    modalButtonTextCancel: {
+      color: theme.colors.text.secondary,
+      fontSize: theme.typography.sizes.body,
+      fontWeight: theme.typography.weights.semibold,
+    },
+    modalButtonTextConfirm: {
+      color: theme.colors.text.inverse,
+      fontSize: theme.typography.sizes.body,
+      fontWeight: theme.typography.weights.bold,
+    },
+  });

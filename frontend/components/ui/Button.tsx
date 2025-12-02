@@ -9,7 +9,7 @@ import {
   TextStyle,
   StyleProp,
 } from 'react-native';
-import { theme } from '../../constants/theme';
+import { useTheme } from '../../contexts/ThemeContext';
 
 type ButtonVariant = 'primary' | 'success' | 'danger' | 'secondary';
 
@@ -21,6 +21,7 @@ interface ButtonProps {
   disabled?: boolean;
   style?: StyleProp<ViewStyle>;
   textStyle?: StyleProp<TextStyle>;
+  icon?: React.ReactNode;
 }
 
 export default function Button({
@@ -31,7 +32,10 @@ export default function Button({
   disabled = false,
   style,
   textStyle,
+  icon,
 }: ButtonProps) {
+  const { theme } = useTheme(); // 👈 Hook dynamique
+
   const getButtonStyle = (): StyleProp<ViewStyle> => {
     const baseStyle: ViewStyle = {
       paddingVertical: theme.spacing.md,
@@ -41,6 +45,7 @@ export default function Button({
       justifyContent: 'center',
       flexDirection: 'row',
       minHeight: 50,
+      gap: theme.spacing.sm,
     };
 
     const variantStyles: Record<ButtonVariant, ViewStyle> = {
@@ -70,7 +75,7 @@ export default function Button({
   const getTextStyle = (): StyleProp<TextStyle> => {
     const baseStyle: TextStyle = {
       fontSize: theme.typography.sizes.body,
-      fontWeight: theme.typography.weights.semibold, // ✅ MAINTENANT CORRECT
+      fontWeight: theme.typography.weights.semibold,
     };
 
     const variantTextStyles: Record<ButtonVariant, TextStyle> = {
@@ -106,6 +111,7 @@ export default function Button({
       style={getButtonStyle()}
       onPress={onPress}
       disabled={disabled || loading}
+      activeOpacity={0.7}
     >
       {loading ? (
         <ActivityIndicator 
@@ -113,13 +119,11 @@ export default function Button({
           size="small" 
         />
       ) : (
-        <Text style={getTextStyle()}>{title}</Text>
+        <>
+          {icon}
+          <Text style={getTextStyle()}>{title}</Text>
+        </>
       )}
     </TouchableOpacity>
   );
 }
-
-// StyleSheet pour les styles constants (optionnel)
-const styles = StyleSheet.create({
-  // Vous pouvez ajouter des styles spécifiques ici si besoin
-});

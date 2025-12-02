@@ -1,3 +1,4 @@
+// frontend/app/(client)/voyages/listeCooperative.tsx
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -13,10 +14,14 @@ import {
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { cooperativeService, Cooperative } from '../../../services/cooperativeService';
-import { theme } from '../../../constants/theme';
-import { UPLOADS_URL } from '../../../services/api'; // ✅ IMPORT AJOUTÉ
+import { UPLOADS_URL } from '../../../services/api';
+import { useTheme } from '../../../contexts/ThemeContext';
+import type { Theme } from '../../../constants/theme';
 
 export default function ListeCooperative() {
+  const { theme } = useTheme(); // 👈 thème dynamique
+  const styles = React.useMemo(() => createStyles(theme), [theme]); // 👈 styles dépendants du thème
+
   const [cooperatives, setCooperatives] = useState<Cooperative[]>([]);
   const [filteredCooperatives, setFilteredCooperatives] = useState<Cooperative[]>([]);
   const [loading, setLoading] = useState(true);
@@ -79,12 +84,11 @@ export default function ListeCooperative() {
       {/* Header avec logo */}
       <View style={styles.cardHeader}>
         <View style={styles.logoContainer}>
-          {/* ✅ AFFICHAGE LOGO CORRIGÉ */}
           {item.logo ? (
-            <Image 
-              source={{ uri: `${UPLOADS_URL}/${item.logo}` }} 
-              style={styles.logo} 
-              resizeMode="contain" // Pour ne pas couper le logo
+            <Image
+              source={{ uri: `${UPLOADS_URL}/${item.logo}` }}
+              style={styles.logo}
+              resizeMode="contain"
             />
           ) : (
             <View style={styles.logoPlaceholder}>
@@ -163,7 +167,11 @@ export default function ListeCooperative() {
           style={styles.detailsButton}
           onPress={() => handleViewDetails(item.id)}
         >
-          <Ionicons name="information-circle-outline" size={18} color={theme.colors.primary[500]} />
+          <Ionicons
+            name="information-circle-outline"
+            size={18}
+            color={theme.colors.primary[500]}
+          />
           <Text style={styles.detailsButtonText}>Voir détails</Text>
         </TouchableOpacity>
 
@@ -171,7 +179,7 @@ export default function ListeCooperative() {
           style={styles.voyagesButton}
           onPress={() => handleViewVoyages(item.id)}
         >
-          <Ionicons name="bus-outline" size={18} color="#fff" />
+          <Ionicons name="bus-outline" size={18} color={theme.colors.text.inverse} />
           <Text style={styles.voyagesButtonText}>Voir ses voyages</Text>
         </TouchableOpacity>
       </View>
@@ -193,7 +201,8 @@ export default function ListeCooperative() {
       <View style={styles.header}>
         <Text style={styles.title}>Coopératives de Transport</Text>
         <Text style={styles.subtitle}>
-          {filteredCooperatives.length} {filteredCooperatives.length > 1 ? 'coopératives' : 'coopérative'}
+          {filteredCooperatives.length}{' '}
+          {filteredCooperatives.length > 1 ? 'coopératives' : 'coopérative'}
         </Text>
       </View>
 
@@ -245,209 +254,209 @@ export default function ListeCooperative() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background.secondary,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingText: {
-    marginTop: theme.spacing.md,
-    fontSize: theme.typography.sizes.body,
-    color: theme.colors.text.secondary,
-  },
-  header: {
-    backgroundColor: theme.colors.primary[500],
-    paddingTop: 60,
-    paddingBottom: 20,
-    paddingHorizontal: 20,
-  },
-  title: {
-    fontSize: theme.typography.sizes.h1,
-    fontWeight: theme.typography.weights.bold,
-    color: theme.colors.text.inverse,
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: theme.typography.sizes.body,
-    color: theme.colors.text.inverse,
-    opacity: 0.9,
-  },
-  searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: theme.colors.background.primary,
-    margin: theme.spacing.lg,
-    paddingHorizontal: theme.spacing.md,
-    borderRadius: theme.borderRadius.md,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  searchInput: {
-    flex: 1,
-    paddingVertical: theme.spacing.md,
-    paddingHorizontal: theme.spacing.sm,
-    fontSize: theme.typography.sizes.body,
-    color: theme.colors.text.primary,
-  },
-  listContent: {
-    paddingHorizontal: theme.spacing.lg,
-    paddingBottom: theme.spacing.xl,
-  },
-  card: {
-    backgroundColor: theme.colors.background.primary,
-    borderRadius: theme.borderRadius.md,
-    padding: theme.spacing.lg,
-    marginBottom: theme.spacing.lg,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    marginBottom: theme.spacing.md,
-  },
-  logoContainer: {
-    marginRight: theme.spacing.md,
-    // ✅ Fond blanc et bordure pour le logo
-    backgroundColor: '#fff',
-    borderRadius: theme.borderRadius.md,
-    padding: 4,
-    borderWidth: 1,
-    borderColor: theme.colors.neutral[100],
-  },
-  logo: {
-    width: 80,
-    height: 80,
-    borderRadius: theme.borderRadius.md,
-    // ✅ Mode contain pour voir tout le logo
-    resizeMode: 'contain',
-  },
-  logoPlaceholder: {
-    width: 80,
-    height: 80,
-    borderRadius: theme.borderRadius.md,
-    backgroundColor: theme.colors.primary[50],
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  logoPlaceholderText: {
-    fontSize: 40,
-  },
-  headerInfo: {
-    flex: 1,
-    justifyContent: 'center',
-  },
-  cooperativeName: {
-    fontSize: theme.typography.sizes.h3,
-    fontWeight: theme.typography.weights.bold,
-    color: theme.colors.text.primary,
-    marginBottom: 4,
-  },
-  codeCooperative: {
-    fontSize: theme.typography.sizes.small,
-    color: theme.colors.text.secondary,
-    marginBottom: 6,
-  },
-  ratingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  ratingText: {
-    fontSize: theme.typography.sizes.body,
-    fontWeight: theme.typography.weights.semibold,
-    color: theme.colors.text.primary,
-  },
-  infoContainer: {
-    marginBottom: theme.spacing.md,
-  },
-  infoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: theme.spacing.sm,
-    gap: theme.spacing.sm,
-  },
-  infoText: {
-    flex: 1,
-    fontSize: theme.typography.sizes.body,
-    color: theme.colors.text.secondary,
-  },
-  statusContainer: {
-    marginBottom: theme.spacing.md,
-  },
-  statusBadge: {
-    alignSelf: 'flex-start',
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.sm,
-    borderRadius: theme.borderRadius.full,
-  },
-  statusText: {
-    fontSize: theme.typography.sizes.small,
-    fontWeight: theme.typography.weights.semibold,
-  },
-  buttonContainer: {
-    flexDirection: 'row',
-    gap: theme.spacing.sm,
-  },
-  detailsButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingVertical: theme.spacing.sm,
-    backgroundColor: theme.colors.primary[50],
-    borderRadius: theme.borderRadius.sm,
-    borderWidth: 1,
-    borderColor: theme.colors.primary[500],
-  },
-  detailsButtonText: {
-    fontSize: theme.typography.sizes.body,
-    fontWeight: theme.typography.weights.semibold,
-    color: theme.colors.primary[500],
-  },
-  voyagesButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingVertical: theme.spacing.sm,
-    backgroundColor: theme.colors.primary[500],
-    borderRadius: theme.borderRadius.sm,
-  },
-  voyagesButtonText: {
-    fontSize: theme.typography.sizes.body,
-    fontWeight: theme.typography.weights.semibold,
-    color: theme.colors.text.inverse,
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 40,
-  },
-  emptyTitle: {
-    fontSize: theme.typography.sizes.h2,
-    fontWeight: theme.typography.weights.bold,
-    color: theme.colors.text.primary,
-    marginTop: theme.spacing.lg,
-    marginBottom: theme.spacing.sm,
-    textAlign: 'center',
-  },
-  emptySubtitle: {
-    fontSize: theme.typography.sizes.body,
-    color: theme.colors.text.secondary,
-    textAlign: 'center',
-  },
-});
+// ✅ Styles dépendants du thème (recalculés quand le thème change)
+const createStyles = (theme: Theme) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: theme.colors.background.secondary,
+    },
+    loadingContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    loadingText: {
+      marginTop: theme.spacing.md,
+      fontSize: theme.typography.sizes.body,
+      color: theme.colors.text.secondary,
+    },
+    header: {
+      backgroundColor: theme.colors.primary[500],
+      paddingTop: 60,
+      paddingBottom: 20,
+      paddingHorizontal: 20,
+    },
+    title: {
+      fontSize: theme.typography.sizes.h1,
+      fontWeight: theme.typography.weights.bold,
+      color: theme.colors.text.inverse,
+      marginBottom: 8,
+    },
+    subtitle: {
+      fontSize: theme.typography.sizes.body,
+      color: theme.colors.text.inverse,
+      opacity: 0.9,
+    },
+    searchContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: theme.colors.background.primary,
+      margin: theme.spacing.lg,
+      paddingHorizontal: theme.spacing.md,
+      borderRadius: theme.borderRadius.md,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+      elevation: 3,
+    },
+    searchInput: {
+      flex: 1,
+      paddingVertical: theme.spacing.md,
+      paddingHorizontal: theme.spacing.sm,
+      fontSize: theme.typography.sizes.body,
+      color: theme.colors.text.primary,
+    },
+    listContent: {
+      paddingHorizontal: theme.spacing.lg,
+      paddingBottom: theme.spacing.xl,
+    },
+    card: {
+      backgroundColor: theme.colors.background.primary,
+      borderRadius: theme.borderRadius.md,
+      padding: theme.spacing.lg,
+      marginBottom: theme.spacing.lg,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+      elevation: 3,
+    },
+    cardHeader: {
+      flexDirection: 'row',
+      marginBottom: theme.spacing.md,
+    },
+    logoContainer: {
+      marginRight: theme.spacing.md,
+      backgroundColor: theme.colors.background.primary,
+      borderRadius: theme.borderRadius.md,
+      padding: 4,
+      borderWidth: 1,
+      borderColor: theme.colors.neutral[100],
+    },
+    logo: {
+      width: 80,
+      height: 80,
+      borderRadius: theme.borderRadius.md,
+      resizeMode: 'contain',
+    },
+    logoPlaceholder: {
+      width: 80,
+      height: 80,
+      borderRadius: theme.borderRadius.md,
+      backgroundColor: theme.colors.primary[50],
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    logoPlaceholderText: {
+      fontSize: 40,
+    },
+    headerInfo: {
+      flex: 1,
+      justifyContent: 'center',
+    },
+    cooperativeName: {
+      fontSize: theme.typography.sizes.h3,
+      fontWeight: theme.typography.weights.bold,
+      color: theme.colors.text.primary,
+      marginBottom: 4,
+    },
+    codeCooperative: {
+      fontSize: theme.typography.sizes.small,
+      color: theme.colors.text.secondary,
+      marginBottom: 6,
+    },
+    ratingContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+    },
+    ratingText: {
+      fontSize: theme.typography.sizes.body,
+      fontWeight: theme.typography.weights.semibold,
+      color: theme.colors.text.primary,
+    },
+    infoContainer: {
+      marginBottom: theme.spacing.md,
+    },
+    infoRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: theme.spacing.sm,
+      gap: theme.spacing.sm,
+    },
+    infoText: {
+      flex: 1,
+      fontSize: theme.typography.sizes.body,
+      color: theme.colors.text.secondary,
+    },
+    statusContainer: {
+      marginBottom: theme.spacing.md,
+    },
+    statusBadge: {
+      alignSelf: 'flex-start',
+      paddingHorizontal: theme.spacing.md,
+      paddingVertical: theme.spacing.sm,
+      borderRadius: theme.borderRadius.full,
+    },
+    statusText: {
+      fontSize: theme.typography.sizes.small,
+      fontWeight: theme.typography.weights.semibold,
+    },
+    buttonContainer: {
+      flexDirection: 'row',
+      gap: theme.spacing.sm,
+    },
+    detailsButton: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 6,
+      paddingVertical: theme.spacing.sm,
+      backgroundColor: theme.colors.primary[50],
+      borderRadius: theme.borderRadius.sm,
+      borderWidth: 1,
+      borderColor: theme.colors.primary[500],
+    },
+    detailsButtonText: {
+      fontSize: theme.typography.sizes.body,
+      fontWeight: theme.typography.weights.semibold,
+      color: theme.colors.primary[500],
+    },
+    voyagesButton: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 6,
+      paddingVertical: theme.spacing.sm,
+      backgroundColor: theme.colors.primary[500],
+      borderRadius: theme.borderRadius.sm,
+    },
+    voyagesButtonText: {
+      fontSize: theme.typography.sizes.body,
+      fontWeight: theme.typography.weights.semibold,
+      color: theme.colors.text.inverse,
+    },
+    emptyContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      paddingHorizontal: 40,
+    },
+    emptyTitle: {
+      fontSize: theme.typography.sizes.h2,
+      fontWeight: theme.typography.weights.bold,
+      color: theme.colors.text.primary,
+      marginTop: theme.spacing.lg,
+      marginBottom: theme.spacing.sm,
+      textAlign: 'center',
+    },
+    emptySubtitle: {
+      fontSize: theme.typography.sizes.body,
+      color: theme.colors.text.secondary,
+      textAlign: 'center',
+    },
+  });

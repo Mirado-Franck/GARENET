@@ -18,10 +18,11 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import Button from '../components/ui/Button';
 import { utilisateurService, InscriptionData } from '../services/utilisateurService';
-import { theme } from '../constants/theme';
+import { useTheme } from '../contexts/ThemeContext';
 
 export default function Inscription() {
   const router = useRouter();
+  const { theme } = useTheme(); // 👈 thème dynamique
   
   const [formData, setFormData] = useState<InscriptionData>({
     nom: '',
@@ -38,6 +39,208 @@ export default function Inscription() {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Partial<InscriptionData & { confirmPassword: string; api: string }>>({});
   const [successMessage, setSuccessMessage] = useState('');
+
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: theme.colors.background.secondary,
+    },
+    header: {
+      backgroundColor: theme.colors.primary[500],
+      paddingTop: 50,
+      paddingBottom: theme.spacing.xl,
+      paddingHorizontal: theme.spacing.xl,
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    backButton: {
+      marginRight: theme.spacing.lg,
+    },
+    headerTitle: {
+      fontSize: theme.typography.sizes.h2,
+      fontWeight: theme.typography.weights.bold,
+      color: theme.colors.text.inverse,
+    },
+    keyboardAvoidingView: {
+      flex: 1,
+    },
+    mainContent: {
+      flex: 1,
+      padding: theme.spacing.xl,
+    },
+    // SECTIONS FIXES
+    titleSection: {
+      marginBottom: theme.spacing.xl,
+    },
+    title: {
+      fontSize: theme.typography.sizes.h1,
+      fontWeight: theme.typography.weights.bold,
+      color: theme.colors.primary[500],
+      marginBottom: theme.spacing.sm,
+    },
+    subtitle: {
+      fontSize: theme.typography.sizes.body,
+      color: theme.colors.text.secondary,
+    },
+    photoSection: {
+      alignItems: 'center',
+      marginBottom: theme.spacing.xl,
+    },
+    photoLabel: {
+      fontSize: theme.typography.sizes.body,
+      fontWeight: theme.typography.weights.semibold,
+      color: theme.colors.text.primary,
+      marginBottom: theme.spacing.md,
+    },
+    photoContainer: {
+      width: 120,
+      height: 120,
+      borderRadius: 60,
+      overflow: 'hidden',
+      marginBottom: theme.spacing.sm,
+    },
+    photoPreview: {
+      width: '100%',
+      height: '100%',
+      resizeMode: 'cover',
+    },
+    photoPlaceholder: {
+      width: '100%',
+      height: '100%',
+      backgroundColor: theme.colors.neutral[100],
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderWidth: 2,
+      borderColor: theme.colors.neutral[300],
+      borderStyle: 'dashed',
+    },
+    photoPlaceholderText: {
+      fontSize: theme.typography.sizes.small,
+      color: theme.colors.neutral[400],
+      marginTop: theme.spacing.xs,
+    },
+    removePhotoButton: {
+      paddingVertical: theme.spacing.xs,
+      paddingHorizontal: theme.spacing.md,
+    },
+    removePhotoText: {
+      fontSize: theme.typography.sizes.small,
+      color: theme.colors.semantic.error,
+      fontWeight: theme.typography.weights.semibold,
+    },
+    successContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: '#d4edda',
+      padding: theme.spacing.md,
+      borderRadius: theme.borderRadius.sm,
+      marginBottom: theme.spacing.xl,
+      borderWidth: 1,
+      borderColor: '#c3e6cb',
+    },
+    successText: {
+      color: theme.colors.semantic.success,
+      marginLeft: theme.spacing.sm,
+      fontSize: theme.typography.sizes.caption,
+      fontWeight: theme.typography.weights.medium,
+    },
+    errorApiContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: '#f8d7da',
+      padding: theme.spacing.md,
+      borderRadius: theme.borderRadius.sm,
+      marginBottom: theme.spacing.xl,
+      borderWidth: 1,
+      borderColor: '#f5c6cb',
+    },
+    errorApiText: {
+      color: theme.colors.semantic.error,
+      marginLeft: theme.spacing.sm,
+      fontSize: theme.typography.sizes.caption,
+      fontWeight: theme.typography.weights.medium,
+    },
+    // FORMULAIRE SCROLLABLE
+    formScrollView: {
+      flex: 1,
+      marginBottom: theme.spacing.lg,
+    },
+    formScrollContent: {
+      flexGrow: 1,
+    },
+    inputGroup: {
+      marginBottom: theme.spacing.xl,
+    },
+    label: {
+      fontSize: theme.typography.sizes.body,
+      fontWeight: theme.typography.weights.semibold,
+      color: theme.colors.text.primary,
+      marginBottom: theme.spacing.sm,
+    },
+    input: {
+      backgroundColor: theme.colors.background.primary,
+      borderWidth: 1,
+      borderColor: theme.colors.neutral[300],
+      borderRadius: theme.borderRadius.md,
+      paddingHorizontal: theme.spacing.lg,
+      paddingVertical: theme.spacing.md,
+      fontSize: theme.typography.sizes.body,
+      color: theme.colors.text.primary,
+    },
+    inputError: {
+      borderColor: theme.colors.semantic.error,
+      borderWidth: 1.5,
+    },
+    passwordContainer: {
+      position: 'relative',
+    },
+    passwordInput: {
+      backgroundColor: theme.colors.background.primary,
+      borderWidth: 1,
+      borderColor: theme.colors.neutral[300],
+      borderRadius: theme.borderRadius.md,
+      paddingHorizontal: theme.spacing.lg,
+      paddingVertical: theme.spacing.md,
+      paddingRight: 50,
+      fontSize: theme.typography.sizes.body,
+      color: theme.colors.text.primary,
+    },
+    eyeIcon: {
+      position: 'absolute',
+      right: theme.spacing.lg,
+      top: theme.spacing.md,
+    },
+    errorText: {
+      color: theme.colors.semantic.error,
+      fontSize: theme.typography.sizes.small,
+      marginTop: theme.spacing.xs,
+      marginLeft: theme.spacing.xs,
+    },
+    // BOUTON ET FOOTER
+    actionSection: {
+      marginTop: 'auto',
+    },
+    submitButton: {
+      marginBottom: theme.spacing.lg,
+    },
+    loader: {
+      marginVertical: theme.spacing.md,
+    },
+    footer: {
+      flexDirection: 'row',
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    footerText: {
+      fontSize: theme.typography.sizes.caption,
+      color: theme.colors.text.secondary,
+    },
+    linkText: {
+      fontSize: theme.typography.sizes.caption,
+      color: theme.colors.primary[500],
+      fontWeight: theme.typography.weights.semibold,
+    },
+  });
 
   const handlePickImage = async () => {
     try {
@@ -94,18 +297,9 @@ export default function Inscription() {
       'Photo de profil',
       'Choisissez une option',
       [
-        {
-          text: 'Prendre une photo',
-          onPress: handleTakePhoto,
-        },
-        {
-          text: 'Choisir dans la galerie',
-          onPress: handlePickImage,
-        },
-        {
-          text: 'Annuler',
-          style: 'cancel',
-        },
+        { text: 'Prendre une photo', onPress: handleTakePhoto },
+        { text: 'Choisir dans la galerie', onPress: handlePickImage },
+        { text: 'Annuler', style: 'cancel' },
       ],
       { cancelable: true }
     );
@@ -154,7 +348,7 @@ export default function Inscription() {
 
     setLoading(true);
     try {
-      const response = await utilisateurService.inscription(formData, photoUri || undefined);
+      await utilisateurService.inscription(formData, photoUri || undefined);
       
       setSuccessMessage('🎉 Inscription réussie ! Redirection...');
       
@@ -204,7 +398,7 @@ export default function Inscription() {
           style={styles.backButton}
           onPress={() => router.back()}
         >
-          <Ionicons name="arrow-back" size={24} color="white" />
+          <Ionicons name="arrow-back" size={24} color={theme.colors.text.inverse} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Inscription</Text>
       </View>
@@ -213,9 +407,8 @@ export default function Inscription() {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardAvoidingView}
       >
-        {/* CONTENU PRINCIPAL FIXE */}
         <View style={styles.mainContent}>
-          {/* TITRE ET SOUS-TITRE FIXES */}
+          {/* TITRE ET SOUS-TITRE */}
           <View style={styles.titleSection}>
             <Text style={styles.title}>Créer un compte</Text>
             <Text style={styles.subtitle}>
@@ -223,7 +416,7 @@ export default function Inscription() {
             </Text>
           </View>
 
-          {/* SECTION PHOTO FIXE */}
+          {/* PHOTO DE PROFIL */}
           <View style={styles.photoSection}>
             <Text style={styles.photoLabel}>Photo de profil (optionnel)</Text>
             <TouchableOpacity 
@@ -249,7 +442,7 @@ export default function Inscription() {
             )}
           </View>
 
-          {/* MESSAGES FIXES */}
+          {/* MESSAGES API / SUCCÈS */}
           {successMessage ? (
             <View style={styles.successContainer}>
               <Ionicons name="checkmark-circle" size={20} color={theme.colors.semantic.success} />
@@ -264,7 +457,7 @@ export default function Inscription() {
             </View>
           ) : null}
 
-          {/* 🔥 FORMULAIRE SCROLLABLE (SEULEMENT LES CHAMPS) */}
+          {/* FORMULAIRE SCROLLABLE */}
           <ScrollView 
             style={styles.formScrollView}
             contentContainerStyle={styles.formScrollContent}
@@ -386,7 +579,7 @@ export default function Inscription() {
             </View>
           </ScrollView>
 
-          {/* BOUTON ET FOOTER FIXES */}
+          {/* ACTIONS & FOOTER */}
           <View style={styles.actionSection}>
             <Button
               title={loading ? 'Inscription en cours...' : 'S\'inscrire'}
@@ -412,204 +605,3 @@ export default function Inscription() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background.secondary,
-  },
-  header: {
-    backgroundColor: theme.colors.primary[500],
-    paddingTop: 50,
-    paddingBottom: theme.spacing.xl,
-    paddingHorizontal: theme.spacing.xl,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  keyboardAvoidingView: {
-    flex: 1,
-  },
-  mainContent: {
-    flex: 1,
-    padding: theme.spacing.xl,
-  },
-  // SECTIONS FIXES
-  titleSection: {
-    marginBottom: theme.spacing.xl,
-  },
-  title: {
-    fontSize: theme.typography.sizes.h1,
-    fontWeight: theme.typography.weights.bold,
-    color: theme.colors.primary[500],
-    marginBottom: theme.spacing.sm,
-  },
-  subtitle: {
-    fontSize: theme.typography.sizes.body,
-    color: theme.colors.text.secondary,
-  },
-  photoSection: {
-    alignItems: 'center',
-    marginBottom: theme.spacing.xl,
-  },
-  actionSection: {
-    marginTop: 'auto', // Pousse vers le bas
-  },
-  // FORMULAIRE SCROLLABLE
-  formScrollView: {
-    flex: 1,
-    marginBottom: theme.spacing.lg,
-  },
-  formScrollContent: {
-    flexGrow: 1,
-  },
-  backButton: {
-    marginRight: theme.spacing.lg,
-  },
-  headerTitle: {
-    fontSize: theme.typography.sizes.h2,
-    fontWeight: theme.typography.weights.bold,
-    color: theme.colors.text.inverse,
-  },
-  photoLabel: {
-    fontSize: theme.typography.sizes.body,
-    fontWeight: theme.typography.weights.semibold,
-    color: theme.colors.text.primary,
-    marginBottom: theme.spacing.md,
-  },
-  photoContainer: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    overflow: 'hidden',
-    marginBottom: theme.spacing.sm,
-  },
-  photoPreview: {
-    width: '100%',
-    height: '100%',
-    resizeMode: 'cover',
-  },
-  photoPlaceholder: {
-    width: '100%',
-    height: '100%',
-    backgroundColor: theme.colors.neutral[100],
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: theme.colors.neutral[300],
-    borderStyle: 'dashed',
-  },
-  photoPlaceholderText: {
-    fontSize: theme.typography.sizes.small,
-    color: theme.colors.neutral[400],
-    marginTop: theme.spacing.xs,
-  },
-  removePhotoButton: {
-    paddingVertical: theme.spacing.xs,
-    paddingHorizontal: theme.spacing.md,
-  },
-  removePhotoText: {
-    fontSize: theme.typography.sizes.small,
-    color: theme.colors.semantic.error,
-    fontWeight: theme.typography.weights.semibold,
-  },
-  successContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#d4edda',
-    padding: theme.spacing.md,
-    borderRadius: theme.borderRadius.sm,
-    marginBottom: theme.spacing.xl,
-    borderWidth: 1,
-    borderColor: '#c3e6cb',
-  },
-  successText: {
-    color: theme.colors.semantic.success,
-    marginLeft: theme.spacing.sm,
-    fontSize: theme.typography.sizes.caption,
-    fontWeight: theme.typography.weights.medium,
-  },
-  errorApiContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f8d7da',
-    padding: theme.spacing.md,
-    borderRadius: theme.borderRadius.sm,
-    marginBottom: theme.spacing.xl,
-    borderWidth: 1,
-    borderColor: '#f5c6cb',
-  },
-  errorApiText: {
-    color: theme.colors.semantic.error,
-    marginLeft: theme.spacing.sm,
-    fontSize: theme.typography.sizes.caption,
-    fontWeight: theme.typography.weights.medium,
-  },
-  inputGroup: {
-    marginBottom: theme.spacing.xl,
-  },
-  label: {
-    fontSize: theme.typography.sizes.body,
-    fontWeight: theme.typography.weights.semibold,
-    color: theme.colors.text.primary,
-    marginBottom: theme.spacing.sm,
-  },
-  input: {
-    backgroundColor: theme.colors.background.primary,
-    borderWidth: 1,
-    borderColor: theme.colors.neutral[300],
-    borderRadius: theme.borderRadius.md,
-    paddingHorizontal: theme.spacing.lg,
-    paddingVertical: theme.spacing.md,
-    fontSize: theme.typography.sizes.body,
-    color: theme.colors.text.primary,
-  },
-  inputError: {
-    borderColor: theme.colors.semantic.error,
-    borderWidth: 1.5,
-  },
-  passwordContainer: {
-    position: 'relative',
-  },
-  passwordInput: {
-    backgroundColor: theme.colors.background.primary,
-    borderWidth: 1,
-    borderColor: theme.colors.neutral[300],
-    borderRadius: theme.borderRadius.md,
-    paddingHorizontal: theme.spacing.lg,
-    paddingVertical: theme.spacing.md,
-    paddingRight: 50,
-    fontSize: theme.typography.sizes.body,
-    color: theme.colors.text.primary,
-  },
-  eyeIcon: {
-    position: 'absolute',
-    right: theme.spacing.lg,
-    top: theme.spacing.md,
-  },
-  errorText: {
-    color: theme.colors.semantic.error,
-    fontSize: theme.typography.sizes.small,
-    marginTop: theme.spacing.xs,
-    marginLeft: theme.spacing.xs,
-  },
-  submitButton: {
-    marginBottom: theme.spacing.lg,
-  },
-  loader: {
-    marginVertical: theme.spacing.md,
-  },
-  footer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  footerText: {
-    fontSize: theme.typography.sizes.caption,
-    color: theme.colors.text.secondary,
-  },
-  linkText: {
-    fontSize: theme.typography.sizes.caption,
-    color: theme.colors.primary[500],
-    fontWeight: theme.typography.weights.semibold,
-  },
-});

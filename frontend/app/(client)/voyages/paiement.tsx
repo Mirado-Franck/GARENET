@@ -11,14 +11,15 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Ionicons } from "@expo/vector-icons";
 import { api } from "../../../services/api";
 import { useTheme } from "../../../contexts/ThemeContext";
 import type { Theme } from "../../../constants/theme";
 
 export default function Paiement() {
   const router = useRouter();
-  const { theme } = useTheme();                                   // 👈 Thème dynamique
-  const styles = React.useMemo(() => createStyles(theme), [theme]); // 👈 Styles dynamiques
+  const { theme } = useTheme();
+  const styles = React.useMemo(() => createStyles(theme), [theme]);
 
   const [numeroMvola, setNumeroMvola] = useState("");
   const [loading, setLoading] = useState(false);
@@ -65,7 +66,6 @@ export default function Paiement() {
       return;
     }
 
-    // Normalisation + validation du numéro MVola
     const numeroNormalized = numeroMvola.replace(/[\s-]/g, "");
     if (!/^03[2-48]\d{7}$/.test(numeroNormalized)) {
       Alert.alert(
@@ -134,7 +134,6 @@ export default function Paiement() {
     }
   };
 
-  // Écran de chargement si les données ne sont pas encore là
   if (!reservationData) {
     return (
       <View style={styles.loadingContainer}>
@@ -144,7 +143,6 @@ export default function Paiement() {
     );
   }
 
-  // 🔢 Données calculées pour le récapitulatif
   const montant = Number(reservationData.montant || 0);
   const nombrePlaces =
     reservationData.nombre_places ??
@@ -160,22 +158,47 @@ export default function Paiement() {
       contentContainerStyle={styles.container}
       keyboardShouldPersistTaps="handled"
     >
-      <Text style={styles.title}>Paiement MVola</Text>
+      {/* Petit header visuel */}
+      <View style={styles.pageHeader}>
+        <View style={styles.pageHeaderIcon}>
+          <Ionicons
+            name="card-outline"
+            size={22}
+            color={theme.colors.primary[500]}
+          />
+        </View>
+        <View style={styles.pageHeaderTextContainer}>
+          <Text style={styles.title}>Paiement MVola</Text>
+          <Text style={styles.subtitle}>
+            Vérifiez les détails puis confirmez le paiement
+          </Text>
+        </View>
+      </View>
 
       {/* RÉCAPITULATIF RÉSERVATION + PRIX */}
       <View style={styles.summary}>
-        <Text style={styles.sectionTitle}>Détails de la réservation</Text>
+        <View style={styles.summaryHeader}>
+          <View style={styles.summaryIconCircle}>
+            <Ionicons name="receipt-outline" size={20} color={theme.colors.primary[500]} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.sectionTitle}>Détails de la réservation</Text>
+            <Text style={styles.sectionSubtitle}>
+              Assurez-vous que les informations sont correctes
+            </Text>
+          </View>
+        </View>
 
         <View style={styles.summaryRow}>
-          <Text style={styles.label}>Réservation :</Text>
-          <Text style={styles.value}>
+          <Text style={styles.label}>Réservation</Text>
+          <Text style={styles.codeValue}>
             {reservationData.code_reservation || "N/A"}
           </Text>
         </View>
 
         {reservationData.voyage?.cooperative?.nom && (
           <View style={styles.summaryRow}>
-            <Text style={styles.label}>Coopérative :</Text>
+            <Text style={styles.label}>Coopérative</Text>
             <Text style={styles.value}>
               {reservationData.voyage.cooperative.nom}
             </Text>
@@ -184,7 +207,7 @@ export default function Paiement() {
 
         {reservationData.voyage?.trajet && (
           <View style={styles.summaryRow}>
-            <Text style={styles.label}>Trajet :</Text>
+            <Text style={styles.label}>Trajet</Text>
             <Text style={styles.value}>
               {reservationData.voyage.trajet.depart} →{" "}
               {reservationData.voyage.trajet.arrivee}
@@ -194,7 +217,7 @@ export default function Paiement() {
 
         {reservationData.voyage?.date_depart && (
           <View style={styles.summaryRow}>
-            <Text style={styles.label}>Date de départ :</Text>
+            <Text style={styles.label}>Date de départ</Text>
             <Text style={styles.value}>
               {new Date(
                 reservationData.voyage.date_depart
@@ -205,7 +228,7 @@ export default function Paiement() {
 
         {reservationData.places && Array.isArray(reservationData.places) && (
           <View style={styles.summaryRow}>
-            <Text style={styles.label}>Places :</Text>
+            <Text style={styles.label}>Places</Text>
             <Text style={styles.value}>
               {reservationData.places.join(", ")}
             </Text>
@@ -214,14 +237,14 @@ export default function Paiement() {
 
         {typeof nombrePlaces === "number" && (
           <View style={styles.summaryRow}>
-            <Text style={styles.label}>Nombre de places :</Text>
+            <Text style={styles.label}>Nombre de places</Text>
             <Text style={styles.value}>{nombrePlaces}</Text>
           </View>
         )}
 
         {typeof prixUnitaire === "number" && (
           <View style={styles.summaryRow}>
-            <Text style={styles.label}>Prix unitaire :</Text>
+            <Text style={styles.label}>Prix unitaire</Text>
             <Text style={styles.value}>
               {Number(prixUnitaire).toLocaleString()} Ar
             </Text>
@@ -230,8 +253,15 @@ export default function Paiement() {
 
         <View style={styles.summaryDivider} />
 
-        <View style={styles.summaryRow}>
-          <Text style={styles.totalLabel}>Montant total :</Text>
+        <View style={[styles.summaryRow, styles.totalRow]}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+            <Ionicons
+              name="cash-outline"
+              size={18}
+              color={theme.colors.primary[500]}
+            />
+            <Text style={styles.totalLabel}>Montant total</Text>
+          </View>
           <Text style={styles.totalValue}>
             {montant.toLocaleString()} Ar
           </Text>
@@ -240,16 +270,37 @@ export default function Paiement() {
 
       {/* INFOS PAIEMENT (MONTANT, RÉFÉRENCE, N° MVOLA) */}
       <View style={styles.paymentSection}>
-        <Text style={styles.sectionTitle}>Informations de paiement</Text>
+        <View style={styles.summaryHeader}>
+          <View style={styles.summaryIconCircle}>
+            <Ionicons
+              name="phone-portrait-outline"
+              size={20}
+              color={theme.colors.primary[500]}
+            />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.sectionTitle}>Informations de paiement</Text>
+            <Text style={styles.sectionSubtitle}>
+              Le paiement sera débité sur votre compte MVola
+            </Text>
+          </View>
+        </View>
 
         <View style={styles.summaryRow}>
-          <Text style={styles.label}>Mode de paiement :</Text>
-          <Text style={styles.value}>MVola</Text>
+          <Text style={styles.label}>Mode de paiement</Text>
+          <View style={styles.paymentTag}>
+            <Ionicons
+              name="logo-usd"
+              size={14}
+              color={theme.colors.primary[700]}
+            />
+            <Text style={styles.paymentTagText}>MVola</Text>
+          </View>
         </View>
 
         {reservationData.code_reservation && (
           <View style={styles.summaryRow}>
-            <Text style={styles.label}>Référence paiement :</Text>
+            <Text style={styles.label}>Référence paiement</Text>
             <Text style={styles.value}>
               {reservationData.code_reservation}
             </Text>
@@ -257,7 +308,7 @@ export default function Paiement() {
         )}
 
         <View style={styles.summaryRow}>
-          <Text style={styles.label}>Montant à payer :</Text>
+          <Text style={styles.label}>Montant à payer</Text>
           <Text style={styles.value}>
             {montant.toLocaleString()} Ar
           </Text>
@@ -265,7 +316,7 @@ export default function Paiement() {
 
         <View style={styles.summaryDivider} />
 
-        <Text style={styles.label}>Numéro MVola à débiter :</Text>
+        <Text style={styles.label}>Numéro MVola à débiter</Text>
         <TextInput
           style={styles.input}
           placeholder="034 XX XXX XX"
@@ -277,10 +328,17 @@ export default function Paiement() {
           placeholderTextColor={theme.colors.neutral[400]}
         />
 
-        <Text style={styles.helperText}>
-          Format: 034, 033, 032 ou 038 suivi de 7 chiffres. Le numéro doit
-          être au nom du titulaire du compte.
-        </Text>
+        <View style={styles.helperRow}>
+          <Ionicons
+            name="information-circle-outline"
+            size={16}
+            color={theme.colors.text.tertiary}
+          />
+          <Text style={styles.helperText}>
+            Format: 034, 033, 032 ou 038 suivi de 7 chiffres. Le numéro doit
+            être au nom du titulaire du compte.
+          </Text>
+        </View>
       </View>
 
       {/* BOUTON PAYER */}
@@ -292,16 +350,26 @@ export default function Paiement() {
         {loading ? (
           <ActivityIndicator color={theme.colors.text.inverse} />
         ) : (
-          <Text style={styles.buttonText}>
-            Payer {montant.toLocaleString()} Ar
-          </Text>
+          <View style={styles.buttonContent}>
+            <Ionicons name="shield-checkmark-outline" size={20} color={theme.colors.text.inverse} />
+            <Text style={styles.buttonText}>
+              Payer {montant.toLocaleString()} Ar
+            </Text>
+          </View>
         )}
       </TouchableOpacity>
 
-      <Text style={styles.securityText}>
-        🔒 Paiement sécurisé par MVola. Assurez-vous que votre téléphone est
-        allumé et dispose de réseau.
-      </Text>
+      <View style={styles.securityRow}>
+        <Ionicons
+          name="lock-closed-outline"
+          size={16}
+          color={theme.colors.text.tertiary}
+        />
+        <Text style={styles.securityText}>
+          Paiement sécurisé par MVola. Assurez-vous que votre téléphone est
+          allumé et dispose de réseau.
+        </Text>
+      </View>
     </ScrollView>
   );
 }
@@ -321,13 +389,35 @@ const createStyles = (theme: Theme) =>
       backgroundColor: theme.colors.background.secondary,
       padding: theme.spacing.xl,
     },
+    // Petit header de page
+    pageHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginBottom: theme.spacing.lg,
+      gap: theme.spacing.md,
+    },
+    pageHeaderIcon: {
+      width: 42,
+      height: 42,
+      borderRadius: 21,
+      backgroundColor: theme.colors.primary[50],
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    pageHeaderTextContainer: {
+      flex: 1,
+    },
     title: {
       fontSize: theme.typography.sizes.h2,
       fontWeight: theme.typography.weights.bold,
-      marginBottom: theme.spacing.lg,
       color: theme.colors.text.primary,
-      textAlign: "center",
     },
+    subtitle: {
+      marginTop: 2,
+      fontSize: theme.typography.sizes.small,
+      color: theme.colors.text.secondary,
+    },
+
     summary: {
       backgroundColor: theme.colors.background.primary,
       padding: theme.spacing.lg,
@@ -350,12 +440,32 @@ const createStyles = (theme: Theme) =>
       shadowRadius: 4,
       elevation: 3,
     },
+    // En-tête dans chaque carte
+    summaryHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      marginBottom: theme.spacing.md,
+      gap: theme.spacing.md,
+    },
+    summaryIconCircle: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: theme.colors.primary[50],
+    },
     sectionTitle: {
       fontSize: theme.typography.sizes.h3,
       fontWeight: theme.typography.weights.bold,
       color: theme.colors.text.primary,
-      marginBottom: theme.spacing.md,
     },
+    sectionSubtitle: {
+      fontSize: theme.typography.sizes.small,
+      color: theme.colors.text.secondary,
+      marginTop: 2,
+    },
+
     summaryRow: {
       flexDirection: "row",
       justifyContent: "space-between",
@@ -374,10 +484,20 @@ const createStyles = (theme: Theme) =>
       flex: 1,
       textAlign: "right",
     },
+    codeValue: {
+      fontSize: theme.typography.sizes.caption,
+      fontWeight: theme.typography.weights.bold,
+      color: theme.colors.primary[600],
+      flex: 1,
+      textAlign: "right",
+    },
     summaryDivider: {
       height: 1,
       backgroundColor: theme.colors.neutral[300],
       marginVertical: theme.spacing.md,
+    },
+    totalRow: {
+      marginTop: theme.spacing.xs,
     },
     totalLabel: {
       fontSize: theme.typography.sizes.body,
@@ -389,6 +509,23 @@ const createStyles = (theme: Theme) =>
       fontWeight: theme.typography.weights.bold,
       color: theme.colors.primary[500],
     },
+
+    paymentTag: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "flex-end",
+      gap: 6,
+      paddingHorizontal: theme.spacing.sm,
+      paddingVertical: 4,
+      borderRadius: 999,
+      backgroundColor: theme.colors.primary[50],
+    },
+    paymentTagText: {
+      fontSize: theme.typography.sizes.small,
+      fontWeight: theme.typography.weights.semibold,
+      color: theme.colors.primary[700],
+    },
+
     input: {
       borderWidth: 1,
       borderColor: theme.colors.neutral[400],
@@ -400,11 +537,19 @@ const createStyles = (theme: Theme) =>
       fontSize: theme.typography.sizes.body,
       color: theme.colors.text.primary,
     },
+    helperRow: {
+      flexDirection: "row",
+      alignItems: "flex-start",
+      gap: 6,
+      marginTop: 4,
+    },
     helperText: {
+      flex: 1,
       fontSize: theme.typography.sizes.small,
       color: theme.colors.text.tertiary,
       fontStyle: "italic",
     },
+
     button: {
       backgroundColor: theme.colors.primary[500],
       padding: theme.spacing.lg,
@@ -420,16 +565,29 @@ const createStyles = (theme: Theme) =>
     buttonDisabled: {
       backgroundColor: theme.colors.neutral[400],
     },
+    buttonContent: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: theme.spacing.sm,
+    },
     buttonText: {
       color: theme.colors.text.inverse,
       fontSize: theme.typography.sizes.body,
       fontWeight: theme.typography.weights.bold,
     },
+    securityRow: {
+      flexDirection: "row",
+      alignItems: "flex-start",
+      justifyContent: "center",
+      gap: 6,
+      marginTop: theme.spacing.sm,
+    },
     securityText: {
-      textAlign: "center",
+      textAlign: "left",
+      flex: 1,
       fontSize: theme.typography.sizes.small,
       color: theme.colors.text.tertiary,
-      marginTop: theme.spacing.sm,
     },
     loadingText: {
       marginTop: theme.spacing.md,

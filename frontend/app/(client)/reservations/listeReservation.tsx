@@ -11,17 +11,17 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { reservationService, Reservation } from '../../../services/reservationService';
 import { Toast } from '../../../components/ui/Toast';
 import { useTheme } from '../../../contexts/ThemeContext';
 
 export default function ListeReservation() {
-  const { theme } = useTheme(); // 👈 dynamique
+  const { theme } = useTheme();
 
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [reservation, setReservation] = useState<Reservation | null>(null);
 
   const [toastVisible, setToastVisible] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
@@ -213,6 +213,27 @@ export default function ListeReservation() {
           flexDirection: 'row',
           gap: theme.spacing.sm,
         },
+        // 💳 Nouveau bouton "Payer"
+        payButton: {
+          flex: 1,
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 6,
+          paddingVertical: theme.spacing.sm,
+          backgroundColor: theme.colors.primary[500],
+          borderRadius: theme.borderRadius.sm,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.15,
+          shadowRadius: 4,
+          elevation: 3,
+        },
+        payButtonText: {
+          fontSize: theme.typography.sizes.body,
+          fontWeight: theme.typography.weights.bold,
+          color: theme.colors.text.inverse,
+        },
         detailsButton: {
           flex: 1,
           flexDirection: 'row',
@@ -312,10 +333,38 @@ export default function ListeReservation() {
     router.push(`/(client)/reservations/detailReservation?id=${reservationId}`);
   };
 
+  // 💳 Nouvelle fonction : préparer le paiement pour une réservation en attente
+  const handlePayNow = async (res: Reservation) => {
+    try {
+      const prixTotal = res.nombre_places * res.voyage.prix;
+
+      const dataForPayment = {
+        reservationId: res.id,
+        voyageId: res.voyage.id,
+        places: res.places,
+        nombre_places: res.nombre_places,
+        montant: prixTotal,
+        code_reservation: res.code_reservation,
+        voyage: res.voyage,
+      };
+
+      await AsyncStorage.setItem('temp_reservation', JSON.stringify(dataForPayment));
+
+      console.log('📦 Données de paiement préparées pour réservation en attente:', dataForPayment);
+
+      router.push('/(client)/voyages/paiement');
+    } catch (error) {
+      console.error('❌ Erreur préparation paiement:', error);
+      setToastMessage('Erreur lors de la préparation du paiement');
+      setToastType('error');
+      setToastVisible(true);
+    }
+  };
+
   const getStatusBadge = (statut: string) => {
     const statusConfig = {
       confirmee: { color: theme.colors.semantic.success, label: 'Confirmée', icon: 'checkmark-circle' },
-      en_attente: { color: theme.colors.semantic.warning, label: 'En attente', icon: 'time' },
+      'en attente': { color: theme.colors.semantic.warning, label: 'En attente', icon: 'time' },
       annulee: { color: theme.colors.semantic.error, label: 'Annulée', icon: 'close-circle' },
     };
 
@@ -410,14 +459,35 @@ export default function ListeReservation() {
           <Text style={styles.voitureInfo}>{res.voyage.voiture.modele}</Text>
         </View>
 
+        {/* 🔄 Actions conditionnelles selon le statut */}
         <View style={styles.cardActions}>
-          <TouchableOpacity
-            style={styles.detailsButton}
-            onPress={() => handleViewDetails(res.id)}
-          >
-            <Ionicons name="eye-outline" size={18} color={theme.colors.primary[500]} />
-            <Text style={styles.detailsButtonText}>Voir détails</Text>
-          </TouchableOpacity>
+          {res.statut === 'en attente' ? (
+            <>
+              {/* Bouton "Payer maintenant" visible uniquement pour les réservations en attente */}
+              <TouchableOpacity
+                style={styles.payButton}
+                onPress={() => handlePayNow(res)}
+              >
+                <Ionicons name="card-outline" size={18} color={theme.colors.text.inverse} />
+                <Text style={styles.payButtonText}>Payer</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.detailsButton}
+                onPress={() => handleViewDetails(res.id)}
+              >
+                <Ionicons name="eye-outline" size={18} color={theme.colors.primary[500]} />
+                <Text style={styles.detailsButtonText}>Détails</Text>
+              </TouchableOpacity>
+            </>
+          ) : (
+            <TouchableOpacity
+              style={styles.detailsButton}
+              onPress={() => handleViewDetails(res.id)}
+            >
+              <Ionicons name="eye-outline" size={18} color={theme.colors.primary[500]} />
+              <Text style={styles.detailsButtonText}>Voir détails</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </View>
     );

@@ -294,9 +294,9 @@ export default function SeConnecter() {
               )}
             </View>
 
-            <TouchableOpacity style={styles.forgotPassword}>
+            {/* <TouchableOpacity style={styles.forgotPassword}>
               <Text style={styles.forgotPasswordText}>Mot de passe oublié ?</Text>
-            </TouchableOpacity>
+            </TouchableOpacity> */}
 
             <Button
               title={loading ? 'Connexion en cours...' : 'Se connecter'}

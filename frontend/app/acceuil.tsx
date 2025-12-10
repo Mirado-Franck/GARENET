@@ -35,25 +35,27 @@ export default function Acceuil() {
     loadVoyages();
   }, []);
 
-  const loadVoyages = async () => {
-    try {
-      setError(null);
-      setIsSearchMode(false);
-      const data = await voyageService.getAllVoyages();
-      
-      const voyagesRecommandes = data.filter(v => 
-        v.trajet.station_depart.toLowerCase() === villeActuelle.toLowerCase()
-      );
-      
-      setVoyages(voyagesRecommandes);
-    } catch (err) {
-      setError('Impossible de charger les voyages');
-      console.error(err);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  };
+const loadVoyages = async () => {
+  try {
+    setError(null);
+    setIsSearchMode(false);
+    const data = await voyageService.getAllVoyages();
+    
+    // Filtrer : ville actuelle + statut disponible
+    const voyagesRecommandes = data.filter(v => 
+      v.trajet.station_depart.toLowerCase() === villeActuelle.toLowerCase() &&
+      v.status === 'disponible'
+    );
+    
+    setVoyages(voyagesRecommandes);
+  } catch (err) {
+    setError('Impossible de charger les voyages');
+    console.error(err);
+  } finally {
+    setLoading(false);
+    setRefreshing(false);
+  }
+};
 
   const handleSearch = async (query: string) => {
     if (!query || query.trim() === '') {

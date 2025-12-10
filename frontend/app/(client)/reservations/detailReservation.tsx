@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { reservationService, Reservation } from '../../../services/reservationService';
 import { Toast } from '../../../components/ui/Toast';
 import * as Print from 'expo-print';
@@ -20,8 +21,8 @@ import { useTheme } from '../../../contexts/ThemeContext';
 import type { Theme } from '../../../constants/theme';
 
 export default function DetailReservation() {
-  const { theme } = useTheme();                             // 👈 Récupération du thème dynamique
-  const styles = React.useMemo(() => createStyles(theme), [theme]); // 👈 Styles recalculés quand le thème change
+  const { theme } = useTheme();
+  const styles = React.useMemo(() => createStyles(theme), [theme]);
 
   const params = useLocalSearchParams();
   const reservationId = parseInt(params.id as string);
@@ -33,7 +34,6 @@ export default function DetailReservation() {
   const [toastMessage, setToastMessage] = useState('');
   const [toastType, setToastType] = useState<'success' | 'error'>('success');
 
-  // Modal de confirmation annulation
   const [showCancelModal, setShowCancelModal] = useState(false);
 
   useEffect(() => {
@@ -81,6 +81,36 @@ export default function DetailReservation() {
     }
   };
 
+  // 💳 Nouvelle fonction : préparer le paiement pour une réservation en attente
+  const handlePayNow = async () => {
+    if (!reservation) return;
+
+    try {
+      const prixTotal = reservation.nombre_places * reservation.voyage.prix;
+
+      const dataForPayment = {
+        reservationId: reservation.id,
+        voyageId: reservation.voyage.id,
+        places: reservation.places,
+        nombre_places: reservation.nombre_places,
+        montant: prixTotal,
+        code_reservation: reservation.code_reservation,
+        voyage: reservation.voyage,
+      };
+
+      await AsyncStorage.setItem('temp_reservation', JSON.stringify(dataForPayment));
+
+      console.log('📦 Données de paiement préparées:', dataForPayment);
+
+      router.push('/(client)/voyages/paiement');
+    } catch (error) {
+      console.error('❌ Erreur préparation paiement:', error);
+      setToastMessage('Erreur lors de la préparation du paiement');
+      setToastType('error');
+      setToastVisible(true);
+    }
+  };
+
   const handlePrint = async () => {
     if (!reservation) return;
 
@@ -88,8 +118,6 @@ export default function DetailReservation() {
     const qrData = `GARNET-${reservation.code_reservation}`;
     const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${qrData}`;
 
-    // NB : ici le design du ticket reste avec des couleurs fixes (HTML à imprimer).
-    // On peut aussi brancher ces couleurs sur `theme` si tu veux.
     const htmlContent = `
       <!DOCTYPE html>
       <html>
@@ -337,11 +365,11 @@ export default function DetailReservation() {
         label: 'Confirmée',
         icon: 'checkmark-circle',
       },
-      en_attente: {
-        color: theme.colors.semantic.warning,
-        label: 'En attente',
-        icon: 'time',
-      },
+            'en attente': { 
+              color: theme.colors.semantic.warning,
+              label: 'En attente',
+              icon: 'time',
+            },
       annulee: {
         color: theme.colors.semantic.error,
         label: 'Annulée',
@@ -568,8 +596,21 @@ export default function DetailReservation() {
         </View>
       </ScrollView>
 
-      {/* Footer fixe */}
+      {/* Footer fixe avec boutons conditionnels */}
       <View style={styles.footer}>
+        {/* 💳 Bouton "Payer" visible uniquement si en_attente */}
+        {reservation.statut === 'en attente' && (
+          <TouchableOpacity style={styles.payButton} onPress={handlePayNow}>
+            <Ionicons
+              name="card-outline"
+              size={20}
+              color={theme.colors.text.inverse}
+            />
+            <Text style={styles.payButtonText}>Payer maintenant</Text>
+          </TouchableOpacity>
+        )}
+
+        {/* Bouton télécharger ticket (toujours visible) */}
         <TouchableOpacity style={styles.printButton} onPress={handlePrint}>
           <Ionicons
             name="print-outline"
@@ -579,6 +620,7 @@ export default function DetailReservation() {
           <Text style={styles.printButtonText}>Télécharger le Ticket</Text>
         </TouchableOpacity>
 
+        {/* Bouton annuler visible uniquement si confirmée */}
         {reservation.statut === 'confirmee' && (
           <TouchableOpacity
             style={styles.cancelButton}
@@ -652,7 +694,7 @@ export default function DetailReservation() {
   );
 }
 
-// ✅ Styles dépendants du thème, générés à partir du ThemeContext
+// ✅ Styles dépendants du thème
 const createStyles = (theme: Theme) =>
   StyleSheet.create({
     container: {
@@ -914,6 +956,26 @@ const createStyles = (theme: Theme) =>
       borderTopWidth: 1,
       borderTopColor: theme.colors.neutral[200],
       gap: theme.spacing.sm,
+    },
+    // 💳 Nouveau bouton "Payer maintenant"
+    payButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: theme.spacing.sm,
+      backgroundColor: theme.colors.primary[500],
+      paddingVertical: theme.spacing.md,
+      borderRadius: theme.borderRadius.md,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.15,
+      shadowRadius: 4,
+      elevation: 4,
+    },
+    payButtonText: {
+      fontSize: theme.typography.sizes.body,
+      fontWeight: theme.typography.weights.bold,
+      color: theme.colors.text.inverse,
     },
     printButton: {
       flexDirection: 'row',

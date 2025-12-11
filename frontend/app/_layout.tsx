@@ -3,7 +3,10 @@ import React from 'react';
 import { Stack } from 'expo-router';
 import { ThemeProvider } from '../contexts/ThemeContext';
 import { AuthProvider } from '../contexts/AuthContext';
+import { LogBox } from 'react-native';
 
+// Désactive l'affichage du LogBox pour tous les console.warn et console.error
+LogBox.ignoreAllLogs(true);
 export default function RootLayout() {
   return (
     <ThemeProvider>

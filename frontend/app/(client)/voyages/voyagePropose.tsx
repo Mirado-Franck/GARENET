@@ -44,7 +44,7 @@ interface Voyage {
 const STATUS_OPTIONS: SelectOption[] = [
   { value: 'tous', label: 'Tous les voyages' },
   { value: 'disponible', label: 'Disponible' },
-  { value: 'termine', label: 'Terminé' },
+  { value: 'terminé', label: 'Terminé' },
 ];
 
 export default function VoyagePropose() {
@@ -192,7 +192,7 @@ export default function VoyagePropose() {
         label: 'Disponible',
         icon: 'checkmark-circle',
       },
-      termine: {
+      terminé: {
         color: theme.colors.neutral[500],
         label: 'Terminé',
         icon: 'checkmark-done-circle',

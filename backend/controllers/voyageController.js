@@ -199,9 +199,10 @@ const filterVoyagesByCooperative = async (req, res, next) => {
     };
 
     // Filtre par status (défaut: disponible)
-    if (status && status !== 'tous') {
-      where.status = status;
-    }
+if (status && status !== 'tous') {
+  // Normaliser : termine → terminé
+  where.status = status === 'termine' ? 'terminé' : status;
+}
 
     // Filtre par date (si fournie)
     if (date) {

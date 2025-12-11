@@ -101,39 +101,43 @@ export const utilisateurService = {
   /**
    * CONNEXION
    */
-  connexion: async (data: ConnexionData): Promise<AuthResponse> => {
+connexion: async (data: ConnexionData): Promise<AuthResponse> => {
     try {
-      console.log('🔄 Tentative de connexion avec:', data.email);
-      
-      const response = await api.post('/utilisateurs/login', data);
-      
-      console.log('✅ Réponse du backend:', response.data);
-      
-      if (response.data.token) {
-        await AsyncStorage.setItem('token', response.data.token);
-        console.log('🔐 Token JWT sauvegardé');
-      }
+        console.log('🔄 Tentative de connexion avec:', data.email);
+        
+        const response = await api.post('/utilisateurs/login', data);
+        
+        console.log('✅ Réponse du backend:', response.data);
+        
+        if (response.data.token) {
+            await AsyncStorage.setItem('token', response.data.token);
+            console.log('🔐 Token JWT sauvegardé');
+        }
 
-      await AsyncStorage.setItem('utilisateur', JSON.stringify(response.data.utilisateur));
-      console.log('👤 Utilisateur sauvegardé:', response.data.utilisateur.email);
-      
-      return response.data;
+        await AsyncStorage.setItem('utilisateur', JSON.stringify(response.data.utilisateur));
+        console.log('👤 Utilisateur sauvegardé:', response.data.utilisateur.email);
+        
+        return response.data;
     } catch (error: any) {
-      console.error('❌ Erreur lors de la connexion:', error.response?.data || error);
-      
-      let errorMessage = 'Erreur lors de la connexion';
-      
-      if (error.response?.status === 401) {
-        errorMessage = 'Email ou mot de passe incorrect';
-      } else if (error.response?.status === 403) {
-        errorMessage = error.response.data.error || 'Compte désactivé';
-      } else if (error.response?.data?.error) {
-        errorMessage = error.response.data.error;
-      }
-      
-      throw new Error(errorMessage);
+        
+        // 🛑 CORRECTION : Remplacement de console.error par console.log.
+        // Cela empêche l'affichage du bandeau rouge/noir (LogBox) en bas de l'écran.
+        console.log('❌ Échec de la connexion (Service):', error.response?.data || error); 
+        
+        let errorMessage = 'Erreur lors de la connexion';
+        
+        if (error.response?.status === 401) {
+            errorMessage = 'Email ou mot de passe incorrect';
+        } else if (error.response?.status === 403) {
+            errorMessage = error.response.data.error || 'Compte désactivé';
+        } else if (error.response?.data?.error) {
+            errorMessage = error.response.data.error;
+        }
+        
+        // Cette ligne est correcte et nécessaire pour déclencher l'Alert native sur la page de login.
+        throw new Error(errorMessage);
     }
-  },
+},
 
   /**
    * ✨ METTRE À JOUR LE PROFIL AVEC PHOTO

@@ -299,6 +299,7 @@ model utilisateur {
   email              String?  @unique(map: "uniq_1d1c63b3e7927c74") @db.VarChar(100)
   telephone          String   // CHANGÉ : Int → String
   statut_compte      String   @db.VarChar(255)
+    push_token         String?   @db.VarChar(255)  // NOUVEAU : pour les notifications push
   role               String   @db.VarChar(255)
   date_creation_compte DateTime @db.Timestamp(0)
   mot_de_passe       String   @db.VarChar(255)

@@ -4,6 +4,9 @@ import express from "express";
 import cors from "cors";
 import path from "path";
 import { fileURLToPath } from "url";
+import cron from "node-cron"; // 👈 NOUVEAU
+import { PrismaClient } from "./generated/prisma/index.js"; // 👈 NOUVEAU
+import { sendVoyageReminder } from "./services/pushNotificationService.js"; // 👈 NOUVEAU
 
 // Import des routes
 import utilisateurRoutes from "./routes/utilisateurRoutes.js";
@@ -17,6 +20,9 @@ import notificationRoutes from "./routes/notificationRoutes.js";
 // ✅ Configuration pour __dirname en ES6 modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// Prisma client pour le cron job
+const prisma = new PrismaClient();
 
 // Création de l'application Express
 const app = express();
@@ -54,7 +60,66 @@ app.get('/', (req, res) => {
   });
 });
 
-// ✅ Gestion des routes non trouvées (404)
+// ========================================
+// ⏰ CRON JOB - RAPPELS DE VOYAGE (TEST)
+// ========================================
+
+/**
+ * Cron job qui s'exécute toutes les minutes.
+ * Il cherche les voyages dont le départ est dans 2 à 7 minutes
+ * et déclenche sendVoyageReminder(voyage.id).
+ */
+const setupVoyageReminderCron = () => {
+  // Exécuter toutes les 10 minutes
+  cron.schedule('*/10 * * * *', async () => {
+    console.log('\n⏰ ===== CRON: Vérification rappels voyage =====');
+    console.log(`📅 Date/Heure: ${new Date().toLocaleString('fr-FR')}`);
+
+    try {
+      const now = new Date();
+
+      // Fenêtre réelle : voyages qui partent dans ~2h
+      // On prend une marge : entre 2h00 et 2h20 à partir de "now"
+      const minTime = new Date(now.getTime() + 2 * 60 * 60 * 1000);        // + 2h00
+      const maxTime = new Date(now.getTime() + (2 * 60 + 20) * 60 * 1000); // + 2h20
+
+      console.log(`🔍 Recherche voyages entre ${minTime.toLocaleTimeString('fr-FR')} et ${maxTime.toLocaleTimeString('fr-FR')}`);
+
+      const voyages = await prisma.voyage.findMany({
+        where: {
+          status: 'disponible',
+          date_depart: {
+            gte: minTime,
+            lte: maxTime,
+          },
+        },
+        include: {
+          trajet: true,
+        },
+        orderBy: { date_depart: 'asc' },
+      });
+
+      console.log(`📋 ${voyages.length} voyage(s) trouvé(s) pour rappel`);
+
+      for (const voyage of voyages) {
+        console.log(`🚌 Voyage ${voyage.code_voyage} (${voyage.trajet.station_depart} → ${voyage.trajet.station_arrivee})`);
+        await sendVoyageReminder(voyage.id);
+      }
+
+      console.log('✅ Fin du cycle de rappel\n');
+    } catch (error) {
+      console.error('❌ Erreur cron rappels voyage:', error);
+    }
+  });
+
+  console.log('⏰ Cron job rappels voyage initialisé (toutes les 10 minutes)');
+};
+
+// ========================================
+// ✅ GESTION DES ERREURS
+// ========================================
+
+// Gestion des routes non trouvées (404)
 app.use((req, res) => {
   res.status(404).json({ 
     error: 'Route non trouvée',
@@ -62,7 +127,7 @@ app.use((req, res) => {
   });
 });
 
-// ✅ Gestion des erreurs globales
+// Gestion des erreurs globales
 app.use((err, req, res, next) => {
   console.error('❌ Erreur serveur:', err);
   res.status(500).json({ 
@@ -71,12 +136,20 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Démarrage du serveur
+// ========================================
+// 🚀 DÉMARRAGE DU SERVEUR
+// ========================================
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.info(`✅ Serveur démarré sur http://localhost:${PORT}/`);
+  console.info(`\n✅ Serveur démarré sur http://localhost:${PORT}/`);
   console.info(`📁 Photos accessibles via http://localhost:${PORT}/uploads/photos/`);
   console.info(`📡 API disponible sur http://localhost:${PORT}/api/`);
+  
+  // 🔥 Initialiser le cron job pour les rappels
+  setupVoyageReminderCron();
+  
+  console.info(`\n🚀 Serveur prêt !\n`);
 });
 
 export default app;

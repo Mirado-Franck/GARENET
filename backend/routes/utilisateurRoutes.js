@@ -1,4 +1,3 @@
-// routes/utilisateurRoutes.js
 import express from "express";
 import {
   createUtilisateur,
@@ -6,9 +5,10 @@ import {
   updateUtilisateur,
   deleteUtilisateur,
   loginUtilisateur,
-  changePassword
+  changePassword,
+  updatePushToken  // 👈 NOUVEL IMPORT
 } from "../controllers/utilisateurController.js";
-import { upload } from "../config/multerConfig.js"; // ✅ Import multer
+import { upload } from "../config/multerConfig.js";
 import { authMiddleware } from "../middlewares/authMiddleware.js";
 
 const router = express.Router();
@@ -27,6 +27,9 @@ router.put("/:id", authMiddleware, upload.single('photo'), updateUtilisateur);
 
 // ✅ Changer le mot de passe (protégé)
 router.put("/:id/password", authMiddleware, changePassword);
+
+// 📱 NOUVEAU : Sauvegarder le push token (protégé)
+router.put("/:id/push-token", authMiddleware, updatePushToken);
 
 // Supprimer (soft delete)
 router.delete("/:id", authMiddleware, deleteUtilisateur);

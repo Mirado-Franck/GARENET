@@ -284,8 +284,38 @@ const deleteUtilisateur = async (req, res) => {
   }
 };
 
+// === ✨ NOUVELLE FONCTION : SAUVEGARDER LE PUSH TOKEN ===
+const updatePushToken = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { push_token } = req.body;
+
+    if (!push_token) {
+      return res.status(400).json({ error: "Push token requis" });
+    }
+
+    console.log(`📱 Sauvegarde push token pour utilisateur ${id}`);
+
+    const utilisateur = await prisma.utilisateur.update({
+      where: { id: parseInt(id) },
+      data: { push_token }
+    });
+
+    console.log('✅ Push token sauvegardé avec succès');
+
+    res.json({ 
+      message: "Push token enregistré avec succès",
+      push_token: utilisateur.push_token 
+    });
+  } catch (error) {
+    console.error("❌ Erreur sauvegarde push token:", error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
 export {
   createUtilisateur,
+  updatePushToken,
   getUtilisateur,
   updateUtilisateur,
   deleteUtilisateur, 

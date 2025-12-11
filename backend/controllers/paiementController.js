@@ -1,5 +1,6 @@
 import { PrismaClient } from "../generated/prisma/index.js";
 import { processPayment } from "../services/mvolaService.js";
+import { sendPushNotification } from "../services/pushNotificationService.js"; // 👈 IMPORT AJOUTÉ
 import crypto from 'crypto';
 
 const prisma = new PrismaClient();
@@ -14,12 +15,6 @@ function genCode(prefix) {
 
 /**
  * 🔥 TRAITEMENT COMPLET : PAIEMENT D'UNE RÉSERVATION EXISTANTE
- * 
- * Cette fonction gère le paiement d'une réservation "en attente" :
- * 1. Récupérer la réservation existante
- * 2. Appeler MVola pour le paiement
- * 3. Si paiement OK → Mettre à jour le statut + créer paiement + notification + reçu
- * 4. Si paiement KO → Retourner erreur
  */
 const processCompletePayment = async (req, res, next) => {
   try {
@@ -34,8 +29,8 @@ const processCompletePayment = async (req, res, next) => {
     }
 
     const { 
-      reservation_id,    // ✅ NOUVEAU : ID de la réservation existante
-      numero_mvola,      // "034 00 000 01"
+      reservation_id,
+      numero_mvola,
       montant 
     } = req.body;
 
@@ -154,7 +149,7 @@ const processCompletePayment = async (req, res, next) => {
       // 4a. Mettre à jour le statut de la réservation
       const updatedReservation = await tx.reservation.update({
         where: { id: reservation.id },
-        data: { statut: 'confirmee' }  // ✅ Passer de "en attente" à "confirmee"
+        data: { statut: 'confirmee' }
       });
       console.log(`  ✅ Réservation mise à jour: ${updatedReservation.code_reservation}`);
 
@@ -185,7 +180,7 @@ const processCompletePayment = async (req, res, next) => {
       });
       console.log(`  ✅ Reçu généré: ${recu.code_recu}`);
 
-      // 4d. Créer la notification
+      // 4d. Créer la notification (IN-APP)
       const placesNumeros = reservation.places.map(p => p.place.numero).join(', ');
       const notificationContent = `✅ Paiement confirmé ! Voyage ${reservation.voyage.trajet.station_depart} → ${reservation.voyage.trajet.station_arrivee} le ${new Date(reservation.voyage.date_depart).toLocaleDateString('fr-FR')}. Places : ${placesNumeros}. Montant : ${montant} Ar`;
       
@@ -201,6 +196,25 @@ const processCompletePayment = async (req, res, next) => {
         }
       });
       console.log(`  ✅ Notification créée: ${notification.ref_notification}`);
+
+      // 📱 NOUVEAU : Envoyer notification PUSH
+      // On le fait dans le try/catch pour ne pas bloquer la transaction si le push échoue
+      try {
+        await sendPushNotification(
+          code_client_id,
+          '✅ Paiement confirmé',
+          `Voyage ${reservation.voyage.trajet.station_depart} → ${reservation.voyage.trajet.station_arrivee}. Places: ${placesNumeros}`,
+          {
+            type: 'paiement_confirme',
+            reservationId: reservation.id,
+            code_reservation: reservation.code_reservation,
+            voyageId: reservation.voyage.id
+          }
+        );
+        console.log('  📱 Notification push envoyée');
+      } catch (pushError) {
+        console.error('  ⚠️ Erreur envoi push (non bloquant):', pushError.message);
+      }
 
       return {
         reservation: updatedReservation,
@@ -378,7 +392,7 @@ const getPaiements = async (req, res, next) => {
             voyage: { 
               include: { 
                 trajet: true,
-                cooperative: true  // ✅ AJOUT : Inclure la coopérative
+                cooperative: true 
               } 
             },
             places: { include: { place: true } }

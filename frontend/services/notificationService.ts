@@ -1,5 +1,13 @@
 // frontend/services/notificationService.ts
 import { api } from './api';
+import * as Notifications from 'expo-notifications';
+import * as Device from 'expo-device';
+import { Platform } from 'react-native';
+import Constants from 'expo-constants';
+
+// ==========================================
+// TYPES ET INTERFACES
+// ==========================================
 
 export interface Notification {
   id: number;
@@ -15,6 +23,96 @@ export interface Notification {
 export interface UnreadCountResponse {
   count: number;
 }
+
+// ==========================================
+// CONFIGURATION DES NOTIFICATIONS PUSH
+// ==========================================
+
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: true,
+    shouldShowBanner: true, // 👈 ajouté
+    shouldShowList: true,   // 👈 ajouté
+  }),
+});
+
+// ==========================================
+// FONCTIONS NOTIFICATIONS PUSH
+// ==========================================
+
+/**
+ * Enregistrer l'appareil pour recevoir des notifications push
+ */
+export const registerForPushNotifications = async () => {
+  try {
+    // Vérifier si on est sur un device physique
+    if (!Device.isDevice) {
+      console.log('⚠️ Les notifications push nécessitent un appareil physique');
+      return null;
+    }
+
+    // Demander les permissions
+    const { status: existingStatus } = await Notifications.getPermissionsAsync();
+    let finalStatus = existingStatus;
+    
+    if (existingStatus !== 'granted') {
+      const { status } = await Notifications.requestPermissionsAsync();
+      finalStatus = status;
+    }
+    
+    if (finalStatus !== 'granted') {
+      console.log('❌ Permission notifications refusée');
+      return null;
+    }
+
+    // Configuration du canal Android
+    if (Platform.OS === 'android') {
+      await Notifications.setNotificationChannelAsync('default', {
+        name: 'Notifications Garnet',
+        importance: Notifications.AndroidImportance.MAX,
+        vibrationPattern: [0, 250, 250, 250],
+        lightColor: '#3b82f6',
+        sound: 'default',
+      });
+    }
+
+    // Obtenir le token Expo Push
+    const projectId = Constants?.expoConfig?.extra?.eas?.projectId ?? Constants?.easConfig?.projectId;
+    
+    const token = await Notifications.getExpoPushTokenAsync({
+      projectId,
+    });
+    
+    console.log('📱 Push Token obtenu:', token.data);
+    return token.data;
+    
+  } catch (error) {
+    console.error('❌ Erreur registration push:', error);
+    return null;
+  }
+};
+
+/**
+ * Sauvegarder le token push dans le backend
+ */
+export const savePushToken = async (userId: number, token: string) => {
+  try {
+    const response = await api.put(`/utilisateurs/${userId}/push-token`, { 
+      push_token: token 
+    });
+    console.log('✅ Token push sauvegardé dans le backend');
+    return response.data;
+  } catch (error) {
+    console.error('❌ Erreur sauvegarde token:', error);
+    throw error;
+  }
+};
+
+// ==========================================
+// SERVICE NOTIFICATIONS API (existant)
+// ==========================================
 
 export const notificationService = {
   /**
@@ -104,5 +202,4 @@ export const notificationService = {
       throw error.response?.data || { error: 'Erreur lors de la création' };
     }
   },
-
 };

@@ -11,6 +11,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
+  Image, // 👈 AJOUT
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -19,7 +20,7 @@ import SearchBar from '../components/ui/SearchBar';
 import { voyageService, Voyage } from '../services/voyageService';
 
 export default function Acceuil() {
-  const { theme } = useTheme(); // 👈 Hook dynamique
+  const { theme } = useTheme();
   const router = useRouter();
   const { isConnecte, setRedirectAfterLogin } = useAuth();
   
@@ -35,27 +36,26 @@ export default function Acceuil() {
     loadVoyages();
   }, []);
 
-const loadVoyages = async () => {
-  try {
-    setError(null);
-    setIsSearchMode(false);
-    const data = await voyageService.getAllVoyages();
-    
-    // Filtrer : ville actuelle + statut disponible
-    const voyagesRecommandes = data.filter(v => 
-      v.trajet.station_depart.toLowerCase() === villeActuelle.toLowerCase() &&
-      v.status === 'disponible'
-    );
-    
-    setVoyages(voyagesRecommandes);
-  } catch (err) {
-    setError('Impossible de charger les voyages');
-    console.error(err);
-  } finally {
-    setLoading(false);
-    setRefreshing(false);
-  }
-};
+  const loadVoyages = async () => {
+    try {
+      setError(null);
+      setIsSearchMode(false);
+      const data = await voyageService.getAllVoyages();
+      
+      const voyagesRecommandes = data.filter(v => 
+        v.trajet.station_depart.toLowerCase() === villeActuelle.toLowerCase() &&
+        v.status === 'disponible'
+      );
+      
+      setVoyages(voyagesRecommandes);
+    } catch (err) {
+      setError('Impossible de charger les voyages');
+      console.error(err);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
 
   const handleSearch = async (query: string) => {
     if (!query || query.trim() === '') {
@@ -126,31 +126,52 @@ const loadVoyages = async () => {
       flex: 1,
       backgroundColor: theme.colors.background.secondary,
     },
-    header: {
-      alignItems: 'center',
-      paddingVertical: theme.spacing.xxxl,
-      paddingHorizontal: theme.spacing.xl,
-      backgroundColor: theme.colors.primary[500],
-      borderBottomLeftRadius: theme.borderRadius.xl,
-      borderBottomRightRadius: theme.borderRadius.xl,
-    },
-    logo: {
-      fontSize: 28,
-      fontWeight: theme.typography.weights.bold,
-      color: theme.colors.text.inverse,
+header: {
+  alignItems: 'center',
+  paddingVertical: theme.spacing.lg,  // 👈 Était theme.spacing.xxl, réduis ici
+  paddingHorizontal: theme.spacing.xl,
+  backgroundColor: theme.colors.primary[500],
+  borderBottomLeftRadius: theme.borderRadius.xl,
+  borderBottomRightRadius: theme.borderRadius.xl,
+},
+    // 🎨 NOUVEAU : Style pour le logo
+    logoContainer: {
       marginBottom: theme.spacing.sm,
+    },
+    logoImage: {
+      width: 1000,
+      height: 100,
+      resizeMode: 'contain',
+    },
+    // 🎨 NOUVEAU : Style amélioré pour le titre de bienvenue
+    welcomeContainer: {
+      alignItems: 'center',
     },
     title: {
-      fontSize: theme.typography.sizes.h2,
-      fontWeight: theme.typography.weights.bold,
+      fontSize: 24,
+      fontWeight: '800',
       color: theme.colors.text.inverse,
       textAlign: 'center',
-      marginBottom: theme.spacing.sm,
+      marginBottom: theme.spacing.xs,
+      letterSpacing: 0.5,
+      textShadowColor: 'rgba(0, 0, 0, 0.15)',
+      textShadowOffset: { width: 0, height: 1 },
+      textShadowRadius: 2,
     },
+    // 🎨 NOUVEAU : Accent sur "GarNet"
+    titleAccent: {
+      color: '#ffffff',
+      fontWeight: '900',
+    },
+    // 🎨 NOUVEAU : Style amélioré pour le sous-titre
     subtitle: {
-      fontSize: theme.typography.sizes.caption,
-      color: theme.colors.text.light,
+      fontSize: theme.typography.sizes.body,
+      color: theme.colors.text.inverse,
       textAlign: 'center',
+      opacity: 0.9,
+      fontStyle: 'italic',
+      letterSpacing: 0.3,
+      paddingHorizontal: theme.spacing.md,
     },
     section: {
       padding: theme.spacing.xl,
@@ -327,13 +348,25 @@ const loadVoyages = async () => {
 
   return (
     <SafeAreaView style={styles.container}>
+      {/* 🎨 HEADER AMÉLIORÉ */}
       <View style={styles.header}>
-        <Ionicons name="leaf" size={28} color="#fff" />
-        <Text style={styles.logo}>GarNET</Text>
-        <Text style={styles.title}>Bienvenue sur GarNET</Text>
-        <Text style={styles.subtitle}>
-          Réservez vos voyages en toute simplicité
-        </Text>
+        {/* Logo personnalisé */}
+        <View style={styles.logoContainer}>
+          <Image 
+            source={require('../assets/GarNet.png')} 
+            style={styles.logoImage}
+          />
+        </View>
+        
+        {/* Textes de bienvenue stylisés */}
+        <View style={styles.welcomeContainer}>
+          <Text style={styles.title}>
+            Bienvenue sur <Text style={styles.titleAccent}>GarNet</Text>
+          </Text>
+          <Text style={styles.subtitle}>
+            Réservez vos voyages en toute simplicité
+          </Text>
+        </View>
       </View>
 
       <View style={styles.section}>

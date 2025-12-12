@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import * as Clipboard from 'expo-clipboard';
 import { cooperativeService, CooperativeDetail, MoyenneAvisResponse } from '../../../services/cooperativeService';
 import { avisService, AvisFormatted, AvisCooperativeResponse } from '../../../services/avisService';
 import { UPLOADS_URL } from '../../../services/api';
@@ -484,7 +485,7 @@ export default function DetailCooperative() {
           justifyContent: 'center',
         },
 
-        // Criteria
+        // Criteria (styles gardés mais section non utilisée)
         criteriaSection: {
           borderTopWidth: 1,
           borderTopColor: theme.colors.neutral[200],
@@ -584,6 +585,12 @@ export default function DetailCooperative() {
           fontSize: 15,
           fontWeight: '500',
           color: theme.colors.text.primary,
+        },
+        copyButton: {
+          paddingHorizontal: 8,
+          paddingVertical: 6,
+          borderRadius: 8,
+          backgroundColor: theme.colors.primary[50],
         },
 
         // Station
@@ -803,8 +810,9 @@ export default function DetailCooperative() {
     router.push(`/(client)/voyages/voyagePropose?cooperativeId=${cooperativeId}`);
   };
 
+  // ⚙️ Voir tous les avis de la coopérative
   const handleViewAllReviews = () => {
-    router.push(`/(client)/voyages/listeAvis?cooperativeId=${cooperativeId}`);
+    router.push(`/(client)/voyages/avisCooperative?cooperativeId=${cooperativeId}`);
   };
 
   const handleCall = (phoneNumber: string) => {
@@ -813,6 +821,17 @@ export default function DetailCooperative() {
 
   const handleEmail = (email: string) => {
     console.log('Email:', email);
+  };
+
+  // Copier le numéro dans le presse-papiers
+  const handleCopyPhone = async (phoneNumber: string) => {
+    if (!phoneNumber) return;
+    try {
+      await Clipboard.setStringAsync(phoneNumber);
+      console.log('📋 Numéro copié:', phoneNumber);
+    } catch (e) {
+      console.error('Erreur copie numéro:', e);
+    }
   };
 
   const formatDate = (dateString?: string) => {
@@ -850,11 +869,12 @@ export default function DetailCooperative() {
   const moyenneNote = avisStats?.moyenne || 0;
   const distribution = avisStats?.distribution || { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
 
-  const criteres = {
-    ponctualite: { note: 4.4, percentage: 88 },
-    confort: { note: 4.1, percentage: 82 },
-    accueil: { note: 4.5, percentage: 90 },
-  };
+  // ⚠️ CRITÈRES DÉTAILLÉS NON GÉRÉS PAR L'APP ACTUELLEMENT
+  // const criteres = {
+  //   ponctualite: { note: 4.4, percentage: 88 },
+  //   confort: { note: 4.1, percentage: 82 },
+  //   accueil: { note: 4.5, percentage: 90 },
+  // };
 
   return (
     <View style={styles.container}>
@@ -927,7 +947,7 @@ export default function DetailCooperative() {
                   },
                 ]}
               >
-                {cooperative.statut === 'actif' ? 'Vérifié' : 'Inactif'}
+                {cooperative.statut === 'actif'}
               </Text>
             </View>
 
@@ -954,11 +974,7 @@ export default function DetailCooperative() {
         <View style={styles.sectionCard}>
           <View style={styles.sectionHeaderRow}>
             <Text style={styles.sectionTitle}>📊 Statistiques des avis</Text>
-            {totalAvis > 0 && (
-              <TouchableOpacity onPress={handleViewAllReviews}>
-                <Text style={styles.seeAllText}>Voir tout</Text>
-              </TouchableOpacity>
-            )}
+            {/* Bouton "Voir tout" retiré ici comme demandé */}
           </View>
 
           {totalAvis > 0 ? (
@@ -990,42 +1006,13 @@ export default function DetailCooperative() {
                 </View>
               </View>
 
+              {/* ⚠️ Critères détaillés retirés car non gérés par l'app actuellement */}
+              {/* 
               <View style={styles.criteriaSection}>
                 <Text style={styles.criteriaTitle}>Critères détaillés</Text>
-                {/* Critères mock */}
-                <View style={styles.criteriaItem}>
-                  <View style={styles.criteriaLabelRow}>
-                    <Ionicons name="time-outline" size={16} color={theme.colors.primary[500]} />
-                    <Text style={styles.criteriaLabel}>Ponctualité</Text>
-                  </View>
-                  <View style={styles.criteriaBarBG}>
-                    <View style={[styles.criteriaBarFill, { width: `${criteres.ponctualite.percentage}%` }]} />
-                  </View>
-                  <Text style={styles.criteriaScore}>{criteres.ponctualite.note}</Text>
-                </View>
-
-                <View style={styles.criteriaItem}>
-                  <View style={styles.criteriaLabelRow}>
-                    <Ionicons name="car-outline" size={16} color={theme.colors.primary[500]} />
-                    <Text style={styles.criteriaLabel}>Confort</Text>
-                  </View>
-                  <View style={styles.criteriaBarBG}>
-                    <View style={[styles.criteriaBarFill, { width: `${criteres.confort.percentage}%` }]} />
-                  </View>
-                  <Text style={styles.criteriaScore}>{criteres.confort.note}</Text>
-                </View>
-
-                <View style={styles.criteriaItem}>
-                  <View style={styles.criteriaLabelRow}>
-                    <Ionicons name="people-outline" size={16} color={theme.colors.primary[500]} />
-                    <Text style={styles.criteriaLabel}>Accueil</Text>
-                  </View>
-                  <View style={styles.criteriaBarBG}>
-                    <View style={[styles.criteriaBarFill, { width: `${criteres.accueil.percentage}%` }]} />
-                  </View>
-                  <Text style={styles.criteriaScore}>{criteres.accueil.note}</Text>
-                </View>
+                ...
               </View>
+              */}
             </>
           ) : (
             <View style={styles.noReviewsContainer}>
@@ -1064,31 +1051,47 @@ export default function DetailCooperative() {
         <View style={styles.sectionCard}>
           <Text style={styles.sectionTitle}>📍 Informations de contact</Text>
 
-          <TouchableOpacity style={styles.infoRow} activeOpacity={0.7}>
-            <View style={styles.infoIconBox}>
-              <Ionicons name="location-outline" size={20} color={theme.colors.primary[500]} />
+          {/* Adresse */}
+          {cooperative.adresse && (
+            <View style={styles.infoRow}>
+              <View style={styles.infoIconBox}>
+                <Ionicons name="location-outline" size={20} color={theme.colors.primary[500]} />
+              </View>
+              <View style={styles.infoContent}>
+                <Text style={styles.infoLabel}>Adresse</Text>
+                <Text style={styles.infoValue}>{cooperative.adresse}</Text>
+              </View>
             </View>
-            <View style={styles.infoContent}>
-              <Text style={styles.infoLabel}>Adresse</Text>
-              <Text style={styles.infoValue}>{cooperative.adresse}</Text>
-            </View>
-          </TouchableOpacity>
+          )}
 
-          <TouchableOpacity 
-            style={styles.infoRow} 
-            activeOpacity={0.7}
-            onPress={() => handleCall(cooperative.contact)}
-          >
-            <View style={styles.infoIconBox}>
-              <Ionicons name="call-outline" size={20} color={theme.colors.primary[500]} />
-            </View>
-            <View style={styles.infoContent}>
-              <Text style={styles.infoLabel}>Téléphone</Text>
-              <Text style={styles.infoValue}>{cooperative.contact}</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color={theme.colors.neutral[400]} />
-          </TouchableOpacity>
+          {/* Téléphone + bouton copier */}
+          {cooperative.contact && (
+            <TouchableOpacity 
+              style={styles.infoRow} 
+              activeOpacity={0.7}
+              onPress={() => handleCall(cooperative.contact)}
+            >
+              <View style={styles.infoIconBox}>
+                <Ionicons name="call-outline" size={20} color={theme.colors.primary[500]} />
+              </View>
+              <View style={styles.infoContent}>
+                <Text style={styles.infoLabel}>Téléphone</Text>
+                <Text style={styles.infoValue}>{cooperative.contact}</Text>
+              </View>
+              <TouchableOpacity
+                style={styles.copyButton}
+                onPress={() => handleCopyPhone(cooperative.contact!)}
+              >
+                <Ionicons
+                  name="copy-outline"
+                  size={18}
+                  color={theme.colors.primary[500]}
+                />
+              </TouchableOpacity>
+            </TouchableOpacity>
+          )}
 
+          {/* Email s'il existe */}
           {cooperative.email && (
             <TouchableOpacity 
               style={styles.infoRow} 
@@ -1102,8 +1105,33 @@ export default function DetailCooperative() {
                 <Text style={styles.infoLabel}>Email</Text>
                 <Text style={styles.infoValue}>{cooperative.email}</Text>
               </View>
-              <Ionicons name="chevron-forward" size={20} color={theme.colors.neutral[400]} />
             </TouchableOpacity>
+          )}
+
+          {/* Statut */}
+          <View style={styles.infoRow}>
+            <View style={styles.infoIconBox}>
+              <Ionicons name="information-circle-outline" size={20} color={theme.colors.primary[500]} />
+            </View>
+            <View style={styles.infoContent}>
+              <Text style={styles.infoLabel}>Statut</Text>
+              <Text style={styles.infoValue}>{cooperative.statut}</Text>
+            </View>
+          </View>
+
+          {/* Date d'inscription si dispo */}
+          {cooperative.date_inscription && (
+            <View style={styles.infoRow}>
+              <View style={styles.infoIconBox}>
+                <Ionicons name="calendar-outline" size={20} color={theme.colors.primary[500]} />
+              </View>
+              <View style={styles.infoContent}>
+                <Text style={styles.infoLabel}>Inscrite depuis</Text>
+                <Text style={styles.infoValue}>
+                  {formatDate(cooperative.date_inscription)}
+                </Text>
+              </View>
+            </View>
           )}
         </View>
 

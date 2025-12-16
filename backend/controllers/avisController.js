@@ -309,5 +309,5 @@ export {
   createAvis, 
   getAvisByVoyage, 
   getLatestAvis,
-  getAvisByCooperative  // 👈 AJOUT DE LA NOUVELLE FONCTION
+  getAvisByCooperative 
 };

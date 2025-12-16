@@ -1,3 +1,4 @@
+// frontend/app/(client)/voyages/reservation.tsx
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -8,7 +9,9 @@ import {
   ActivityIndicator,
   Alert,
   Modal,
+  Image, // 👈 AJOUT
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, router } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { voyageService, PlacesVoyageResponse, Place } from '../../../services/voyageService';
@@ -18,8 +21,8 @@ import { useTheme } from '../../../contexts/ThemeContext';
 import type { Theme } from '../../../constants/theme';
 
 export default function Reservation() {
-  const { theme } = useTheme(); // 👈 thème dynamique
-  const styles = React.useMemo(() => createStyles(theme), [theme]); // 👈 styles dépendants du thème (sauf sièges)
+  const { theme } = useTheme();
+  const styles = React.useMemo(() => createStyles(theme), [theme]);
 
   const params = useLocalSearchParams();
   const voyageId = parseInt(params.voyageId as string);
@@ -35,6 +38,10 @@ export default function Reservation() {
   const [toastType, setToastType] = useState<'success' | 'error'>('success');
 
   const [showConfirmModal, setShowConfirmModal] = useState(false);
+
+  // 👇 NOUVEAU : modal choix moyen de paiement
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [pendingPayment, setPendingPayment] = useState<{ reservationId: number; montant: number } | null>(null);
 
   const prixTotal = selectedPlaces.length * prixUnitaire;
 
@@ -98,19 +105,19 @@ export default function Reservation() {
       await AsyncStorage.setItem('temp_reservation', JSON.stringify(dataForPayment));
       console.log('📦 Données stockées dans AsyncStorage');
 
-      setToastMessage('Réservation en attente créée ! Procédez au paiement.');
+      // On garde en mémoire pour le bouton MVola
+      setPendingPayment({
+        reservationId: response.reservation.id,
+        montant: prixTotal,
+      });
+
+      setToastMessage('Réservation en attente créée ! Choisissez un moyen de paiement.');
       setToastType('success');
       setToastVisible(true);
 
-      setTimeout(() => {
-        router.push({
-          pathname: '/(client)/voyages/paiement',
-          params: {
-            reservationId: response.reservation.id,
-            montant: prixTotal,
-          },
-        });
-      }, 1500);
+      // 👉 On n’envoie plus directement vers paiement
+      // On ouvre le modal "Choix de moyen de paiement"
+      setShowPaymentModal(true);
     } catch (error: any) {
       console.error('❌ Erreur création réservation:', error);
 
@@ -131,6 +138,31 @@ export default function Reservation() {
     }
   };
 
+  // 👇 Quand l’utilisateur choisit MVola dans le second modal
+  const handleSelectMvola = () => {
+    if (!pendingPayment) {
+      setShowPaymentModal(false);
+      return;
+    }
+
+    setShowPaymentModal(false);
+
+    router.push({
+      pathname: '/(client)/voyages/paiement',
+      params: {
+        reservationId: pendingPayment.reservationId,
+        montant: pendingPayment.montant,
+      },
+    });
+  };
+
+  // 👇 Quand l’utilisateur choisit "Payer plus tard"
+  const handlePayLater = () => {
+    setShowPaymentModal(false);
+    // Rediriger vers la liste des réservations
+    router.push('/(client)/reservations/listeReservation');
+  };
+
   const getPlaceStyle = (place: Place) => {
     if (place.est_chauffeur) return styles.placeChauffeur;
     if (place.est_reserve) return styles.placeReserved;
@@ -144,7 +176,6 @@ export default function Reservation() {
     return styles.placeTextAvailable;
   };
 
-  // Organisation des places (tri + rangées)
   const organizeCarLayout = (places: Place[]) => {
     const chauffeur = places.find((place) => place.est_chauffeur);
     const voyageurs = places.filter((place) => !place.est_chauffeur);
@@ -161,7 +192,6 @@ export default function Reservation() {
 
     const rows: Place[][] = [];
 
-    // Rangée 1 : Conducteur + 2 passagers avant
     const row1: Place[] = [];
     if (chauffeur) row1.push(chauffeur);
 
@@ -169,7 +199,6 @@ export default function Reservation() {
     row1.push(...avantPassagers);
     rows.push(row1);
 
-    // Rangées suivantes : 4 places par rangée
     const placesRestantes = sortedVoyageurs.slice(2);
     for (let i = 0; i < placesRestantes.length; i += 4) {
       const row = placesRestantes.slice(i, i + 4);
@@ -320,7 +349,7 @@ export default function Reservation() {
         </TouchableOpacity>
       </View>
 
-      {/* Modal de confirmation */}
+      {/* Modal de confirmation (déjà existant) */}
       <Modal
         visible={showConfirmModal}
         transparent
@@ -346,8 +375,7 @@ export default function Reservation() {
             </View>
 
             <Text style={styles.modalInfo}>
-              ℹ️ Une réservation sera créée et vous serez redirigé vers la page de
-              paiement
+              ℹ️ Une réservation sera créée et vous pourrez choisir votre moyen de paiement.
             </Text>
 
             <View style={styles.modalButtons}>
@@ -369,6 +397,62 @@ export default function Reservation() {
         </View>
       </Modal>
 
+      {/* 👇 NOUVEAU : Modal choix moyen de paiement */}
+      <Modal
+        visible={showPaymentModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowPaymentModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.paymentModalContent}>
+            <Text style={styles.paymentTitle}>Choix de moyen de paiement</Text>
+            <Text style={styles.paymentSubtitle}>
+              Sélectionnez un moyen de paiement pour régler votre réservation.
+            </Text>
+
+            {/* Option MVola */}
+            <TouchableOpacity
+              style={styles.paymentOption}
+              activeOpacity={0.7}
+              onPress={handleSelectMvola}
+            >
+              <View style={styles.paymentOptionLeft}>
+                <Image
+                  source={require('../../../assets/mvola.png')}
+                  style={styles.paymentLogo}
+                  resizeMode="contain"
+                />
+                <View>
+                  <Text style={styles.paymentOptionTitle}>MVola</Text>
+                  <Text style={styles.paymentOptionSubtitle}>
+                    Paiement mobile rapide et sécurisé
+                  </Text>
+                </View>
+              </View>
+              <Ionicons
+                name="chevron-forward"
+                size={18}
+                color={theme.colors.neutral[500]}
+              />
+            </TouchableOpacity>
+
+            {/* Bouton Payer plus tard */}
+            <TouchableOpacity
+              style={styles.paymentLaterButton}
+              onPress={handlePayLater}
+            >
+              <Ionicons
+                name="time-outline"
+                size={18}
+                color={theme.colors.primary[500]}
+              />
+              <Text style={styles.paymentLaterText}>Payer plus tard</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
       {toastVisible && (
         <Toast
           message={toastMessage}
@@ -381,7 +465,7 @@ export default function Reservation() {
   );
 }
 
-// ✅ Styles : thème dynamique pour la structure, couleurs FIXES pour les sièges
+// Styles
 const createStyles = (theme: Theme) =>
   StyleSheet.create({
     container: {
@@ -485,7 +569,7 @@ const createStyles = (theme: Theme) =>
       marginBottom: theme.spacing.xl,
     },
 
-    // 🚫 Partie SIÈGES : couleurs FIXES (ne dépendent pas du thème choisi)
+    // sièges (fixes)
     seat: {
       width: 50,
       height: 50,
@@ -500,24 +584,24 @@ const createStyles = (theme: Theme) =>
     },
     driverSeat: {
       backgroundColor: '#FFF3E0',
-      borderColor: '#F59E0B', // warning statique
+      borderColor: '#F59E0B',
       width: 60,
       height: 60,
     },
     placeAvailable: {
-      backgroundColor: '#E8F5E9', // vert clair fixe
-      borderColor: '#22C55E', // succès fixe
+      backgroundColor: '#E8F5E9',
+      borderColor: '#22C55E',
     },
     placeSelected: {
-      backgroundColor: '#3B82F6', // bleu fixe (équiv. primary[500] par défaut)
-      borderColor: '#1D4ED8', // bleu foncé fixe (équiv. primary[700])
+      backgroundColor: '#3B82F6',
+      borderColor: '#1D4ED8',
     },
     placeReserved: {
-      backgroundColor: '#FFEBEE', // rouge clair fixe
-      borderColor: '#EF4444', // rouge fixe
+      backgroundColor: '#FFEBEE',
+      borderColor: '#EF4444',
     },
     placeChauffeur: {
-      backgroundColor: '#FFF3E0', // orange clair fixe
+      backgroundColor: '#FFF3E0',
       borderColor: '#F59E0B',
     },
     placeTextAvailable: {
@@ -702,5 +786,78 @@ const createStyles = (theme: Theme) =>
       color: theme.colors.text.inverse,
       fontSize: theme.typography.sizes.body,
       fontWeight: theme.typography.weights.bold,
+    },
+
+    // 🔹 Modal choix moyen de paiement
+    paymentModalContent: {
+      backgroundColor: theme.colors.background.primary,
+      borderRadius: theme.borderRadius.lg,
+      padding: 24,
+      width: '100%',
+      maxWidth: 400,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: 0.3,
+      shadowRadius: 16,
+      elevation: 10,
+    },
+    paymentTitle: {
+      fontSize: theme.typography.sizes.h2,
+      fontWeight: theme.typography.weights.bold,
+      color: theme.colors.text.primary,
+      marginBottom: 8,
+      textAlign: 'center',
+    },
+    paymentSubtitle: {
+      fontSize: theme.typography.sizes.small,
+      color: theme.colors.text.secondary,
+      textAlign: 'center',
+      marginBottom: 20,
+    },
+    paymentOption: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingVertical: 12,
+      paddingHorizontal: 10,
+      borderRadius: theme.borderRadius.md,
+      borderWidth: 1,
+      borderColor: theme.colors.primary[500],
+      backgroundColor: theme.colors.primary[50],
+      marginBottom: 16,
+    },
+    paymentOptionLeft: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: theme.spacing.sm,
+    },
+    paymentLogo: {
+      width: 40,
+      height: 40,
+    },
+    paymentOptionTitle: {
+      fontSize: theme.typography.sizes.body,
+      fontWeight: theme.typography.weights.bold,
+      color: theme.colors.text.primary,
+    },
+    paymentOptionSubtitle: {
+      fontSize: theme.typography.sizes.small,
+      color: theme.colors.text.secondary,
+    },
+    paymentLaterButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: theme.spacing.sm,
+      paddingVertical: 10,
+      borderRadius: theme.borderRadius.md,
+      borderWidth: 1,
+      borderColor: theme.colors.neutral[300],
+      backgroundColor: theme.colors.background.secondary,
+    },
+    paymentLaterText: {
+      fontSize: theme.typography.sizes.body,
+      fontWeight: theme.typography.weights.semibold,
+      color: theme.colors.primary[500],
     },
   });

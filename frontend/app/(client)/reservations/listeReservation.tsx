@@ -9,12 +9,14 @@ import {
   ActivityIndicator,
   RefreshControl,
 } from 'react-native';
+import { useFocusEffect } from 'expo-router';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { reservationService, Reservation } from '../../../services/reservationService';
 import { Toast } from '../../../components/ui/Toast';
 import { useTheme } from '../../../contexts/ThemeContext';
+import { useCallback } from 'react';
 
 export default function ListeReservation() {
   const { theme } = useTheme();
@@ -27,9 +29,11 @@ export default function ListeReservation() {
   const [toastMessage, setToastMessage] = useState('');
   const [toastType, setToastType] = useState<'success' | 'error'>('success');
 
-  useEffect(() => {
+useFocusEffect(
+  useCallback(() => {
     loadReservations();
-  }, []);
+  }, [])
+);
 
   const styles = React.useMemo(
     () =>

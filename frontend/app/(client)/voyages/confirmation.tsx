@@ -251,10 +251,10 @@ export default function Confirmation() {
           style={[styles.button, styles.secondaryButton]}
           onPress={() => {
             AsyncStorage.removeItem("last_confirmation");
-            router.replace("/(client)/home");
+            router.replace("/(client)/voyages/listeCooperative");
           }}
         >
-          <Text style={styles.buttonTextSecondary}>Retour à l'accueil</Text>
+          <Text style={styles.buttonTextSecondary}>Retour</Text>
         </TouchableOpacity>
       </View>
     </ScrollView>

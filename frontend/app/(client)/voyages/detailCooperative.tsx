@@ -948,6 +948,7 @@ export default function DetailCooperative() {
                 ]}
               >
                 {cooperative.statut === 'actif'}
+                
               </Text>
             </View>
 

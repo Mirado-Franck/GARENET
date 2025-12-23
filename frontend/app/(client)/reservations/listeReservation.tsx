@@ -1,5 +1,4 @@
-// frontend/app/(client)/reservations/listeReservation.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -9,14 +8,13 @@ import {
   ActivityIndicator,
   RefreshControl,
 } from 'react-native';
-import { useFocusEffect } from 'expo-router';
 import { router } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { reservationService, Reservation } from '../../../services/reservationService';
 import { Toast } from '../../../components/ui/Toast';
 import { useTheme } from '../../../contexts/ThemeContext';
-import { useCallback } from 'react';
 
 export default function ListeReservation() {
   const { theme } = useTheme();
@@ -28,12 +26,6 @@ export default function ListeReservation() {
   const [toastVisible, setToastVisible] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [toastType, setToastType] = useState<'success' | 'error'>('success');
-
-useFocusEffect(
-  useCallback(() => {
-    loadReservations();
-  }, [])
-);
 
   const styles = React.useMemo(
     () =>
@@ -195,6 +187,26 @@ useFocusEffect(
           fontWeight: theme.typography.weights.bold,
           color: theme.colors.primary[500],
         },
+
+        restantRow: {
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          paddingTop: theme.spacing.sm,
+          borderTopWidth: 1,
+          borderTopColor: theme.colors.neutral[200],
+          marginBottom: theme.spacing.md,
+        },
+        restantLabel: {
+          fontSize: theme.typography.sizes.small,
+          color: theme.colors.text.secondary,
+        },
+        restantValue: {
+          fontSize: theme.typography.sizes.body,
+          fontWeight: theme.typography.weights.bold,
+          color: theme.colors.semantic.warning,
+        },
+
         cooperativeInfo: {
           flexDirection: 'row',
           alignItems: 'center',
@@ -217,7 +229,6 @@ useFocusEffect(
           flexDirection: 'row',
           gap: theme.spacing.sm,
         },
-        // 💳 Nouveau bouton "Payer"
         payButton: {
           flex: 1,
           flexDirection: 'row',
@@ -255,23 +266,6 @@ useFocusEffect(
           fontWeight: theme.typography.weights.semibold,
           color: theme.colors.primary[500],
         },
-        cancelButton: {
-          flex: 1,
-          flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: 6,
-          paddingVertical: theme.spacing.sm,
-          backgroundColor: theme.colors.semantic.error + '10',
-          borderRadius: theme.borderRadius.sm,
-          borderWidth: 1,
-          borderColor: theme.colors.semantic.error,
-        },
-        cancelButtonText: {
-          fontSize: theme.typography.sizes.body,
-          fontWeight: theme.typography.weights.semibold,
-          color: theme.colors.semantic.error,
-        },
         emptyContainer: {
           alignItems: 'center',
           justifyContent: 'center',
@@ -306,16 +300,48 @@ useFocusEffect(
     [theme]
   );
 
+  const normalizeStatut = (s: string) => (s || '').toLowerCase().trim();
+
+  const isEnAttente = (s: string) => normalizeStatut(s) === 'en attente';
+  const isPayePartiel = (s: string) => {
+    const v = normalizeStatut(s);
+    return v === 'paye_partiel' || v === 'payee_partiellement' || v === 'payée_partiellement' || v === 'payé partiel';
+  };
+
+  const isPayable = (s: string) => isEnAttente(s) || isPayePartiel(s);
+
+  const getMontants = (res: Reservation) => {
+    const total = Number(res.nombre_places) * Number(res.voyage.prix);
+
+    const anyRes = res as any;
+    const restantFromApi = anyRes?.montant_restant;
+    const payeFromApi = anyRes?.montant_paye;
+
+    if (typeof restantFromApi === 'number') {
+      return {
+        total: typeof anyRes?.montant_total === 'number' ? anyRes.montant_total : total,
+        paye: typeof payeFromApi === 'number' ? payeFromApi : Math.max(0, total - restantFromApi),
+        restant: Math.max(0, restantFromApi),
+      };
+    }
+
+    // fallback (si l’API ne renvoie pas encore)
+    const paidViaPaiements = Array.isArray(anyRes?.paiements)
+      ? anyRes.paiements.reduce((sum: number, p: any) => sum + Number(p?.montant || 0), 0)
+      : 0;
+
+    const paidViaSingle = res.paiement ? Number(res.paiement.montant || 0) : 0;
+    const paye = paidViaPaiements > 0 ? paidViaPaiements : paidViaSingle;
+    const restant = Math.max(0, total - paye);
+
+    return { total, paye, restant };
+  };
+
   const loadReservations = async () => {
     try {
       setLoading(true);
       const data = await reservationService.getMyReservations();
-      if (Array.isArray(data)) {
-        setReservations(data);
-      } else {
-        console.warn('Réponse réservations non valide :', data);
-        setReservations([]);
-      }
+      setReservations(Array.isArray(data) ? data : []);
     } catch (error: any) {
       console.error('Erreur chargement réservations:', error);
       setReservations([]);
@@ -328,6 +354,18 @@ useFocusEffect(
     }
   };
 
+  // 🔁 Charge 1 fois
+  useEffect(() => {
+    loadReservations();
+  }, []);
+
+  // 🔁 Recharge à chaque focus (quand on revient sur la page)
+  useFocusEffect(
+    useCallback(() => {
+      loadReservations();
+    }, [])
+  );
+
   const onRefresh = () => {
     setRefreshing(true);
     loadReservations();
@@ -337,25 +375,35 @@ useFocusEffect(
     router.push(`/(client)/reservations/detailReservation?id=${reservationId}`);
   };
 
-  // 💳 Nouvelle fonction : préparer le paiement pour une réservation en attente
   const handlePayNow = async (res: Reservation) => {
     try {
-      const prixTotal = res.nombre_places * res.voyage.prix;
+      const { restant, total } = getMontants(res);
+
+      if (restant <= 0) {
+        setToastMessage('Cette réservation est déjà soldée.');
+        setToastType('error');
+        setToastVisible(true);
+        return;
+      }
 
       const dataForPayment = {
         reservationId: res.id,
         voyageId: res.voyage.id,
         places: res.places,
         nombre_places: res.nombre_places,
-        montant: prixTotal,
+
+        // 👉 on met le RESTANT comme montant par défaut
+        montant: restant,
+
+        // infos utiles
+        montant_total: total,
+        montant_restant: restant,
+
         code_reservation: res.code_reservation,
         voyage: res.voyage,
       };
 
       await AsyncStorage.setItem('temp_reservation', JSON.stringify(dataForPayment));
-
-      console.log('📦 Données de paiement préparées pour réservation en attente:', dataForPayment);
-
       router.push('/(client)/voyages/paiement');
     } catch (error) {
       console.error('❌ Erreur préparation paiement:', error);
@@ -366,13 +414,21 @@ useFocusEffect(
   };
 
   const getStatusBadge = (statut: string) => {
-    const statusConfig = {
+    const s = normalizeStatut(statut);
+
+    const statusConfig: any = {
       confirmee: { color: theme.colors.semantic.success, label: 'Confirmée', icon: 'checkmark-circle' },
+      confirmée: { color: theme.colors.semantic.success, label: 'Confirmée', icon: 'checkmark-circle' },
+
       'en attente': { color: theme.colors.semantic.warning, label: 'En attente', icon: 'time' },
+
+      paye_partiel: { color: theme.colors.semantic.warning, label: 'Payé partiel', icon: 'cash' },
+
       annulee: { color: theme.colors.semantic.error, label: 'Annulée', icon: 'close-circle' },
+      annulée: { color: theme.colors.semantic.error, label: 'Annulée', icon: 'close-circle' },
     };
 
-    const config = statusConfig[statut as keyof typeof statusConfig] || {
+    const config = statusConfig[s] || {
       color: theme.colors.neutral[500],
       label: statut,
       icon: 'help-circle',
@@ -406,15 +462,14 @@ useFocusEffect(
 
   const renderReservationCard = (res: Reservation) => {
     const prixTotal = res.nombre_places * res.voyage.prix;
+    const { restant } = getMontants(res);
 
     return (
       <View key={res.id} style={styles.card}>
         <View style={styles.cardHeader}>
           <View style={styles.cardHeaderLeft}>
             <Text style={styles.cardCode}>{res.code_reservation}</Text>
-            <Text style={styles.cardDate}>
-              Réservé le {formatDate(res.date_reservation)}
-            </Text>
+            <Text style={styles.cardDate}>Réservé le {formatDate(res.date_reservation)}</Text>
           </View>
           {getStatusBadge(res.statut)}
         </View>
@@ -456,6 +511,13 @@ useFocusEffect(
           <Text style={styles.prixTotal}>{prixTotal.toLocaleString()} Ar</Text>
         </View>
 
+        {isPayable(res.statut) && restant > 0 && (
+          <View style={styles.restantRow}>
+            <Text style={styles.restantLabel}>Reste à payer</Text>
+            <Text style={styles.restantValue}>{restant.toLocaleString()} Ar</Text>
+          </View>
+        )}
+
         <View style={styles.cooperativeInfo}>
           <Ionicons name="business-outline" size={16} color={theme.colors.neutral[600]} />
           <Text style={styles.cooperativeName}>{res.voyage.cooperative.nom}</Text>
@@ -463,31 +525,20 @@ useFocusEffect(
           <Text style={styles.voitureInfo}>{res.voyage.voiture.modele}</Text>
         </View>
 
-        {/* 🔄 Actions conditionnelles selon le statut */}
         <View style={styles.cardActions}>
-          {res.statut === 'en attente' ? (
+          {isPayable(res.statut) && restant > 0 ? (
             <>
-              {/* Bouton "Payer maintenant" visible uniquement pour les réservations en attente */}
-              <TouchableOpacity
-                style={styles.payButton}
-                onPress={() => handlePayNow(res)}
-              >
+              <TouchableOpacity style={styles.payButton} onPress={() => handlePayNow(res)}>
                 <Ionicons name="card-outline" size={18} color={theme.colors.text.inverse} />
                 <Text style={styles.payButtonText}>Payer</Text>
               </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.detailsButton}
-                onPress={() => handleViewDetails(res.id)}
-              >
+              <TouchableOpacity style={styles.detailsButton} onPress={() => handleViewDetails(res.id)}>
                 <Ionicons name="eye-outline" size={18} color={theme.colors.primary[500]} />
                 <Text style={styles.detailsButtonText}>Détails</Text>
               </TouchableOpacity>
             </>
           ) : (
-            <TouchableOpacity
-              style={styles.detailsButton}
-              onPress={() => handleViewDetails(res.id)}
-            >
+            <TouchableOpacity style={styles.detailsButton} onPress={() => handleViewDetails(res.id)}>
               <Ionicons name="eye-outline" size={18} color={theme.colors.primary[500]} />
               <Text style={styles.detailsButtonText}>Voir détails</Text>
             </TouchableOpacity>
@@ -508,7 +559,6 @@ useFocusEffect(
 
   return (
     <View style={styles.container}>
-      {/* Header */}
       <View style={styles.header}>
         <Text style={styles.title}>Mes Réservations</Text>
         <Text style={styles.subtitle}>
@@ -531,9 +581,7 @@ useFocusEffect(
           <View style={styles.emptyContainer}>
             <Ionicons name="calendar-outline" size={80} color={theme.colors.neutral[300]} />
             <Text style={styles.emptyTitle}>Aucune réservation</Text>
-            <Text style={styles.emptySubtitle}>
-              Vous n'avez pas encore effectué de réservation.
-            </Text>
+            <Text style={styles.emptySubtitle}>Vous n'avez pas encore effectué de réservation.</Text>
             <TouchableOpacity
               style={styles.emptyButton}
               onPress={() => router.push('/(client)/voyages')}
@@ -542,7 +590,7 @@ useFocusEffect(
             </TouchableOpacity>
           </View>
         ) : (
-          reservations.map(res => renderReservationCard(res))
+          reservations.map(renderReservationCard)
         )}
       </ScrollView>
 

@@ -232,7 +232,7 @@ export default function Confirmation() {
 
       <View style={styles.infoBox}>
         <Text style={styles.infoText}>
-          ℹ️ Un reçu a été généré. Vous pouvez le retrouver dans vos réservations.
+          ℹ️ Etape complète! Vous pouvez le retrouver dans vos réservations.
         </Text>
       </View>
 

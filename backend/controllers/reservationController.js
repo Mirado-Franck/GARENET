@@ -13,12 +13,13 @@ function normalizePlaceNumber(v) {
   return String(v).trim().toUpperCase();
 }
 
+const roundMoney = (n) => Math.round(Number(n || 0) * 100) / 100;
+
 // ========================================
 // 🆕 NOUVELLE ROUTE : CRÉER RÉSERVATION "EN ATTENTE"
 // ========================================
 const createPendingReservation = async (req, res, next) => {
   try {
-    // Auth obligatoire
     if (!req.user || !req.user.id) {
       return res.status(401).json({ error: "Non authentifié." });
     }
@@ -26,26 +27,22 @@ const createPendingReservation = async (req, res, next) => {
     const code_client_id = req.user.id;
     const { code_voyage_id, places } = req.body;
 
-    // Validation
     if (!code_voyage_id || !places || !Array.isArray(places) || places.length === 0) {
-      return res.status(400).json({ 
-        error: "Données invalides: 'code_voyage_id' et 'places' requis." 
+      return res.status(400).json({
+        error: "Données invalides: 'code_voyage_id' et 'places' requis."
       });
     }
 
-    // Normaliser les numéros de places
     const seatNumbers = places.map(normalizePlaceNumber);
     const uniqueSeats = Array.from(new Set(seatNumbers));
 
-    // Vérifier doublons
     if (uniqueSeats.length !== seatNumbers.length) {
       const dupes = seatNumbers.filter((x, i) => seatNumbers.indexOf(x) !== i);
-      return res.status(400).json({ 
-        error: `Doublon(s) de place détecté(s): ${Array.from(new Set(dupes)).join(', ')}` 
+      return res.status(400).json({
+        error: `Doublon(s) de place détecté(s): ${Array.from(new Set(dupes)).join(', ')}`
       });
     }
 
-    // Charger client + voyage/voiture/places
     const [client, voyage] = await Promise.all([
       prisma.client.findUnique({
         where: { id: code_client_id },
@@ -68,53 +65,45 @@ const createPendingReservation = async (req, res, next) => {
     if (!voyage) return res.status(404).json({ error: "Voyage non trouvé." });
     if (!voyage.voiture) return res.status(400).json({ error: "Aucune voiture associée à ce voyage." });
 
-    // Vérifier que toutes les places existent
     const fetchedPlaces = voyage.voiture.places || [];
     const fetchedNumsSet = new Set(fetchedPlaces.map(p => normalizePlaceNumber(p.numero)));
     const missing = uniqueSeats.filter(n => !fetchedNumsSet.has(n));
-    
+
     if (missing.length > 0) {
-      return res.status(400).json({ 
-        error: `Place(s) introuvable(s) pour ce voyage: ${missing.join(', ')}` 
+      return res.status(400).json({
+        error: `Place(s) introuvable(s) pour ce voyage: ${missing.join(', ')}`
       });
     }
 
-    // Vérifier chauffeur / déjà réservées
     const chauffeurSeats = fetchedPlaces.filter(p => p.est_chauffeur).map(p => p.numero);
     if (chauffeurSeats.length > 0) {
-      return res.status(400).json({ 
-        error: `Siège chauffeur non réservable: ${chauffeurSeats.join(', ')}` 
+      return res.status(400).json({
+        error: `Siège chauffeur non réservable: ${chauffeurSeats.join(', ')}`
       });
     }
 
     const alreadyReserved = fetchedPlaces.filter(p => p.est_reserve).map(p => p.numero);
     if (alreadyReserved.length > 0) {
-      return res.status(409).json({ 
-        error: `Déjà réservé(s): ${alreadyReserved.join(', ')}` 
+      return res.status(409).json({
+        error: `Déjà réservé(s): ${alreadyReserved.join(', ')}`
       });
     }
 
-    // Map numero -> place
     const placeByNumero = new Map(
       fetchedPlaces.map(p => [normalizePlaceNumber(p.numero), p])
     );
     const seatIds = uniqueSeats.map(n => placeByNumero.get(n).id);
 
-    // Préparer les données passagers (infos du client connecté)
     const nom = client.utilisateur?.nom || '';
     const prenoms = client.utilisateur?.prenoms || '';
     const clientTelStr = client.utilisateur?.telephone;
     const clientTelInt = clientTelStr ? parseInt(clientTelStr, 10) : NaN;
 
     if (!nom) {
-      return res.status(400).json({ 
-        error: "Nom du compte client manquant." 
-      });
+      return res.status(400).json({ error: "Nom du compte client manquant." });
     }
     if (isNaN(clientTelInt)) {
-      return res.status(400).json({ 
-        error: "Téléphone du compte client invalide." 
-      });
+      return res.status(400).json({ error: "Téléphone du compte client invalide." });
     }
 
     const passagersData = uniqueSeats.map(() => ({
@@ -129,13 +118,11 @@ const createPendingReservation = async (req, res, next) => {
       date_naissance: null
     }));
 
-    // Transaction : verrouiller places + créer réservation "en attente" + passagers
     const resultat = await prisma.$transaction(async (tx) => {
-      // 1) Verrouiller les places - ✅ AVEC FILTRE voiture_id
       const updateRes = await tx.place_voiture.updateMany({
         where: {
           id: { in: seatIds },
-          voiture_id: voyage.voiture.id,  // ✅ CORRECTION : Filtrer par voiture spécifique
+          voiture_id: voyage.voiture.id,
           est_reserve: false,
           est_chauffeur: false
         },
@@ -146,7 +133,6 @@ const createPendingReservation = async (req, res, next) => {
         throw new Error('CONFLICT_SEATS');
       }
 
-      // 2) Créer la réservation avec statut "en attente"
       const reservation = await tx.reservation.create({
         data: {
           code_trajet_id: voyage.code_trajet_id,
@@ -154,7 +140,7 @@ const createPendingReservation = async (req, res, next) => {
           code_client_id,
           code_reservation: genCode('RES'),
           date_reservation: new Date(),
-          statut: 'en attente', // ✅ STATUT "EN ATTENTE"
+          statut: 'en attente',
           nombre_places: uniqueSeats.length,
           places: {
             create: seatIds.map(id => ({ place_id: id }))
@@ -165,18 +151,13 @@ const createPendingReservation = async (req, res, next) => {
         }
       });
 
-      // 3) Créer les passagers
-      await tx.passager.createMany({
-        data: passagersData
-      });
+      await tx.passager.createMany({ data: passagersData });
 
       return { reservation };
     });
 
-    // Calculer montant total
-    const montantTotal = voyage.prix * uniqueSeats.length;
+    const montantTotal = roundMoney(voyage.prix * uniqueSeats.length);
 
-    // Réponse
     return res.status(201).json({
       success: true,
       message: "Réservation en attente créée avec succès.",
@@ -186,7 +167,10 @@ const createPendingReservation = async (req, res, next) => {
         statut: resultat.reservation.statut,
         nombre_places: resultat.reservation.nombre_places,
         places: uniqueSeats,
-        montant: montantTotal,
+        // ✅ utiles pour échelonné (sans casser le front)
+        montant_total: montantTotal,
+        montant_paye: 0,
+        montant_restant: montantTotal,
         voyage: {
           id: voyage.id,
           code: voyage.code_voyage,
@@ -203,8 +187,8 @@ const createPendingReservation = async (req, res, next) => {
 
   } catch (err) {
     if (err.message === 'CONFLICT_SEATS') {
-      return res.status(409).json({ 
-        error: "Une ou plusieurs places viennent d'être réservées par un autre utilisateur." 
+      return res.status(409).json({
+        error: "Une ou plusieurs places viennent d'être réservées par un autre utilisateur."
       });
     }
 
@@ -353,11 +337,10 @@ const createReservation = async (req, res, next) => {
     }
 
     const resultat = await prisma.$transaction(async (tx) => {
-      // ✅ CORRECTION : Ajouter voiture_id dans le filtre
       const updateRes = await tx.place_voiture.updateMany({
         where: {
           id: { in: seatIds },
-          voiture_id: voyage.voiture.id,  // ✅ CORRECTION : Filtrer par voiture spécifique
+          voiture_id: voyage.voiture.id,
           est_reserve: false,
           est_chauffeur: false
         },
@@ -375,7 +358,7 @@ const createReservation = async (req, res, next) => {
           code_client_id,
           code_reservation: genCode('RES'),
           date_reservation: new Date(),
-          statut: 'confirmee', // ✅ CONFIRMÉE (ancienne route)
+          statut: 'confirmee',
           nombre_places: uniqueSeats.length,
           places: {
             create: seatIds.map(id => ({ place_id: id }))
@@ -387,9 +370,7 @@ const createReservation = async (req, res, next) => {
         }
       });
 
-      const created = await tx.passager.createMany({
-        data: passagersData
-      });
+      const created = await tx.passager.createMany({ data: passagersData });
 
       return { reservation, createdCount: created.count };
     });
@@ -430,20 +411,22 @@ const createReservation = async (req, res, next) => {
   }
 };
 
-// === RÉCUPÉRER TOUTES LES RÉSERVATIONS DU CLIENT CONNECTÉ ===
+// ========================================
+// ✅ GET RESERVATIONS (avec montant_total / payé / restant)
+// ========================================
 const getReservations = async (req, res, next) => {
   try {
     const clientId = req.user.id;
 
     if (!clientId) {
-      return res.status(401).json({ 
+      return res.status(401).json({
         success: false,
-        error: "Authentification requise" 
+        error: "Authentification requise"
       });
     }
 
     const reservations = await prisma.reservation.findMany({
-      where: { 
+      where: {
         code_client_id: clientId,
       },
       include: {
@@ -455,50 +438,80 @@ const getReservations = async (req, res, next) => {
             cooperative: true
           }
         },
-        places: { 
-          include: { 
+        places: {
+          include: {
             place: {
               select: {
                 numero: true,
                 id: true
               }
-            } 
-          } 
+            }
+          }
         },
-        paiement: true,
+        // ✅ On ne garde que les paiements valides, non supprimés, triés du plus récent au plus ancien
+        paiement: {
+          where: {
+            deleted_at: null,
+            status: 'valide'
+          },
+          orderBy: {
+            date_paiement: 'desc'
+          }
+        },
         recu: true
       },
       orderBy: { date_reservation: "desc" }
     });
 
-    const formattedReservations = reservations.map(reservation => ({
-      id: reservation.id,
-      code_reservation: reservation.code_reservation,
-      date_reservation: reservation.date_reservation,
-      statut: reservation.statut,
-      nombre_places: reservation.nombre_places,
-      places: reservation.places.map(p => p.place.numero),
-      voyage: {
-        code: reservation.voyage.code_voyage,
-        date_depart: reservation.voyage.date_depart,
-        heure_depart: reservation.voyage.heure_depart,
-        prix: reservation.voyage.prix,
-        trajet: {
-          depart: reservation.voyage.trajet.station_depart,
-          arrivee: reservation.voyage.trajet.station_arrivee,
-          distance: reservation.voyage.trajet.distance
+    const formattedReservations = reservations.map(reservation => {
+      const montantTotal = roundMoney(reservation.nombre_places * reservation.voyage.prix);
+      const montantPaye = roundMoney(
+        (reservation.paiement || []).reduce((sum, p) => sum + Number(p.montant || 0), 0)
+      );
+      const montantRestant = roundMoney(montantTotal - montantPaye);
+
+      return {
+        id: reservation.id,
+        code_reservation: reservation.code_reservation,
+        date_reservation: reservation.date_reservation,
+        statut: reservation.statut,
+        nombre_places: reservation.nombre_places,
+        places: reservation.places.map(p => p.place.numero),
+        voyage: {
+          id: reservation.voyage.id,
+          code: reservation.voyage.code_voyage,
+          date_depart: reservation.voyage.date_depart,
+          heure_depart: reservation.voyage.heure_depart,
+          prix: reservation.voyage.prix,
+          trajet: {
+            depart: reservation.voyage.trajet.station_depart,
+            arrivee: reservation.voyage.trajet.station_arrivee,
+            distance: reservation.voyage.trajet.distance
+          },
+          voiture: {
+            modele: reservation.voyage.voiture.modele,
+            immatriculation: reservation.voyage.voiture.immatriculation,
+            capacite: reservation.voyage.voiture.capacite
+          },
+          cooperative: {
+            nom: reservation.voyage.cooperative.nom
+          }
         },
-        voiture: {
-          modele: reservation.voyage.voiture.modele,
-          immatriculation: reservation.voyage.voiture.immatriculation
-        },
-        cooperative: {
-          nom: reservation.voyage.cooperative.nom
-        }
-      },
-      paiement: reservation.paiement.length > 0 ? reservation.paiement[0] : null,
-      recu: reservation.recu.length > 0 ? reservation.recu[0] : null
-    }));
+
+        // ✅ Nouvelles infos utiles
+        montant_total: montantTotal,
+        montant_paye: montantPaye,
+        montant_restant: montantRestant,
+
+        // ✅ Paiements (tous)
+        paiements: reservation.paiement,
+
+        // ✅ Compatibilité: on donne le dernier paiement (le plus récent)
+        paiement: reservation.paiement.length > 0 ? reservation.paiement[0] : null,
+
+        recu: reservation.recu.length > 0 ? reservation.recu[0] : null
+      };
+    });
 
     res.status(200).json({
       success: true,
@@ -508,10 +521,10 @@ const getReservations = async (req, res, next) => {
 
   } catch (error) {
     console.error("Erreur getReservations:", error);
-    res.status(500).json({ 
+    res.status(500).json({
       success: false,
       error: "Erreur lors de la récupération des réservations",
-      details: error.message 
+      details: error.message
     });
   }
 };
@@ -522,16 +535,11 @@ const cancelReservation = async (req, res, next) => {
     const { id } = req.params;
     const clientId = req.user.id;
 
-    // ✅ CORRECTION : Inclure voiture pour avoir voiture_id
     const reservation = await prisma.reservation.findUnique({
       where: { id: parseInt(id) },
-      include: { 
+      include: {
         places: { include: { place: true } },
-        voyage: {
-          include: {
-            voiture: true  // ✅ CORRECTION : Inclure voiture
-          }
-        }
+        voyage: { include: { voiture: true } }
       }
     });
 
@@ -550,11 +558,10 @@ const cancelReservation = async (req, res, next) => {
     await prisma.$transaction(async (tx) => {
       const placeIds = reservation.places.map(rp => rp.place.id);
 
-      // ✅ CORRECTION : Ajouter voiture_id dans le filtre
       await tx.place_voiture.updateMany({
         where: {
           id: { in: placeIds },
-          voiture_id: reservation.voyage.voiture.id  // ✅ CORRECTION : Filtrer par voiture
+          voiture_id: reservation.voyage.voiture.id
         },
         data: { est_reserve: false }
       });
@@ -572,28 +579,30 @@ const cancelReservation = async (req, res, next) => {
 
   } catch (err) {
     console.error("Erreur cancelReservation:", err);
-    res.status(500).json({ 
+    res.status(500).json({
       success: false,
       error: "Erreur lors de l'annulation",
-      details: err.message 
+      details: err.message
     });
   }
 };
 
-// === RÉCUPÉRER L'HISTORIQUE DES RÉSERVATIONS (TERMINÉES) ===
+// ========================================
+// ✅ HISTORIQUE (confirmées + voyage terminé)
+// ========================================
 const getHistoriqueReservations = async (req, res, next) => {
   try {
     const clientId = req.user.id;
 
     if (!clientId) {
-      return res.status(401).json({ 
+      return res.status(401).json({
         success: false,
-        error: "Authentification requise" 
+        error: "Authentification requise"
       });
     }
 
     const reservations = await prisma.reservation.findMany({
-      where: { 
+      where: {
         code_client_id: clientId,
         statut: {
           in: ["confirmee", "confirmée"]
@@ -612,60 +621,81 @@ const getHistoriqueReservations = async (req, res, next) => {
             voiture: true,
             cooperative: true,
             avis: {
-              where: {
-                code_client_id: clientId
-              }
+              where: { code_client_id: clientId }
             }
           }
         },
-        places: { 
-          include: { 
+        places: {
+          include: {
             place: {
               select: {
                 numero: true,
                 id: true
               }
-            } 
-          } 
+            }
+          }
         },
-        paiement: true,
+        paiement: {
+          where: {
+            deleted_at: null,
+            status: 'valide'
+          },
+          orderBy: {
+            date_paiement: 'desc'
+          }
+        },
         recu: true
       },
-      orderBy: { 
+      orderBy: {
         date_reservation: "desc"
       }
     });
 
-    const formattedReservations = reservations.map(reservation => ({
-      id: reservation.id,
-      code_reservation: reservation.code_reservation,
-      date_reservation: reservation.date_reservation,
-      statut: reservation.statut,
-      nombre_places: reservation.nombre_places,
-      places: reservation.places.map(p => p.place.numero),
-      voyage: {
-        id: reservation.voyage.id,
-        code: reservation.voyage.code_voyage,
-        date_depart: reservation.voyage.date_depart,
-        heure_depart: reservation.voyage.heure_depart,
-        prix: reservation.voyage.prix,
-        trajet: {
-          depart: reservation.voyage.trajet.station_depart,
-          arrivee: reservation.voyage.trajet.station_arrivee,
-          distance: reservation.voyage.trajet.distance
+    const formattedReservations = reservations.map(reservation => {
+      const montantTotal = roundMoney(reservation.nombre_places * reservation.voyage.prix);
+      const montantPaye = roundMoney(
+        (reservation.paiement || []).reduce((sum, p) => sum + Number(p.montant || 0), 0)
+      );
+      const montantRestant = roundMoney(montantTotal - montantPaye);
+
+      return {
+        id: reservation.id,
+        code_reservation: reservation.code_reservation,
+        date_reservation: reservation.date_reservation,
+        statut: reservation.statut,
+        nombre_places: reservation.nombre_places,
+        places: reservation.places.map(p => p.place.numero),
+        voyage: {
+          id: reservation.voyage.id,
+          code: reservation.voyage.code_voyage,
+          date_depart: reservation.voyage.date_depart,
+          heure_depart: reservation.voyage.heure_depart,
+          prix: reservation.voyage.prix,
+          trajet: {
+            depart: reservation.voyage.trajet.station_depart,
+            arrivee: reservation.voyage.trajet.station_arrivee,
+            distance: reservation.voyage.trajet.distance
+          },
+          voiture: {
+            modele: reservation.voyage.voiture.modele,
+            immatriculation: reservation.voyage.voiture.immatriculation
+          },
+          cooperative: {
+            nom: reservation.voyage.cooperative.nom
+          }
         },
-        voiture: {
-          modele: reservation.voyage.voiture.modele,
-          immatriculation: reservation.voyage.voiture.immatriculation
-        },
-        cooperative: {
-          nom: reservation.voyage.cooperative.nom
-        }
-      },
-      avis_donne: reservation.voyage.avis && reservation.voyage.avis.length > 0,
-      paiement: reservation.paiement.length > 0 ? reservation.paiement[0] : null,
-      recu: reservation.recu.length > 0 ? reservation.recu[0] : null
-    }));
+        avis_donne: reservation.voyage.avis && reservation.voyage.avis.length > 0,
+
+        // ✅ montants (historique = normalement restant = 0)
+        montant_total: montantTotal,
+        montant_paye: montantPaye,
+        montant_restant: montantRestant,
+
+        paiements: reservation.paiement,
+        paiement: reservation.paiement.length > 0 ? reservation.paiement[0] : null,
+        recu: reservation.recu.length > 0 ? reservation.recu[0] : null
+      };
+    });
 
     res.status(200).json({
       success: true,
@@ -675,10 +705,10 @@ const getHistoriqueReservations = async (req, res, next) => {
 
   } catch (error) {
     console.error("Erreur getHistoriqueReservations:", error);
-    res.status(500).json({ 
+    res.status(500).json({
       success: false,
       error: "Erreur lors de la récupération de l'historique",
-      details: error.message 
+      details: error.message
     });
   }
 };

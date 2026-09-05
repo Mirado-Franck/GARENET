@@ -5,6 +5,25 @@
 
 GARENET digitalise le parcours complet d'un client de transport interurbain : il recherche un voyage (ligne, coopérative, date), choisit ses places sur un plan de voiture, paie par **MVola** (total ou en **échéancier**), reçoit un **reçu PDF** partageable, des **rappels automatiques** avant le départ, et peut noter le voyage et la coopérative.
 
+<!-- TODO: les 6 captures d'écran (screenshots/*.png) sont attendues dans le dossier screenshots/ -->
+
+## 📸 Captures d'écran
+
+| 🏠 Accueil | 🔍 Recherche de voyages |
+|:---:|:---:|
+| <img src="screenshots/01-acceuil.png" width="100%"> | <img src="screenshots/02-recherche-voyage.png" width="100%"> |
+| **Accueil** : accès rapide aux voyages, mes réservations et notifications | **Recherche** par station, coopérative et date |
+
+| 🪑 Sélection des places | 💳 Paiement MVola |
+|:---:|:---:|
+| <img src="screenshots/03-plan-places.png" width="100%"> | <img src="screenshots/04-paiement-mvola.png" width="100%"> |
+| **Plan de voiture** interactif avec les places disponibles en temps réel | **Paiement Mobile Money** — total ou échelonné |
+
+| 🧾 Confirmation & reçu | 👤 Profil |
+|:---:|:---:|
+| <img src="screenshots/05-recu.png" width="100%"> | <img src="screenshots/06-profil.png" width="100%"> |
+| **Confirmation** de la réservation et reçu PDF partageable | **Profil** : photo, thème clair/sombre, historique |
+
 ---
 
 ## ✨ Fonctionnalités

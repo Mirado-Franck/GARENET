@@ -5,24 +5,24 @@
 
 GARENET digitalise le parcours complet d'un client de transport interurbain : il recherche un voyage (ligne, coopérative, date), choisit ses places sur un plan de voiture, paie par **MVola** (total ou en **échéancier**), reçoit un **reçu PDF** partageable, des **rappels automatiques** avant le départ, et peut noter le voyage et la coopérative.
 
-<!-- TODO: les 6 captures d'écran (screenshots/*.png) sont attendues dans le dossier screenshots/ -->
+<!-- TODO: déposer les 6 captures ci-dessous dans /screenshots (fichiers .png, mêmes noms) -->
 
 ## 📸 Captures d'écran
 
-| 🏠 Accueil | 🔍 Recherche de voyages |
+| 🏠 Accueil | 🚌 Détail du voyage |
 |:---:|:---:|
-| <img src="screenshots/01-acceuil.png" width="100%"> | <img src="screenshots/02-recherche-voyage.png" width="100%"> |
-| **Accueil** : accès rapide aux voyages, mes réservations et notifications | **Recherche** par station, coopérative et date |
+| <img src="screenshots/01-acceuil.png" width="100%"> | <img src="screenshots/02-detail-voyage.png" width="100%"> |
+| **Accueil** : localisation auto, voyages recommandés et accès au compte | **Détail** : trajet, distance, prix, places restantes, coopérative |
 
 | 🪑 Sélection des places | 💳 Paiement MVola |
 |:---:|:---:|
 | <img src="screenshots/03-plan-places.png" width="100%"> | <img src="screenshots/04-paiement-mvola.png" width="100%"> |
-| **Plan de voiture** interactif avec les places disponibles en temps réel | **Paiement Mobile Money** — total ou échelonné |
+| **Plan de voiture** interactif — places disponibles, réservées et sélectionnées en temps réel | **Paiement Mobile Money** — « Payer tout » ou « Payer partiel » (échelonné) |
 
-| 🧾 Confirmation & reçu | 👤 Profil |
+| 📋 Mes réservations | 👤 Profil |
 |:---:|:---:|
-| <img src="screenshots/05-recu.png" width="100%"> | <img src="screenshots/06-profil.png" width="100%"> |
-| **Confirmation** de la réservation et reçu PDF partageable | **Profil** : photo, thème clair/sombre, historique |
+| <img src="screenshots/05-reservations.png" width="100%"> | <img src="screenshots/06-profil.png" width="100%"> |
+| **Suivi des réservations** : statut (en attente / confirmée), reste à payer | **Profil** : photo, rôle, thème clair/sombre, confidentialité |
 
 ---
 
@@ -252,18 +252,25 @@ MVOLA_CALLBACK_URL=http://localhost:3000/api/paiements/callback
 ```bash
 cd frontend
 npm install
+cp .env.example .env    # puis renseigner l'adresse du backend (voir ci-dessous)
 npm start               # ouvre le QR code Expo Go
 ```
 
 - 📱 **Sur téléphone** : scanner le QR code avec **Expo Go** (Android/iOS)
 - 🖥️ **Sur navigateur** : `npm run web`
 
-> ⚠️ **Important** : l'API attend l'adresse de votre machine. Sur téléphone, modifiez `frontend/services/api.ts` :
-> ```ts
-> // remplacez 192.168.11.170 par l'adresse IP de VOTRE machine sur le réseau
-> const API_URL = Platform.OS === 'web' ? 'http://localhost:3000' : 'http://VOTRE_IP:3000';
+> ⚠️ **Configurer l'adresse du backend** — elle se trouve dans `frontend/.env` (jamais versionné), aucune modification de code n'est nécessaire :
+>
+> ```ini
+> # frontend/.env
+> EXPO_PUBLIC_API_URL=http://192.168.1.100:3000   # ← IP de VOTRE machine sur le Wi-Fi
 > ```
-> Le téléphone et le backend doivent être sur le **même réseau Wi-Fi**.
+>
+> - 📱 **Téléphone physique** : adresse IP de votre machine (téléphone et backend sur le **même réseau Wi-Fi**)
+> - 🖥️ **Navigateur** : `http://localhost:3000`
+> - 🤖 **Émulateur Android** : `http://10.0.2.2:3000` (le `localhost` de l'émulateur pointe sur lui-même)
+>
+> Après modification de `.env`, relancez `npm start` (les variables `EXPO_PUBLIC_*` sont injectées au démarrage du bundler).
 
 ---
 

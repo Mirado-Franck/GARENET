@@ -1,12 +1,15 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
-import { Platform } from 'react-native';
 
 // ✅ Configuration de l'URL de base (Racine du serveur)
-const SERVER_URL = Platform.OS === 'android'
-    ? 'http://192.168.11.170:3000'
-    : 'http://localhost:3000';
+// L'adresse du backend est fournie par le fichier d'environnement
+// `frontend/.env` via la variable EXPO_PUBLIC_API_URL
+// (voir `frontend/.env.example` pour le modèle).
+// → plus d'IP codée en dur : chaque développeur configure son .env,
+//   et seul le .env.example est versionné.
+const ENV_URL = (process.env.EXPO_PUBLIC_API_URL || '').trim().replace(/\/+$/, '');
+const SERVER_URL = ENV_URL || 'http://localhost:3000';
 
 // ✅ Export des URLs pour l'API et les Images
 export const API_URL = `${SERVER_URL}/api`;

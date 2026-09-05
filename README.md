@@ -5,8 +5,6 @@
 
 GARENET digitalise le parcours complet d'un client de transport interurbain : il recherche un voyage (ligne, coopérative, date), choisit ses places sur un plan de voiture, paie par **MVola** (total ou en **échéancier**), reçoit un **reçu PDF** partageable, des **rappels automatiques** avant le départ, et peut noter le voyage et la coopérative.
 
-<!-- TODO: déposer les 6 captures ci-dessous dans /screenshots (fichiers .png, mêmes noms) -->
-
 ## 📸 Captures d'écran
 
 | 🏠 Accueil | 🚌 Détail du voyage |
@@ -19,10 +17,15 @@ GARENET digitalise le parcours complet d'un client de transport interurbain : il
 | <img src="screenshots/03-plan-places.png" width="100%"> | <img src="screenshots/04-paiement-mvola.png" width="100%"> |
 | **Plan de voiture** interactif — places disponibles, réservées et sélectionnées en temps réel | **Paiement Mobile Money** — « Payer tout » ou « Payer partiel » (échelonné) |
 
-| 📋 Mes réservations | 👤 Profil |
+| 📋 Mes réservations | 🏢 Détail coopérative |
 |:---:|:---:|
-| <img src="screenshots/05-reservations.png" width="100%"> | <img src="screenshots/06-profil.png" width="100%"> |
-| **Suivi des réservations** : statut (en attente / confirmée), reste à payer | **Profil** : photo, rôle, thème clair/sombre, confidentialité |
+| <img src="screenshots/05-reservations.png" width="100%"> | <img src="screenshots/08-detail-cooperative.png" width="100%"> |
+| **Suivi des réservations** : statut (en attente / confirmée), reste à payer | **Fiche coopérative** : note moyenne, statistiques des avis, derniers commentaires |
+
+| ⭐ Avis & notation | 👤 Profil |
+|:---:|:---:|
+| <img src="screenshots/07-avis.png" width="100%"> | <img src="screenshots/06-profil.png" width="100%"> |
+| **Avis** : note en étoiles + commentaire après le voyage | **Profil** : photo, rôle, thème clair/sombre, confidentialité |
 
 ---
 
